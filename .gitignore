@@ -405,3 +405,6 @@ FodyWeavers.xsd
 *.tsbuildinfo
 .env
 .env.local
+
+# Locally packaged extension
+/.artifacts/

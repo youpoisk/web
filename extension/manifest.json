@@ -1,1 +1,11 @@
-{"manifest_version":3,"name":"YouPoisk — интерактивный макет","version":"0.1.0","description":"Локальный макет оценок и списка просмотра. Без API и настоящей авторизации.","action":{"default_popup":"popup.html","default_title":"YouPoisk"},"options_page":"options.html","permissions":["storage"],"content_scripts":[{"matches":["https://www.youtube.com/*"],"js":["content.js"],"css":["content.css"]}]}
+{
+  "manifest_version":3,
+  "name":"YouPoisk",
+  "version":"0.2.0",
+  "description":"Оценки видео и каналов YouTube, личная библиотека и «Посмотрю позже». Данные хранятся локально.",
+  "permissions":["storage","activeTab"],
+  "background":{"service_worker":"background.js"},
+  "action":{"default_popup":"popup.html","default_title":"YouPoisk"},
+  "options_page":"options.html",
+  "content_scripts":[{"matches":["https://www.youtube.com/*"],"js":["core.js","bridge.js","content.js"],"css":["content.css"],"run_at":"document_idle"}]
+}
