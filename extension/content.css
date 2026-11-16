@@ -1,2 +1,29 @@
-#yp-panel{background:#fff7f2;border:1px solid #eed9cd;border-radius:14px;padding:18px 20px;margin:16px 0;color:#303338;font:13px Arial,sans-serif;position:relative}#yp-panel .yp-top{display:flex;justify-content:space-between;align-items:center;gap:15px}#yp-panel strong{font-size:22px;letter-spacing:-1.2px}#yp-panel strong span{color:#f76835}#yp-panel small{color:#a68b79;font-size:10px}#yp-panel .yp-scores{display:flex;gap:7px;margin:15px 0;flex-wrap:wrap}#yp-panel button{cursor:pointer;border:1px solid #e6d9cf;background:white;padding:9px 13px;border-radius:6px;color:#7f6b5d;font:12px Arial,sans-serif}#yp-panel .yp-scores button{min-width:35px}#yp-panel button.yp-active,#yp-panel .yp-save{background:#f76835;color:white;border-color:#f76835}#yp-panel .yp-actions{display:flex;gap:9px;flex-wrap:wrap}#yp-panel .yp-status{font-size:10px;color:#9b8a7a;margin-top:12px}#yp-panel button:focus-visible{outline:3px solid #fcaa88;outline-offset:2px}
-#yp-panel{background:#f5faff;border-color:#d4e8f5;border-radius:10px;color:#14171a}#yp-panel strong,#yp-panel strong span{color:#1da1f2}#yp-panel small,#yp-panel .yp-status{color:#657786}#yp-panel button{color:#657786;border-color:#ccd6dd}#yp-panel button.yp-active,#yp-panel .yp-save{background:#1da1f2;border-color:#1da1f2;color:white}#yp-panel button:disabled{opacity:.5;cursor:default}#yp-panel button:focus-visible{outline-color:#8ed0fa}#yp-panel details{margin-top:15px}#yp-panel summary{cursor:pointer;font-size:12px;color:#657786}#yp-panel .yp-scores{gap:5px}#yp-panel .yp-scores button{padding:8px;min-width:30px}#yp-panel p{margin:15px 0 0;font-size:13px}
+/* Fit the native action row without clipping custom controls. */
+ytd-watch-metadata #top-row{flex-wrap:wrap!important;row-gap:12px}
+ytd-watch-metadata #actions{flex:1 1 640px!important;margin-left:0!important;min-width:0;max-width:100%}
+ytd-watch-metadata #menu{max-width:100%;min-width:0}
+ytd-watch-metadata #top-level-buttons-computed{flex-wrap:wrap!important;gap:8px;justify-content:flex-end}
+#yp-panel{--yp-text:#0f0f0f;--yp-bg:#fff;--yp-chip:#f0f0f0;--yp-secondary:#606060;display:inline-flex;align-items:center;gap:8px;flex-shrink:0;margin:0;padding:0;border:0;background:transparent;color:var(--yp-text);font:500 14px Roboto,Arial,sans-serif;position:relative}
+html[dark] #yp-panel{--yp-text:#f1f1f1;--yp-bg:#212121;--yp-chip:#353535;--yp-secondary:#aaa}
+#yp-panel>button{height:36px;border:0;border-radius:18px;background:var(--yp-chip);color:var(--yp-text);padding:0 13px;white-space:nowrap;font:inherit;cursor:pointer}
+#yp-panel>button:hover{filter:brightness(1.12)}
+#yp-panel>button[aria-pressed=true],#yp-panel>.yp-rate-trigger{color:#1da1f2;background:rgba(29,161,242,.15)}
+#yp-panel button:disabled{opacity:.5;cursor:default}
+#yp-panel button:focus-visible,#yp-panel summary:focus-visible{outline:2px solid #1da1f2;outline-offset:3px}
+#yp-panel .yp-rating-popover{position:fixed;inset:auto;margin:0;padding:20px;max-width:calc(100vw - 16px);width:340px;box-sizing:border-box;border:1px solid #8885;border-radius:12px;background:var(--yp-bg);color:var(--yp-text);box-shadow:0 8px 30px #0004;font:14px Roboto,Arial,sans-serif}
+#yp-panel .yp-rating-popover::backdrop{background:transparent}
+#yp-panel .yp-rating-popover strong{font-size:20px;color:#1da1f2}
+#yp-panel .yp-rating-popover p{margin:16px 0 8px}
+#yp-panel .yp-scores{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:12px 0}
+#yp-panel .yp-scores button{padding:9px 8px;border-radius:6px;font:inherit;background:var(--yp-chip);color:var(--yp-text);border:0;min-width:0;cursor:pointer}
+#yp-panel .yp-scores button.yp-active{background:#1da1f2;color:white}
+#yp-panel small{font-size:11px;color:var(--yp-secondary)}
+#yp-panel details{margin:15px 0}#yp-panel summary{cursor:pointer;font-size:12px}
+#yp-panel .yp-status{position:absolute;right:0;top:44px;z-index:100;min-width:230px;max-width:330px;padding:10px 12px;border-radius:7px;background:var(--yp-bg);box-shadow:0 3px 16px #0002;color:var(--yp-text);font-size:11px;line-height:1.5;margin:0}
+#yp-panel .yp-status:empty{display:none}
+@media(max-width:600px){#yp-panel{flex-wrap:wrap;gap:5px}#yp-panel>button{font-size:12px;padding:0 10px}}
+#yp-panel .yp-rating-popover{max-height:calc(100vh - 16px);overflow-y:auto}
+/* Rating matches the measured native like/dislike control, including its font. */
+#yp-panel>.yp-rate-trigger{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 16px;flex-shrink:0;font-family:Roboto,Arial,sans-serif;font-size:14px;font-weight:500;line-height:20px;letter-spacing:normal}
+#yp-panel .yp-rate-icon{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
+#yp-panel .yp-rate-label{font:inherit;letter-spacing:inherit;line-height:inherit}

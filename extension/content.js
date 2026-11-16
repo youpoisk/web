@@ -1,5 +1,5 @@
 (() => {
-  let current=null, state=null, timer=null, generation=0, navigating=false, busy=false;
+  let current=null, state=null, timer=null, generation=0, navigating=false, busy=false, nativeSizeObserver=null;
   const demo=document.body.dataset.demo==='true';
   function context(){
     if(navigating)return null;
@@ -26,20 +26,55 @@
     for(let i=1;i<=10;i++){const b=node('button',String(i),value===i?'yp-active':'');b.type='button';b.setAttribute('aria-label',`${key==='rating'?'Видео':'Канал'}: оценка ${i}`);b.setAttribute('aria-pressed',String(value===i));b.onclick=()=>update({[key]:i});row.append(b);}
     const clear=node('button','Сбросить');clear.type='button';clear.disabled=value==null;clear.onclick=()=>update({[key]:null});row.append(clear);panel.append(row);
   }
+  function menuHost(){
+    const menu=document.querySelector('ytd-watch-metadata #menu, #above-the-fold #menu') || (demo?document.getElementById('menu'):null);
+    return menu?.querySelector('#top-level-buttons-computed')||menu;
+  }
+  function matchNativeRatingButton(rate,host){
+    nativeSizeObserver?.disconnect();
+    const segment=host.querySelector('segmented-like-dislike-button-view-model, ytd-segmented-like-dislike-button-renderer') || host;
+    const native=[...segment.querySelectorAll('.ytSmartImationsContent')].find(el=>el.getBoundingClientRect().width>0) || (segment!==host?segment:null);
+    if(!native)return;
+    const label=segment.querySelector('.yt-core-attributed-string, .yt-spec-button-shape-next__button-text-content') || segment.querySelector('button') || native;
+    const sync=()=>{
+      if(!rate.isConnected)return;
+      const rect=native.getBoundingClientRect();
+      if(rect.width<=0||rect.height<=0)return;
+      const font=getComputedStyle(label);
+      Object.assign(rate.style,{
+        width:rect.width+'px',height:rect.height+'px',minWidth:rect.width+'px',
+        borderRadius:(rect.height/2)+'px',boxSizing:'border-box',
+        fontFamily:font.fontFamily,fontSize:font.fontSize,fontWeight:font.fontWeight,
+        lineHeight:font.lineHeight,letterSpacing:font.letterSpacing,fontStyle:font.fontStyle,
+      });
+    };
+    sync();nativeSizeObserver=new ResizeObserver(sync);nativeSizeObserver.observe(native);
+  }
   function render(){
-    const host=document.querySelector('#above-the-fold #title, #below #title')||document.querySelector('ytd-watch-metadata h1')||document.getElementById('demo-inject');
+    const host=menuHost();
     if(!host||!current||!state)return;
     if(state.options.enabled===false){document.getElementById('yp-panel')?.remove();return;}
-    const panel=node('section');panel.id='yp-panel';panel.setAttribute('aria-label','Панель YouPoisk');
-    const top=node('div','', 'yp-top');top.append(node('strong','YouPoisk'),node('small','НА ЭТОМ УСТРОЙСТВЕ'));panel.append(top);
+    const panel=node('div');panel.id='yp-panel';panel.setAttribute('aria-label','Действия YouPoisk');
     const saved=state.videos[current.id]||{};
-    panel.append(node('p','Ваша оценка видео'));scores(panel,'rating',saved.rating);
-    const actions=node('div','', 'yp-actions');
-    const later=node('button',saved.later?'✓ В «Посмотрю позже»':'＋ Посмотрю позже','yp-save');later.type='button';later.setAttribute('aria-pressed',String(!!saved.later));later.onclick=()=>update({later:!saved.later});
-    const add=node('button',saved.added?'✓ В библиотеке':'Добавить в библиотеку');add.type='button';add.disabled=!!saved.added;add.onclick=()=>update({added:true});actions.append(later,add);panel.append(actions);
-    if(state.options.channel && current.channelUrl){const details=node('details');details.append(node('summary',`Оценить канал · ${current.channel||'YouTube'}`));scores(details,'channelRating',state.channels[current.channelUrl]?.rating);panel.append(details);}
-    const status=node('div','Локальный режим. Синхронизация с сайтом появится после подключения API.','yp-status');status.setAttribute('role','status');panel.append(status);
-    const old=document.getElementById('yp-panel');if(old)old.replaceWith(panel);else host.insertAdjacentElement('afterend',panel);
+    const rate=node('button','','yp-rate-trigger');const star=document.createElementNS('http://www.w3.org/2000/svg','svg');star.setAttribute('viewBox','0 0 24 24');star.setAttribute('aria-hidden','true');star.classList.add('yp-rate-icon');const starPath=document.createElementNS('http://www.w3.org/2000/svg','path');starPath.setAttribute('d','m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2L3.2 9.6l6.3-.9Z');star.append(starPath);rate.replaceChildren(star,node('span',saved.rating?String(saved.rating)+'/10':'Оценить','yp-rate-label'));rate.type='button';rate.title='Оценка YouPoisk от 1 до 10';rate.setAttribute('aria-expanded','false');rate.setAttribute('aria-haspopup','dialog');
+    const popover=node('div','', 'yp-rating-popover');popover.id='yp-rating-popover';popover.setAttribute('popover','auto');popover.setAttribute('role','dialog');popover.setAttribute('aria-label','Оценка YouPoisk');
+    popover.append(node('strong','YouPoisk'),node('p','Ваша оценка видео'));scores(popover,'rating',saved.rating);
+    if(state.options.channel && current.channelUrl){const details=node('details');details.append(node('summary',`Оценить канал · ${current.channel||'YouTube'}`));scores(details,'channelRating',state.channels[current.channelUrl]?.rating);popover.append(details);}
+    popover.append(node('small','Сохраняется на этом устройстве.'));
+    rate.onclick=()=>{
+      if(popover.matches(':popover-open')){popover.hidePopover();return;}
+      const rect=rate.getBoundingClientRect();
+      popover.style.left=Math.max(8,Math.min(rect.left,innerWidth-350))+'px';
+      popover.style.top=Math.max(8,Math.min(rect.bottom+8,innerHeight-260))+'px';
+      popover.showPopover();
+      const height=popover.getBoundingClientRect().height;popover.style.top=Math.max(8,Math.min(rect.bottom+8,innerHeight-height-8))+'px';
+    };
+    popover.addEventListener('toggle',()=>{rate.setAttribute('aria-expanded',String(popover.matches(':popover-open')));});
+    const recommend=node('button',saved.recommended?'✓ Рекомендовано':'↗ Рекомендовать','yp-recommend');recommend.type='button';recommend.setAttribute('aria-pressed',String(!!saved.recommended));recommend.title='Сохранить рекомендацию локально. Отправка друзьям станет доступна после подключения сервера.';recommend.onclick=async()=>{await update({recommended:!saved.recommended});notify(saved.recommended?'Рекомендация удалена':'Рекомендация сохранена локально. Пока не отправляется друзьям.');};
+    const later=node('button',saved.later?'✓ Посмотрю позже':'＋ Посмотрю позже','yp-save');later.type='button';later.setAttribute('aria-pressed',String(!!saved.later));later.onclick=()=>update({later:!saved.later});
+    const status=node('div','', 'yp-status');status.setAttribute('role','status');
+    panel.append(rate,recommend,later,popover,status);
+    const old=document.getElementById('yp-panel');if(old)old.replaceWith(panel);else {const likes=[...host.children].find(el=>el.matches('segmented-like-dislike-button-view-model, ytd-segmented-like-dislike-button-renderer')||el.querySelector('segmented-like-dislike-button-view-model, ytd-segmented-like-dislike-button-renderer'));if(likes)likes.after(panel);else host.prepend(panel);}matchNativeRatingButton(rate,host);
   }
   async function refresh(){
     timer=null;const version=++generation;
@@ -48,9 +83,9 @@
     catch(e){notify(e.message);}
   }
   function schedule(){clearTimeout(timer);timer=setTimeout(refresh,200);}
-  document.addEventListener('yt-navigate-start',()=>{navigating=true;generation++;current=null;document.getElementById('yp-panel')?.remove();});
+  document.addEventListener('yt-navigate-start',()=>{navigating=true;generation++;current=null;nativeSizeObserver?.disconnect();document.getElementById('yp-panel')?.remove();});
   document.addEventListener('yt-navigate-finish',()=>{navigating=false;schedule();});
-  const observer=new MutationObserver(records=>{if(records.every(r=>r.target.closest?.('#yp-panel')))return;if(!document.getElementById('yp-panel') || context()?.id!==current?.id)schedule();});
+  const observer=new MutationObserver(records=>{if(records.every(r=>r.target.closest?.('#yp-panel')))return;if(!document.getElementById('yp-panel') || document.getElementById('yp-panel')?.parentElement!==menuHost() || context()?.id!==current?.id)schedule();});
   observer.observe(document.body,{childList:true,subtree:true});
   if(YP.installed)chrome.runtime.onMessage.addListener((message,_sender,respond)=>{
     if(message.type==='YP_CONTEXT'){respond({video:context()});return;}

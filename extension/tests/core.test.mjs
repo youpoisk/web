@@ -51,3 +51,7 @@ test('manifest declares all runtime files and restricts content scripts to YouTu
  const files=[manifest.background.service_worker,manifest.action.default_popup,manifest.options_page,...manifest.content_scripts[0].js,...manifest.content_scripts[0].css];for(const file of files)assert.ok(readFileSync(new URL('../'+file,import.meta.url)).length>0,file);
  assert.equal(manifest.externally_connectable,undefined);
 });
+
+test('local recommendation toggles independently of the rating and watchlist',()=>{
+ let state=core.apply(core.empty(),update({rating:9,later:true}));state=core.apply(state,update({recommended:true}));assert.equal(state.videos[video.id].recommended,true);assert.equal(state.videos[video.id].rating,9);assert.equal(state.videos[video.id].later,true);state=core.apply(state,update({recommended:false}));assert.equal(state.videos[video.id].recommended,false);assert.throws(()=>core.apply(state,update({recommended:'yes'})));
+});

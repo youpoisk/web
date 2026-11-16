@@ -1,7 +1,7 @@
 {
   "manifest_version":3,
   "name":"YouPoisk",
-  "version":"0.2.0",
+  "version":"0.3.0",
   "description":"Оценки видео и каналов YouTube, личная библиотека и «Посмотрю позже». Данные хранятся локально.",
   "permissions":["storage","activeTab"],
   "background":{"service_worker":"background.js"},

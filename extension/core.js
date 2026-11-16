@@ -26,12 +26,12 @@
     if(command.type==='OPTIONS') {next.options=options(command.options||{});return next;}
     if(command.type!=='UPDATE') throw Error('Неизвестная команда');
     const v=metadata(command.video); const patch=command.patch||{};
-    if(Object.keys(patch).some(k=>!['rating','later','added','channelRating'].includes(k))) throw Error('Неизвестное поле');
+    if(Object.keys(patch).some(k=>!['rating','later','added','channelRating','recommended'].includes(k))) throw Error('Неизвестное поле');
     if('rating' in patch) rating(patch.rating);
     if('channelRating' in patch) {rating(patch.channelRating);if(!v.channelUrl) throw Error('Канал ещё не определён');}
-    for(const key of ['later','added']) if(key in patch && typeof patch[key]!=='boolean') throw Error('Некорректное состояние списка');
+    for(const key of ['later','added','recommended']) if(key in patch && typeof patch[key]!=='boolean') throw Error('Некорректное состояние списка');
     const previous=next.videos[v.id];
-    next.videos[v.id]={rating:null,later:false,added:true,createdAt:now,...previous,...v,...('rating' in patch?{rating:patch.rating}:{}),...('later' in patch?{later:patch.later}:{}),...('added' in patch?{added:patch.added}:{}),updatedAt:now};
+    next.videos[v.id]={rating:null,later:false,recommended:false,added:true,createdAt:now,...previous,...v,...('rating' in patch?{rating:patch.rating}:{}),...('later' in patch?{later:patch.later}:{}),...('added' in patch?{added:patch.added}:{}),...('recommended' in patch?{recommended:patch.recommended}:{}),updatedAt:now};
     if(patch.later===true || (patch.rating!=null))next.videos[v.id].added=true;
     if('channelRating' in patch)next.channels[v.channelUrl]={name:v.channel,url:v.channelUrl,rating:patch.channelRating,updatedAt:now};
     return next;
