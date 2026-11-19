@@ -3,7 +3,7 @@
   "info": {
     "title": "YouPoisk current runtime API",
     "version": "0.1.0",
-    "description": "Partial implemented MVP contract:17business operations plus2health operations, not the full planned product. Standard JSON bodies8KiB, exact origins, access in memory, credentials/secrets never in URLs/logs/YouTube DOM. Database schema remains Go Code First; this external IDL is checked against actual Go route registrations and DTO responses. Int64 clients must reject unsafe numeric values rather than silently round. Mail and browser-broker protocols are not advertised as implemented."
+    "description": "Partial implemented MVP contract:19business operations plus2health operations, not the full planned product. Standard JSON bodies8KiB, exact origins, access in memory, credentials/secrets never in URLs/logs/YouTube DOM. Database schema remains Go Code First; this external IDL is checked against actual Go route registrations and DTO responses. Int64 clients must reject unsafe numeric values rather than silently round. Mail and browser-broker protocols are not advertised as implemented."
   },
   "servers": [
     {
@@ -1850,6 +1850,232 @@
           }
         }
       }
+    },
+    "/v1/auth/browser/code": {
+      "post": {
+        "operationId": "issueBrowserCode",
+        "summary": "Issue a short-lived browser authorization code",
+        "tags": [
+          "Accounts"
+        ],
+        "description": "Live Bearer web session and exact first-party API Origin required. Generates digest-only one-use code bound to session/epoch/callback/state/S256. Account60/min and separate64inflight admission. No query parameters or cookie mutation. 422 invalid binding,401 inactive session,429 admission,503 transient preserve flow. First-party page/coordinator and real Chrome release POC are not implemented by this endpoint.",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Must equal configured API_PUBLIC_ORIGIN; first-party API page only."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrowserCodeIssue"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Issue a short-lived browser authorization code",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Set-Cookie": {
+                "description": "Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserCodeIssued"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/browser/exchange": {
+      "post": {
+        "operationId": "exchangeBrowserCode",
+        "summary": "Exchange a one-use code for access only",
+        "tags": [
+          "Accounts"
+        ],
+        "description": "No Authorization header permitted. Cookie is ignored. Exact callback Origin/state/S256 required; consumes once under account lock with live session/epoch/time recheck. Returns access/current user/session only, never refresh or Set-Cookie, never extends absolute session lifetime. Consumed/expired/unknown/bad proof401; after an uncertain successful response obtain a fresh code via still-active first-party session, not an automatic replay or password fallback. Separate1800/min/directIP and64inflight admission. No query parameters.",
+        "security": [],
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact registered callback origin, checked against the code binding; duplicate/missing/extension Origin forbidden."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrowserCodeExchange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Exchange a one-use code for access only",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Set-Cookie": {
+                "description": "Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebCredentials"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2860,6 +3086,96 @@
         },
         "required": [
           "status"
+        ],
+        "additionalProperties": false
+      },
+      "BrowserNonce": {
+        "type": "string",
+        "minLength": 43,
+        "maxLength": 43,
+        "pattern": "^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"
+      },
+      "BrowserCallback": {
+        "type": "string",
+        "format": "uri",
+        "maxLength": 2048,
+        "pattern": "^https?://",
+        "description": "Exact registered canonical callback including repository base path; no query/fragment. HTTPS in production."
+      },
+      "BrowserCodeIssue": {
+        "type": "object",
+        "properties": {
+          "redirect_uri": {
+            "$ref": "#/components/schemas/BrowserCallback"
+          },
+          "state": {
+            "$ref": "#/components/schemas/BrowserNonce"
+          },
+          "code_challenge": {
+            "$ref": "#/components/schemas/BrowserNonce"
+          },
+          "code_challenge_method": {
+            "const": "S256"
+          }
+        },
+        "required": [
+          "redirect_uri",
+          "state",
+          "code_challenge",
+          "code_challenge_method"
+        ],
+        "additionalProperties": false
+      },
+      "BrowserCodeExchange": {
+        "type": "object",
+        "properties": {
+          "authorization_code": {
+            "$ref": "#/components/schemas/BrowserNonce"
+          },
+          "code_verifier": {
+            "type": "string",
+            "minLength": 43,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._~-]{43,128}$"
+          },
+          "redirect_uri": {
+            "$ref": "#/components/schemas/BrowserCallback"
+          },
+          "state": {
+            "$ref": "#/components/schemas/BrowserNonce"
+          }
+        },
+        "required": [
+          "authorization_code",
+          "code_verifier",
+          "redirect_uri",
+          "state"
+        ],
+        "additionalProperties": false
+      },
+      "BrowserCodeIssued": {
+        "type": "object",
+        "properties": {
+          "authorization_code": {
+            "$ref": "#/components/schemas/BrowserNonce"
+          },
+          "state": {
+            "$ref": "#/components/schemas/BrowserNonce"
+          },
+          "redirect_uri": {
+            "$ref": "#/components/schemas/BrowserCallback"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "At most90seconds and never beyond the live session expiry."
+          }
+        },
+        "required": [
+          "authorization_code",
+          "state",
+          "redirect_uri",
+          "expires_at"
         ],
         "additionalProperties": false
       }

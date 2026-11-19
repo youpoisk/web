@@ -40,6 +40,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/browser/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a short-lived browser authorization code
+         * @description Live Bearer web session and exact first-party API Origin required. Generates digest-only one-use code bound to session/epoch/callback/state/S256. Account60/min and separate64inflight admission. No query parameters or cookie mutation. 422 invalid binding,401 inactive session,429 admission,503 transient preserve flow. First-party page/coordinator and real Chrome release POC are not implemented by this endpoint.
+         */
+        post: operations["issueBrowserCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/browser/exchange": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange a one-use code for access only
+         * @description No Authorization header permitted. Cookie is ignored. Exact callback Origin/state/S256 required; consumes once under account lock with live session/epoch/time recheck. Returns access/current user/session only, never refresh or Set-Cookie, never extends absolute session lifetime. Consumed/expired/unknown/bad proof401; after an uncertain successful response obtain a fresh code via still-active first-party session, not an automatic replay or password fallback. Separate1800/min/directIP and64inflight admission. No query parameters.
+         */
+        post: operations["exchangeBrowserCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/login": {
         parameters: {
             query?: never;
@@ -356,6 +396,35 @@ export interface components {
             code: string;
             message: string;
         };
+        /**
+         * Format: uri
+         * @description Exact registered canonical callback including repository base path; no query/fragment. HTTPS in production.
+         */
+        BrowserCallback: string;
+        BrowserCodeExchange: {
+            authorization_code: components["schemas"]["BrowserNonce"];
+            code_verifier: string;
+            redirect_uri: components["schemas"]["BrowserCallback"];
+            state: components["schemas"]["BrowserNonce"];
+        };
+        BrowserCodeIssue: {
+            code_challenge: components["schemas"]["BrowserNonce"];
+            /** @constant */
+            code_challenge_method: "S256";
+            redirect_uri: components["schemas"]["BrowserCallback"];
+            state: components["schemas"]["BrowserNonce"];
+        };
+        BrowserCodeIssued: {
+            authorization_code: components["schemas"]["BrowserNonce"];
+            /**
+             * Format: date-time
+             * @description At most90seconds and never beyond the live session expiry.
+             */
+            expires_at: string;
+            redirect_uri: components["schemas"]["BrowserCallback"];
+            state: components["schemas"]["BrowserNonce"];
+        };
+        BrowserNonce: string;
         CardChannel: {
             /** @description Separate video provider proof. Verified channel alone is insufficient. Future context writes recheck proof server-side. */
             association_verified: boolean;
@@ -686,6 +755,120 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BootstrapError"];
+                };
+            };
+        };
+    };
+    issueBrowserCode: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must equal configured API_PUBLIC_ORIGIN; first-party API page only. */
+                Origin: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrowserCodeIssue"];
+            };
+        };
+        responses: {
+            /** @description Issue a short-lived browser authorization code */
+            200: {
+                headers: {
+                    /** @description Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer. */
+                    "Set-Cookie"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrowserCodeIssued"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    exchangeBrowserCode: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Exact registered callback origin, checked against the code binding; duplicate/missing/extension Origin forbidden. */
+                Origin: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrowserCodeExchange"];
+            };
+        };
+        responses: {
+            /** @description Exchange a one-use code for access only */
+            200: {
+                headers: {
+                    /** @description Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer. */
+                    "Set-Cookie"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebCredentials"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
