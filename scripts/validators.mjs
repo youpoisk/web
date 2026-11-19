@@ -24,6 +24,8 @@ const contract = {};
 const pointer = value => value.replaceAll('~', '~0').replaceAll('/', '~1');
 function register(name, fragment) {
   const ref = `${id}#${fragment}`;
+  const existing = Object.keys(refs).find(key => refs[key] === ref);
+  if (existing) return existing;
   ajv.getSchema(ref);
   refs[name] = ref;
   return name;
@@ -48,7 +50,9 @@ for (const [path, methods] of Object.entries(spec.paths)) {
     contract[operation.operationId] = { method: method.toUpperCase(), path, request, responses,
       auth: operation.security?.some(option => Object.hasOwn(option, 'Bearer'))
         ? (operation.security.some(option => Object.keys(option).length === 0) ? 'optional' : 'required') : 'none',
-      parameters: resolved.map(parameter => ({ name: parameter.name, in: parameter.in, required: parameter.required ?? false })) };
+      parameters: resolved.map((parameter, index) => ({ name: parameter.name, in: parameter.in,
+        required: parameter.required ?? false, validator: register(`${operation.operationId}_parameter_${index}`,
+          parameters[index].$ref ? `${parameters[index].$ref.slice(1)}/schema` : `${prefix}/parameters/${index}/schema`) })) };
   }
 }
 const code = standalone(ajv, refs);
@@ -62,7 +66,7 @@ if (/\b(?:eval\s*\(|new\s+Function\s*\()/.test(content)) throw new Error('Runtim
 const file = resolve(root, 'src/shared/api/validators.js');
 const declarations = '// Generated; do not edit.\n' + Object.keys(refs).sort().map(name =>
   `export declare const ${name}: (value: unknown) => boolean;`).join('\n') +
-  '\nexport declare const contract: Readonly<Record<string, { method: string; path: string; request: string | null; responses: Readonly<Record<string, string | null>>; auth: "none" | "optional" | "required"; parameters: ReadonlyArray<{ name: string; in: string; required: boolean }> }>>;\n';
+  '\nexport declare const contract: Readonly<Record<string, { method: string; path: string; request: string | null; responses: Readonly<Record<string, string | null>>; auth: "none" | "optional" | "required"; parameters: ReadonlyArray<{ name: string; in: string; required: boolean; validator: string }> }>>;\n';
 if (mode === 'check') {
   if ((await readFile(file, 'utf8')).replaceAll('\r\n', '\n') !== content) throw new Error('Runtime validators drifted; run pnpm api:validators');
   if ((await readFile(file.replace(/\.js$/, '.d.ts'), 'utf8')).replaceAll('\r\n', '\n') !== declarations) throw new Error('Runtime validator declarations drifted');
