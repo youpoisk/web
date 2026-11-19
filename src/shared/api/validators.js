@@ -868,8 +868,8 @@ function validate57(data, { instancePath = "", parentData, parentDataProperty, r
 }
 validate57.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_Credentials = validate59;
-var formats14 = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
 var pattern5 = new RegExp("^[A-Za-z0-9_]{3,32}$", "u");
+var pattern6 = new RegExp("^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$", "u");
 function validate61(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -974,21 +974,24 @@ function validate61(data, { instancePath = "", parentData, parentDataProperty, r
                   let data3 = data.email;
                   const _errs8 = errors;
                   if (errors === _errs8) {
-                    if (errors === _errs8) {
-                      if (typeof data3 === "string") {
-                        if (func1(data3) > 254) {
-                          validate61.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
+                    if (typeof data3 === "string") {
+                      if (func1(data3) > 254) {
+                        validate61.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
+                        return false;
+                      } else {
+                        if (func1(data3) < 3) {
+                          validate61.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
                           return false;
                         } else {
-                          if (!formats14.test(data3)) {
-                            validate61.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/format", keyword: "format", params: { format: "email" }, message: 'must match format "email"' }];
+                          if (!pattern6.test(data3)) {
+                            validate61.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                             return false;
                           }
                         }
-                      } else {
-                        validate61.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                        return false;
                       }
+                    } else {
+                      validate61.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+                      return false;
                     }
                   }
                   var valid0 = _errs8 === errors;
@@ -1098,7 +1101,7 @@ function validate60(data, { instancePath = "", parentData, parentDataProperty, r
   return errors === 0;
 }
 validate60.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
-var pattern6 = new RegExp("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$", "u");
+var pattern7 = new RegExp("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$", "u");
 function validate64(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -1189,7 +1192,7 @@ function validate64(data, { instancePath = "", parentData, parentDataProperty, r
                           validate64.errors = [{ instancePath: instancePath + "/refresh_token", schemaPath: "#/properties/refresh_token/minLength", keyword: "minLength", params: { limit: 80 }, message: "must NOT have fewer than 80 characters" }];
                           return false;
                         } else {
-                          if (!pattern6.test(data3)) {
+                          if (!pattern7.test(data3)) {
                             validate64.errors = [{ instancePath: instancePath + "/refresh_token", schemaPath: "#/properties/refresh_token/pattern", keyword: "pattern", params: { pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$" }, message: 'must match pattern "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"' }];
                             return false;
                           }
@@ -1287,7 +1290,7 @@ function validate59(data, { instancePath = "", parentData, parentDataProperty, r
 validate59.evaluated = { "dynamicProps": true, "dynamicItems": false };
 var schema_Device = validate67;
 var schema29 = { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "client_type": { "type": "string", "enum": ["web", "extension"] }, "device_label": { "type": "string", "maxLength": 100 }, "created_at": { "type": "string", "format": "date-time" }, "updated_at": { "type": "string", "format": "date-time" }, "expires_at": { "type": "string", "format": "date-time" }, "current": { "type": "boolean" } }, "required": ["id", "client_type", "device_label", "created_at", "updated_at", "expires_at", "current"], "additionalProperties": false };
-var formats22 = require_formats().fullFormats["date-time"];
+var formats20 = require_formats().fullFormats["date-time"];
 function validate67(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -1376,7 +1379,7 @@ function validate67(data, { instancePath = "", parentData, parentDataProperty, r
                   if (errors === _errs8) {
                     if (errors === _errs8) {
                       if (typeof data3 === "string") {
-                        if (!formats22.validate(data3)) {
+                        if (!formats20.validate(data3)) {
                           validate67.errors = [{ instancePath: instancePath + "/created_at", schemaPath: "#/properties/created_at/format", keyword: "format", params: { format: "date-time" }, message: 'must match format "date-time"' }];
                           return false;
                         }
@@ -1397,7 +1400,7 @@ function validate67(data, { instancePath = "", parentData, parentDataProperty, r
                     if (errors === _errs10) {
                       if (errors === _errs10) {
                         if (typeof data4 === "string") {
-                          if (!formats22.validate(data4)) {
+                          if (!formats20.validate(data4)) {
                             validate67.errors = [{ instancePath: instancePath + "/updated_at", schemaPath: "#/properties/updated_at/format", keyword: "format", params: { format: "date-time" }, message: 'must match format "date-time"' }];
                             return false;
                           }
@@ -1418,7 +1421,7 @@ function validate67(data, { instancePath = "", parentData, parentDataProperty, r
                       if (errors === _errs12) {
                         if (errors === _errs12) {
                           if (typeof data5 === "string") {
-                            if (!formats22.validate(data5)) {
+                            if (!formats20.validate(data5)) {
                               validate67.errors = [{ instancePath: instancePath + "/expires_at", schemaPath: "#/properties/expires_at/format", keyword: "format", params: { format: "date-time" }, message: 'must match format "date-time"' }];
                               return false;
                             }
@@ -1761,7 +1764,7 @@ function validate71(data, { instancePath = "", parentData, parentDataProperty, r
                           validate71.errors = [{ instancePath: instancePath + "/refresh_token", schemaPath: "#/properties/refresh_token/minLength", keyword: "minLength", params: { limit: 80 }, message: "must NOT have fewer than 80 characters" }];
                           return false;
                         } else {
-                          if (!pattern6.test(data3)) {
+                          if (!pattern7.test(data3)) {
                             validate71.errors = [{ instancePath: instancePath + "/refresh_token", schemaPath: "#/properties/refresh_token/pattern", keyword: "pattern", params: { pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$" }, message: 'must match pattern "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"' }];
                             return false;
                           }
@@ -1791,7 +1794,7 @@ function validate71(data, { instancePath = "", parentData, parentDataProperty, r
 }
 validate71.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_ExtensionRefresh = validate73;
-var pattern8 = new RegExp("^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$", "u");
+var pattern9 = new RegExp("^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$", "u");
 function validate73(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -1863,7 +1866,7 @@ function validate73(data, { instancePath = "", parentData, parentDataProperty, r
                         validate73.errors = [{ instancePath: instancePath + "/attempt_proof", schemaPath: "#/properties/attempt_proof/minLength", keyword: "minLength", params: { limit: 43 }, message: "must NOT have fewer than 43 characters" }];
                         return false;
                       } else {
-                        if (!pattern8.test(data2)) {
+                        if (!pattern9.test(data2)) {
                           validate73.errors = [{ instancePath: instancePath + "/attempt_proof", schemaPath: "#/properties/attempt_proof/pattern", keyword: "pattern", params: { pattern: "^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$" }, message: 'must match pattern "^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"' }];
                           return false;
                         }
@@ -1892,7 +1895,7 @@ function validate73(data, { instancePath = "", parentData, parentDataProperty, r
                           validate73.errors = [{ instancePath: instancePath + "/refresh_token", schemaPath: "#/properties/refresh_token/minLength", keyword: "minLength", params: { limit: 80 }, message: "must NOT have fewer than 80 characters" }];
                           return false;
                         } else {
-                          if (!pattern6.test(data3)) {
+                          if (!pattern7.test(data3)) {
                             validate73.errors = [{ instancePath: instancePath + "/refresh_token", schemaPath: "#/properties/refresh_token/pattern", keyword: "pattern", params: { pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$" }, message: 'must match pattern "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"' }];
                             return false;
                           }
@@ -2126,9 +2129,9 @@ function validate76(data, { instancePath = "", parentData, parentDataProperty, r
 validate76.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_ObservationAdd = validate77;
 var schema37 = { "type": "object", "properties": { "youtube_video_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{11}$", "minLength": 11, "maxLength": 11 }, "title": { "type": ["string", "null"], "description": "Optional observed plain text; server NFC/whitespace-normalizes to at most250 code points, raw UTF8 bound4096bytes. Empty/null means unknown, not a fabricated title." }, "youtube_channel_id": { "type": ["string", "null"], "pattern": "^(UC[A-Za-z0-9_-]{22})?$", "description": "Optional UC claim, not trusted identity/membership evidence." }, "channel_name": { "type": ["string", "null"], "description": "Optional observed plain name, normalized max150 code points." }, "channel_handle": { "type": ["string", "null"], "description": "Observed bounded handle text only; never an identity/merge key or a fetch URL." }, "duration_seconds": { "type": ["integer", "null"], "minimum": 0, "maximum": 2147483647, "description": "Unknown staysnull and is hidden by clients." }, "hashtags": { "type": ["array", "null"], "maxItems": 30, "items": { "type": "string", "description": "Optional leading#, then Unicode letters/numbers/marks/underscore. Server NFC+casefold, normalized1..100 code points; raw input at most1024bytes." } }, "hashtags_observation_status": { "type": ["string", "null"], "enum": ["unknown", "partial", "complete", null], "default": "unknown", "description": "Omitted/null meansunknown. Unknown cannot carry positive tags. Complete empty is observed empty; untrusted input never grants erasure authority." }, "expected_revision": { "type": "integer", "format": "int64", "minimum": 0, "description": "JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence." }, "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 }, "later": { "type": "boolean" } }, "required": ["youtube_video_id", "expected_revision"], "additionalProperties": false, "allOf": [{ "if": { "anyOf": [{ "not": { "properties": { "hashtags_observation_status": {} }, "required": ["hashtags_observation_status"] } }, { "properties": { "hashtags_observation_status": { "enum": ["unknown", null] } }, "required": ["hashtags_observation_status"] }] }, "then": { "properties": { "hashtags": { "anyOf": [{ "type": "array", "maxItems": 0 }, { "type": "null" }] } } } }] };
-var func28 = Object.prototype.hasOwnProperty;
-var pattern10 = new RegExp("^[A-Za-z0-9_-]{11}$", "u");
-var pattern11 = new RegExp("^(UC[A-Za-z0-9_-]{22})?$", "u");
+var func29 = Object.prototype.hasOwnProperty;
+var pattern11 = new RegExp("^[A-Za-z0-9_-]{11}$", "u");
+var pattern12 = new RegExp("^(UC[A-Za-z0-9_-]{22})?$", "u");
 function validate77(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -2333,7 +2336,7 @@ function validate77(data, { instancePath = "", parentData, parentDataProperty, r
       } else {
         const _errs17 = errors;
         for (const key0 in data) {
-          if (!func28.call(schema37.properties, key0)) {
+          if (!func29.call(schema37.properties, key0)) {
             validate77.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -2353,7 +2356,7 @@ function validate77(data, { instancePath = "", parentData, parentDataProperty, r
                     validate77.errors = [{ instancePath: instancePath + "/youtube_video_id", schemaPath: "#/properties/youtube_video_id/minLength", keyword: "minLength", params: { limit: 11 }, message: "must NOT have fewer than 11 characters" }];
                     return false;
                   } else {
-                    if (!pattern10.test(data2)) {
+                    if (!pattern11.test(data2)) {
                       validate77.errors = [{ instancePath: instancePath + "/youtube_video_id", schemaPath: "#/properties/youtube_video_id/pattern", keyword: "pattern", params: { pattern: "^[A-Za-z0-9_-]{11}$" }, message: 'must match pattern "^[A-Za-z0-9_-]{11}$"' }];
                       return false;
                     }
@@ -2390,7 +2393,7 @@ function validate77(data, { instancePath = "", parentData, parentDataProperty, r
                 }
                 if (errors === _errs22) {
                   if (typeof data4 === "string") {
-                    if (!pattern11.test(data4)) {
+                    if (!pattern12.test(data4)) {
                       validate77.errors = [{ instancePath: instancePath + "/youtube_channel_id", schemaPath: "#/properties/youtube_channel_id/pattern", keyword: "pattern", params: { pattern: "^(UC[A-Za-z0-9_-]{22})?$" }, message: 'must match pattern "^(UC[A-Za-z0-9_-]{22})?$"' }];
                       return false;
                     }
@@ -3311,7 +3314,7 @@ function validate87(data, { instancePath = "", parentData, parentDataProperty, r
                         validate87.errors = [{ instancePath: instancePath + "/attempt_proof", schemaPath: "#/properties/attempt_proof/minLength", keyword: "minLength", params: { limit: 43 }, message: "must NOT have fewer than 43 characters" }];
                         return false;
                       } else {
-                        if (!pattern8.test(data2)) {
+                        if (!pattern9.test(data2)) {
                           validate87.errors = [{ instancePath: instancePath + "/attempt_proof", schemaPath: "#/properties/attempt_proof/pattern", keyword: "pattern", params: { pattern: "^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$" }, message: 'must match pattern "^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"' }];
                           return false;
                         }
@@ -3407,7 +3410,7 @@ function validate86(data, { instancePath = "", parentData, parentDataProperty, r
 }
 validate86.evaluated = { "dynamicProps": true, "dynamicItems": false };
 var schema_Register = validate90;
-var schema46 = { "type": "object", "properties": { "login": { "type": "string", "pattern": "^[A-Za-z0-9_]{3,32}$" }, "email": { "type": "string", "format": "email", "maxLength": 254 }, "name": { "type": "string", "description": "Server trims and NFC-normalizes; normalized length1..100 code points." }, "password": { "type": "string", "minLength": 8, "maxLength": 128, "writeOnly": true, "description": "8..128 Unicode code points, at most512 UTF8 bytes. Never trimmed/normalized/stored in client storage or an offline queue. Invalid Unicode JSON escapes are rejected." }, "client_type": { "type": "string", "enum": ["web", "extension"] } }, "required": ["login", "email", "name", "password", "client_type"], "additionalProperties": false };
+var schema46 = { "type": "object", "properties": { "login": { "type": "string", "pattern": "^[A-Za-z0-9_]{3,32}$" }, "email": { "type": "string", "maxLength": 254, "minLength": 3, "pattern": "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$", "description": "Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred." }, "name": { "type": "string", "description": "Server trims and NFC-normalizes; normalized length1..100 code points." }, "password": { "type": "string", "minLength": 8, "maxLength": 128, "writeOnly": true, "description": "8..128 Unicode code points, at most512 UTF8 bytes. Never trimmed/normalized/stored in client storage or an offline queue. Invalid Unicode JSON escapes are rejected." }, "client_type": { "type": "string", "enum": ["web", "extension"] } }, "required": ["login", "email", "name", "password", "client_type"], "additionalProperties": false };
 function validate90(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -3457,21 +3460,24 @@ function validate90(data, { instancePath = "", parentData, parentDataProperty, r
               let data1 = data.email;
               const _errs4 = errors;
               if (errors === _errs4) {
-                if (errors === _errs4) {
-                  if (typeof data1 === "string") {
-                    if (func1(data1) > 254) {
-                      validate90.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
+                if (typeof data1 === "string") {
+                  if (func1(data1) > 254) {
+                    validate90.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
+                    return false;
+                  } else {
+                    if (func1(data1) < 3) {
+                      validate90.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
                       return false;
                     } else {
-                      if (!formats14.test(data1)) {
-                        validate90.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/format", keyword: "format", params: { format: "email" }, message: 'must match format "email"' }];
+                      if (!pattern6.test(data1)) {
+                        validate90.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                         return false;
                       }
                     }
-                  } else {
-                    validate90.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                    return false;
                   }
+                } else {
+                  validate90.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+                  return false;
                 }
               }
               var valid0 = _errs4 === errors;
@@ -3649,21 +3655,24 @@ function validate91(data, { instancePath = "", parentData, parentDataProperty, r
                   let data3 = data.email;
                   const _errs8 = errors;
                   if (errors === _errs8) {
-                    if (errors === _errs8) {
-                      if (typeof data3 === "string") {
-                        if (func1(data3) > 254) {
-                          validate91.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
+                    if (typeof data3 === "string") {
+                      if (func1(data3) > 254) {
+                        validate91.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
+                        return false;
+                      } else {
+                        if (func1(data3) < 3) {
+                          validate91.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
                           return false;
                         } else {
-                          if (!formats14.test(data3)) {
-                            validate91.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/format", keyword: "format", params: { format: "email" }, message: 'must match format "email"' }];
+                          if (!pattern6.test(data3)) {
+                            validate91.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                             return false;
                           }
                         }
-                      } else {
-                        validate91.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                        return false;
                       }
+                    } else {
+                      validate91.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+                      return false;
                     }
                   }
                   var valid0 = _errs8 === errors;
@@ -3686,9 +3695,9 @@ function validate91(data, { instancePath = "", parentData, parentDataProperty, r
 validate91.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_VideoCard = validate92;
 var schema48 = { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "youtube_video_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{11}$", "minLength": 11, "maxLength": 11 }, "title": { "type": ["string", "null"], "minLength": 1, "maxLength": 250 }, "duration_seconds": { "type": ["integer", "null"], "minimum": 0, "maximum": 2147483647 }, "availability": { "type": "string", "enum": ["unknown", "available", "unavailable"] }, "url": { "type": "string", "format": "uri", "pattern": "^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$" }, "preview_url": { "type": "string", "format": "uri", "pattern": "^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$" }, "hashtags": { "type": "array", "maxItems": 100, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 100, "pattern": "^[^#]" } }, "hashtags_observation_status": { "type": "string", "enum": ["unknown", "partial", "complete"] }, "channel": { "anyOf": [{ "$ref": "#/components/schemas/CardChannel" }, { "type": "null" }] }, "rating": { "$ref": "#/components/schemas/Rating" }, "my_state": { "$ref": "#/components/schemas/VideoState", "description": "Omitted for guest; only current live viewer, never another author. Absent carrier means real revision0." } }, "required": ["id", "youtube_video_id", "title", "duration_seconds", "availability", "url", "preview_url", "hashtags", "hashtags_observation_status", "channel", "rating"], "additionalProperties": false };
-var pattern16 = new RegExp("^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$", "u");
-var pattern17 = new RegExp("^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$", "u");
-var pattern18 = new RegExp("^[^#]", "u");
+var pattern19 = new RegExp("^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$", "u");
+var pattern20 = new RegExp("^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$", "u");
+var pattern21 = new RegExp("^[^#]", "u");
 function validate92(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -3708,7 +3717,7 @@ function validate92(data, { instancePath = "", parentData, parentDataProperty, r
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!func28.call(schema48.properties, key0)) {
+          if (!func29.call(schema48.properties, key0)) {
             validate92.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -3749,7 +3758,7 @@ function validate92(data, { instancePath = "", parentData, parentDataProperty, r
                       validate92.errors = [{ instancePath: instancePath + "/youtube_video_id", schemaPath: "#/properties/youtube_video_id/minLength", keyword: "minLength", params: { limit: 11 }, message: "must NOT have fewer than 11 characters" }];
                       return false;
                     } else {
-                      if (!pattern10.test(data1)) {
+                      if (!pattern11.test(data1)) {
                         validate92.errors = [{ instancePath: instancePath + "/youtube_video_id", schemaPath: "#/properties/youtube_video_id/pattern", keyword: "pattern", params: { pattern: "^[A-Za-z0-9_-]{11}$" }, message: 'must match pattern "^[A-Za-z0-9_-]{11}$"' }];
                         return false;
                       }
@@ -3837,7 +3846,7 @@ function validate92(data, { instancePath = "", parentData, parentDataProperty, r
                       if (errors === _errs12) {
                         if (errors === _errs12) {
                           if (typeof data5 === "string") {
-                            if (!pattern16.test(data5)) {
+                            if (!pattern19.test(data5)) {
                               validate92.errors = [{ instancePath: instancePath + "/url", schemaPath: "#/properties/url/pattern", keyword: "pattern", params: { pattern: "^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$" }, message: 'must match pattern "^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$"' }];
                               return false;
                             } else {
@@ -3863,7 +3872,7 @@ function validate92(data, { instancePath = "", parentData, parentDataProperty, r
                         if (errors === _errs14) {
                           if (errors === _errs14) {
                             if (typeof data6 === "string") {
-                              if (!pattern17.test(data6)) {
+                              if (!pattern20.test(data6)) {
                                 validate92.errors = [{ instancePath: instancePath + "/preview_url", schemaPath: "#/properties/preview_url/pattern", keyword: "pattern", params: { pattern: "^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$" }, message: 'must match pattern "^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$"' }];
                                 return false;
                               } else {
@@ -3907,7 +3916,7 @@ function validate92(data, { instancePath = "", parentData, parentDataProperty, r
                                           validate92.errors = [{ instancePath: instancePath + "/hashtags/" + i0, schemaPath: "#/properties/hashtags/items/minLength", keyword: "minLength", params: { limit: 1 }, message: "must NOT have fewer than 1 characters" }];
                                           return false;
                                         } else {
-                                          if (!pattern18.test(data8)) {
+                                          if (!pattern21.test(data8)) {
                                             validate92.errors = [{ instancePath: instancePath + "/hashtags/" + i0, schemaPath: "#/properties/hashtags/items/pattern", keyword: "pattern", params: { pattern: "^[^#]" }, message: 'must match pattern "^[^#]"' }];
                                             return false;
                                           }
@@ -4719,7 +4728,7 @@ function validate102(data, { instancePath = "", parentData, parentDataProperty, 
                         validate102.errors = [{ instancePath: instancePath + "/attempt_proof", schemaPath: "#/properties/attempt_proof/minLength", keyword: "minLength", params: { limit: 43 }, message: "must NOT have fewer than 43 characters" }];
                         return false;
                       } else {
-                        if (!pattern8.test(data2)) {
+                        if (!pattern9.test(data2)) {
                           validate102.errors = [{ instancePath: instancePath + "/attempt_proof", schemaPath: "#/properties/attempt_proof/pattern", keyword: "pattern", params: { pattern: "^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$" }, message: 'must match pattern "^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$"' }];
                           return false;
                         }
@@ -5095,21 +5104,24 @@ function validate108(data, { instancePath = "", parentData, parentDataProperty, 
               let data1 = data.email;
               const _errs4 = errors;
               if (errors === _errs4) {
-                if (errors === _errs4) {
-                  if (typeof data1 === "string") {
-                    if (func1(data1) > 254) {
-                      validate108.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
+                if (typeof data1 === "string") {
+                  if (func1(data1) > 254) {
+                    validate108.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
+                    return false;
+                  } else {
+                    if (func1(data1) < 3) {
+                      validate108.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
                       return false;
                     } else {
-                      if (!formats14.test(data1)) {
-                        validate108.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/format", keyword: "format", params: { format: "email" }, message: 'must match format "email"' }];
+                      if (!pattern6.test(data1)) {
+                        validate108.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                         return false;
                       }
                     }
-                  } else {
-                    validate108.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                    return false;
                   }
+                } else {
+                  validate108.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+                  return false;
                 }
               }
               var valid0 = _errs4 === errors;
@@ -7056,21 +7068,24 @@ function validate133(data, { instancePath = "", parentData, parentDataProperty, 
                   let data3 = data.email;
                   const _errs8 = errors;
                   if (errors === _errs8) {
-                    if (errors === _errs8) {
-                      if (typeof data3 === "string") {
-                        if (func1(data3) > 254) {
-                          validate133.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
+                    if (typeof data3 === "string") {
+                      if (func1(data3) > 254) {
+                        validate133.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
+                        return false;
+                      } else {
+                        if (func1(data3) < 3) {
+                          validate133.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
                           return false;
                         } else {
-                          if (!formats14.test(data3)) {
-                            validate133.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/format", keyword: "format", params: { format: "email" }, message: 'must match format "email"' }];
+                          if (!pattern6.test(data3)) {
+                            validate133.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                             return false;
                           }
                         }
-                      } else {
-                        validate133.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                        return false;
                       }
+                    } else {
+                      validate133.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+                      return false;
                     }
                   }
                   var valid0 = _errs8 === errors;
@@ -8408,7 +8423,7 @@ function validate146(data, { instancePath = "", parentData, parentDataProperty, 
       } else {
         const _errs17 = errors;
         for (const key0 in data) {
-          if (!func28.call(schema37.properties, key0)) {
+          if (!func29.call(schema37.properties, key0)) {
             validate146.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -8428,7 +8443,7 @@ function validate146(data, { instancePath = "", parentData, parentDataProperty, 
                     validate146.errors = [{ instancePath: instancePath + "/youtube_video_id", schemaPath: "#/properties/youtube_video_id/minLength", keyword: "minLength", params: { limit: 11 }, message: "must NOT have fewer than 11 characters" }];
                     return false;
                   } else {
-                    if (!pattern10.test(data2)) {
+                    if (!pattern11.test(data2)) {
                       validate146.errors = [{ instancePath: instancePath + "/youtube_video_id", schemaPath: "#/properties/youtube_video_id/pattern", keyword: "pattern", params: { pattern: "^[A-Za-z0-9_-]{11}$" }, message: 'must match pattern "^[A-Za-z0-9_-]{11}$"' }];
                       return false;
                     }
@@ -8465,7 +8480,7 @@ function validate146(data, { instancePath = "", parentData, parentDataProperty, 
                 }
                 if (errors === _errs22) {
                   if (typeof data4 === "string") {
-                    if (!pattern11.test(data4)) {
+                    if (!pattern12.test(data4)) {
                       validate146.errors = [{ instancePath: instancePath + "/youtube_channel_id", schemaPath: "#/properties/youtube_channel_id/pattern", keyword: "pattern", params: { pattern: "^(UC[A-Za-z0-9_-]{22})?$" }, message: 'must match pattern "^(UC[A-Za-z0-9_-]{22})?$"' }];
                       return false;
                     }
@@ -10295,7 +10310,7 @@ function validate165(data, { instancePath = "", parentData, parentDataProperty, 
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!func28.call(schema48.properties, key0)) {
+          if (!func29.call(schema48.properties, key0)) {
             validate165.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -10336,7 +10351,7 @@ function validate165(data, { instancePath = "", parentData, parentDataProperty, 
                       validate165.errors = [{ instancePath: instancePath + "/youtube_video_id", schemaPath: "#/properties/youtube_video_id/minLength", keyword: "minLength", params: { limit: 11 }, message: "must NOT have fewer than 11 characters" }];
                       return false;
                     } else {
-                      if (!pattern10.test(data1)) {
+                      if (!pattern11.test(data1)) {
                         validate165.errors = [{ instancePath: instancePath + "/youtube_video_id", schemaPath: "#/properties/youtube_video_id/pattern", keyword: "pattern", params: { pattern: "^[A-Za-z0-9_-]{11}$" }, message: 'must match pattern "^[A-Za-z0-9_-]{11}$"' }];
                         return false;
                       }
@@ -10424,7 +10439,7 @@ function validate165(data, { instancePath = "", parentData, parentDataProperty, 
                       if (errors === _errs12) {
                         if (errors === _errs12) {
                           if (typeof data5 === "string") {
-                            if (!pattern16.test(data5)) {
+                            if (!pattern19.test(data5)) {
                               validate165.errors = [{ instancePath: instancePath + "/url", schemaPath: "#/properties/url/pattern", keyword: "pattern", params: { pattern: "^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$" }, message: 'must match pattern "^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$"' }];
                               return false;
                             } else {
@@ -10450,7 +10465,7 @@ function validate165(data, { instancePath = "", parentData, parentDataProperty, 
                         if (errors === _errs14) {
                           if (errors === _errs14) {
                             if (typeof data6 === "string") {
-                              if (!pattern17.test(data6)) {
+                              if (!pattern20.test(data6)) {
                                 validate165.errors = [{ instancePath: instancePath + "/preview_url", schemaPath: "#/properties/preview_url/pattern", keyword: "pattern", params: { pattern: "^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$" }, message: 'must match pattern "^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$"' }];
                                 return false;
                               } else {
@@ -10494,7 +10509,7 @@ function validate165(data, { instancePath = "", parentData, parentDataProperty, 
                                           validate165.errors = [{ instancePath: instancePath + "/hashtags/" + i0, schemaPath: "#/properties/hashtags/items/minLength", keyword: "minLength", params: { limit: 1 }, message: "must NOT have fewer than 1 characters" }];
                                           return false;
                                         } else {
-                                          if (!pattern18.test(data8)) {
+                                          if (!pattern21.test(data8)) {
                                             validate165.errors = [{ instancePath: instancePath + "/hashtags/" + i0, schemaPath: "#/properties/hashtags/items/pattern", keyword: "pattern", params: { pattern: "^[^#]" }, message: 'must match pattern "^[^#]"' }];
                                             return false;
                                           }
@@ -10899,7 +10914,7 @@ function validate171(data, { instancePath = "", parentData, parentDataProperty, 
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!func28.call(schema48.properties, key0)) {
+          if (!func29.call(schema48.properties, key0)) {
             validate171.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -10940,7 +10955,7 @@ function validate171(data, { instancePath = "", parentData, parentDataProperty, 
                       validate171.errors = [{ instancePath: instancePath + "/youtube_video_id", schemaPath: "#/properties/youtube_video_id/minLength", keyword: "minLength", params: { limit: 11 }, message: "must NOT have fewer than 11 characters" }];
                       return false;
                     } else {
-                      if (!pattern10.test(data1)) {
+                      if (!pattern11.test(data1)) {
                         validate171.errors = [{ instancePath: instancePath + "/youtube_video_id", schemaPath: "#/properties/youtube_video_id/pattern", keyword: "pattern", params: { pattern: "^[A-Za-z0-9_-]{11}$" }, message: 'must match pattern "^[A-Za-z0-9_-]{11}$"' }];
                         return false;
                       }
@@ -11028,7 +11043,7 @@ function validate171(data, { instancePath = "", parentData, parentDataProperty, 
                       if (errors === _errs12) {
                         if (errors === _errs12) {
                           if (typeof data5 === "string") {
-                            if (!pattern16.test(data5)) {
+                            if (!pattern19.test(data5)) {
                               validate171.errors = [{ instancePath: instancePath + "/url", schemaPath: "#/properties/url/pattern", keyword: "pattern", params: { pattern: "^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$" }, message: 'must match pattern "^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$"' }];
                               return false;
                             } else {
@@ -11054,7 +11069,7 @@ function validate171(data, { instancePath = "", parentData, parentDataProperty, 
                         if (errors === _errs14) {
                           if (errors === _errs14) {
                             if (typeof data6 === "string") {
-                              if (!pattern17.test(data6)) {
+                              if (!pattern20.test(data6)) {
                                 validate171.errors = [{ instancePath: instancePath + "/preview_url", schemaPath: "#/properties/preview_url/pattern", keyword: "pattern", params: { pattern: "^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$" }, message: 'must match pattern "^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$"' }];
                                 return false;
                               } else {
@@ -11098,7 +11113,7 @@ function validate171(data, { instancePath = "", parentData, parentDataProperty, 
                                           validate171.errors = [{ instancePath: instancePath + "/hashtags/" + i0, schemaPath: "#/properties/hashtags/items/minLength", keyword: "minLength", params: { limit: 1 }, message: "must NOT have fewer than 1 characters" }];
                                           return false;
                                         } else {
-                                          if (!pattern18.test(data8)) {
+                                          if (!pattern21.test(data8)) {
                                             validate171.errors = [{ instancePath: instancePath + "/hashtags/" + i0, schemaPath: "#/properties/hashtags/items/pattern", keyword: "pattern", params: { pattern: "^[^#]" }, message: 'must match pattern "^[^#]"' }];
                                             return false;
                                           }

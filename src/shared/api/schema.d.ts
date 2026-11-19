@@ -514,7 +514,7 @@ export interface components {
         Register: {
             /** @enum {string} */
             client_type: "web" | "extension";
-            /** Format: email */
+            /** @description Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred. */
             email: string;
             login: string;
             /** @description Server trims and NFC-normalizes; normalized length1..100 code points. */
@@ -523,10 +523,7 @@ export interface components {
             password: string;
         };
         User: {
-            /**
-             * Format: email
-             * @description Own unverified email; email verification/recovery is deferred.
-             */
+            /** @description Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred. */
             email: string;
             /** Format: uuid */
             id: string;

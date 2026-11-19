@@ -32,6 +32,19 @@ test('web credentials cannot contain extension refresh fields, including null', 
   assert.equal(validators.schema_ExtensionCredentials({ ...web, refresh_token: 'malformed' }), false);
 });
 
+test('Unicode mailbox responses preserve the existing server registration policy', () => {
+  for (const email of ['тест@example.com', 'alice@пример.рф']) {
+    const user = { ...web.user, email };
+    assert.equal(validators.schema_User(user), true);
+    assert.equal(validators.schema_WebCredentials({ ...web, user }), true);
+    assert.equal(validators.registerAccount_request({ login: 'test_user', name: 'Owner',
+      email, password: 'valid password', client_type: 'web' }), true);
+  }
+  for (const email of ['missing-at', 'owner\n@example.com', '\u0000@example.com']) {
+    assert.equal(validators.schema_User({ ...web.user, email }), false);
+  }
+});
+
 test('observation rejects caller trust and unknown positive tags, permits explicit complete-empty', () => {
   const observation = { youtube_video_id: 'AbCdEf_12-3', expected_revision: 0 };
   assert.equal(validators.addObservedVideo_request(observation), true);

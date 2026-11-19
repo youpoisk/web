@@ -1919,9 +1919,10 @@
           },
           "email": {
             "type": "string",
-            "format": "email",
             "maxLength": 254,
-            "description": "Own unverified email; email verification/recovery is deferred."
+            "description": "Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred.",
+            "minLength": 3,
+            "pattern": "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"
           }
         },
         "required": [
@@ -2005,8 +2006,10 @@
           },
           "email": {
             "type": "string",
-            "format": "email",
-            "maxLength": 254
+            "maxLength": 254,
+            "minLength": 3,
+            "pattern": "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$",
+            "description": "Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred."
           },
           "name": {
             "type": "string",
