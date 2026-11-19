@@ -30,11 +30,14 @@ export class ApiError extends Error {
   }
 }
 
-function safeNumbers(value: unknown): void {
+function safeWireValues(value: unknown): void {
+  if (typeof value === 'string' && /[\uD800-\uDFFF]/u.test(value)) throw new ApiError('protocol');
   if (typeof value === 'number' && (!Number.isFinite(value) || (Number.isInteger(value) && !Number.isSafeInteger(value)))) {
     throw new ApiError('protocol');
   }
-  if (value && typeof value === 'object') for (const item of Object.values(value)) safeNumbers(item);
+  if (value && typeof value === 'object') for (const [key, item] of Object.entries(value)) {
+    safeWireValues(key); safeWireValues(item);
+  }
 }
 function validates(name: string, value: unknown): boolean {
   const validator = (schemas as unknown as Record<string, (input: unknown) => boolean>)[name];
@@ -87,6 +90,7 @@ export class ApiClient {
     if (!Number.isSafeInteger(this.#timeout) || this.#timeout < 1 || this.#timeout > 120000) throw new ApiError('configuration');
   }
   async request<K extends Operation>(operation: K, options: RequestOptions<K>): Promise<ResponseBody<K>> {
+    if (!Object.hasOwn(schemas.contract, operation)) throw new ApiError('invalid_input');
     const entry = schemas.contract[operation];
     if (!entry || ['registerAccount', 'loginAccount', 'refreshSession'].includes(operation)) throw new ApiError('invalid_input');
     const scope = this.#session();
@@ -125,11 +129,11 @@ export class ApiClient {
     let body: string | undefined;
     if (entry.request) {
       try {
-        safeNumbers(options.body);
+        safeWireValues(options.body);
         body = JSON.stringify(options.body);
         if (body === undefined || new TextEncoder().encode(body).length > 8192) throw new Error();
         const copy: unknown = JSON.parse(body);
-        safeNumbers(copy);
+        safeWireValues(copy);
         if (!validates(entry.request, copy)) throw new Error();
       } catch { throw new ApiError('invalid_input'); }
       headers.set('Content-Type', 'application/json');
@@ -159,7 +163,7 @@ export class ApiClient {
       if (typeof ref !== 'string' || !/^application\/json(?:\s*;|$)/i.test(response.headers.get('Content-Type') ?? '')) throw new ApiError('protocol');
       let parsed: unknown;
       try { parsed = JSON.parse(raw); } catch { throw new ApiError('protocol'); }
-      try { safeNumbers(parsed); } catch { throw new ApiError('protocol'); }
+      try { safeWireValues(parsed); } catch { throw new ApiError('protocol'); }
       if (!validates(ref, parsed)) throw new ApiError('protocol');
       if (!response.ok) {
         const code = (parsed as { code?: string }).code ?? '';

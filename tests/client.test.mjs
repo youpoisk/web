@@ -43,6 +43,7 @@ test('guest probes omit auth; no hidden guest fallback for private/recovering re
   await assert.rejects(recovering.request('getVideoCard', { path: { id } }), fail('authentication_unavailable'));
   await assert.rejects(client(async () => json(user), () => ({ ...signed, accessToken: 'bad\ntoken' })).request('getMe', {}), fail('authentication_unavailable'));
   await assert.rejects(c.request('missing', {}), fail('invalid_input'));
+  await assert.rejects(c.request('__proto__', {}), fail('invalid_input'));
   await assert.rejects(c.request('loginAccount', { body: {} }), fail('invalid_input'));
 });
 
@@ -98,6 +99,20 @@ test('invalid success/body/schema/numbers/UTF8 fail closed', async () => {
   for (const response of responses) await assert.rejects(client(async () => response).request('getMe', {}), fail('protocol'));
   await assert.rejects(client(async () => new Response(null, { status: 204 })).request('getMe', {}), fail('protocol'));
   await assert.rejects(client(async () => json({ kind: 'video_state', target_id: id, state: { revision: 2 ** 60, added: false, later: false, rating: null }, change_seq: null })).request('getVideoState', { path: { id } }), fail('protocol'));
+});
+
+test('escaped Unicode must contain scalar values in both keys and values', async () => {
+  for (const name of ['\uD800', '\uDC00']) {
+    await assert.rejects(client(async () => json({ ...user, name })).request('getMe', {}), fail('protocol'));
+    await assert.rejects(client(async () => json(user)).request('addObservedVideo', {
+      header: { 'Idempotency-Key': id }, body: { youtube_video_id: 'AbCdEf_12-3', expected_revision: 0, title: name },
+    }), fail('invalid_input'));
+  }
+  const malformedKeys = { code: 'invalid', message: '', field_errors: { ['\uD800']: 'invalid' }, request_id: 'id' };
+  await assert.rejects(client(async () => json(malformedKeys, 422)).request('getMe', {}), fail('protocol'));
+  for (const name of ['😀', '\uFFFD']) {
+    assert.equal((await client(async () => json({ ...user, name })).request('getMe', {})).name, name);
+  }
 });
 
 test('late success or failure from another account is discarded', async () => {
