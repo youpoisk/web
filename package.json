@@ -10,8 +10,10 @@
     "test:extension": "node --test extension/tests/*.test.mjs",
     "api:import": "node scripts/contract.mjs import",
     "api:generate": "node scripts/contract.mjs generate",
-    "api:check": "node scripts/contract.mjs check",
-    "api:check-source": "node scripts/contract.mjs check-source"
+    "api:check": "node scripts/contract.mjs check && node scripts/validators.mjs check",
+    "api:check-source": "node scripts/contract.mjs check-source",
+    "api:validators": "node scripts/validators.mjs generate",
+    "test:api": "node --disallow-code-generation-from-strings --test tests/*.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -22,6 +24,9 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.1.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "esbuild": "0.28.2",
     "openapi-typescript": "7.13.0",
     "typescript": "^5.9.0",
     "vite": "^7.2.0"
