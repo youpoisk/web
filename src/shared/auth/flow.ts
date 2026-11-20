@@ -66,11 +66,21 @@ export class PendingFlow {
         !['restore', 'login', 'register'].includes(value.intent) || !route(value.returnHash) || !Number.isSafeInteger(value.created) || value.created < 0) throw new FlowError('protocol');
     return value;
   }
-  #matches(value: Pending): void {
+  #status(value: Pending): 'pending' | 'expired' | 'stale' {
     const now = this.#clock();
-    if (!Number.isSafeInteger(now) || now < value.created || now - value.created > 15 * 60 * 1000) throw new FlowError('expired');
+    if (!Number.isSafeInteger(now) || now < value.created || now - value.created > 15 * 60 * 1000) return 'expired';
     const current = this.#identity();
-    if (current.epoch !== value.epoch || current.owner !== value.owner) throw new FlowError('stale');
+    return current.epoch !== value.epoch || current.owner !== value.owner ? 'stale' : 'pending';
+  }
+  #matches(value: Pending): void {
+    const status = this.#status(value);
+    if (status !== 'pending') throw new FlowError(status);
+  }
+  pendingSummary(): (Pick<Pending, 'state' | 'intent' | 'returnHash' | 'owner' | 'epoch' | 'created'> & { status: 'pending' | 'expired' | 'stale' }) | null {
+    const pending = this.#read();
+    if (!pending) return null;
+    return { state: pending.state, intent: pending.intent, returnHash: pending.returnHash,
+      owner: pending.owner, epoch: pending.epoch, created: pending.created, status: this.#status(pending) };
   }
   async begin(intent: Intent, returnHash: string) {
     if (!['restore', 'login', 'register'].includes(intent) || !route(returnHash)) throw new FlowError('protocol');

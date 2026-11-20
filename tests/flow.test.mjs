@@ -84,3 +84,17 @@ test('asynchronous digest cannot overwrite concurrent/new-account pending state'
  let resume;const wait=new Promise(resolve=>{resume=resolve});const other=fixture({crypto:{...crypto,subtle:{async digest(...args){await wait;return globalThis.crypto.subtle.digest(...args)}}}});
  const pending=other.flow.begin('restore','#/');other.env.scope={owner,epoch:'00000000-0000-4000-8000-000000000003'};resume();await assert.rejects(pending,failure('stale'));assert.equal(other.data.size,0);
 });
+
+test('ordinary reload can inspect and explicitly cancel an interrupted flow without reading private proof',async()=>{
+ const f=fixture();assert.equal(f.flow.pendingSummary(),null);
+ const params=await f.flow.begin('restore','#/draft');
+ const reloaded=new PendingFlow(f.config);
+ assert.equal(reloaded.capture(callback,()=>assert.fail()),null);
+ const summary=reloaded.pendingSummary();
+ assert.equal(summary.state,params.get('state'));assert.equal(summary.status,'pending');
+ assert.equal(summary.returnHash,'#/draft');assert.equal(Object.hasOwn(summary,'verifier'),false);assert.equal(Object.hasOwn(summary,'challenge'),false);
+ f.env.scope={owner:null,epoch};assert.equal(reloaded.pendingSummary().status,'stale');
+ f.env.now+=900001;assert.equal(reloaded.pendingSummary().status,'expired');
+ const cancelled=reloaded.cancel(summary.state);assert.equal(cancelled.returnHash,'#/draft');
+ const next=await reloaded.begin('login',cancelled.returnHash);assert.notEqual(next.get('state'),summary.state);
+});
