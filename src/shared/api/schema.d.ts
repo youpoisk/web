@@ -80,6 +80,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/browser/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Identify a live first-party cookie family without granting access
+         * @description Exact native API Origin, no Authorization and exactly one HttpOnly refresh cookie required. Empty JSON object only, no query. Full token hash/live web user-session/expiry checked; an owned consumed parent can identify its family but never authorizes access or changes refresh-reuse rules. Response contains only session UUID, no user profile/access/refresh/Set-Cookie. Used to scope durable pending refresh attempt after account changes. Separate1800/min/directIP and64inflight admission; unknown/expired/revoked/extension cookie401, storage503. Browser coordinator/native page remains mandatory and is not implemented by this operation.
+         */
+        post: operations["identifyBrowserSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/login": {
         parameters: {
             query?: never;
@@ -425,6 +445,10 @@ export interface components {
             state: components["schemas"]["BrowserNonce"];
         };
         BrowserNonce: string;
+        BrowserSessionHint: {
+            /** Format: uuid */
+            session_id: string;
+        };
         CardChannel: {
             /** @description Separate video provider proof. Verified channel alone is insufficient. Future context writes recheck proof server-side. */
             association_verified: boolean;
@@ -843,6 +867,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebCredentials"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    identifyBrowserSession: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Must equal configured API_PUBLIC_ORIGIN; first-party API page only. */
+                Origin: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Identify a live first-party cookie family without granting access */
+            200: {
+                headers: {
+                    /** @description Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer. */
+                    "Set-Cookie"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrowserSessionHint"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

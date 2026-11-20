@@ -23,9 +23,17 @@ test('business client rejects valid grant requests before fetch for every accoun
     let calls = 0;
     const api = new ApiClient({ baseUrl: 'https://api.example', session: () => scope,
       fetch: async () => { calls++; throw new Error('Grant must not reach fetch'); } });
-    for (const [operation, body, origin] of [['issueBrowserCode', issue, 'http://127.0.0.1:18080'], ['exchangeBrowserCode', exchange, 'http://127.0.0.1:5173']]) {
+    for (const [operation, body, origin] of [['identifyBrowserSession', {}, 'http://127.0.0.1:18080'], ['issueBrowserCode', issue, 'http://127.0.0.1:18080'], ['exchangeBrowserCode', exchange, 'http://127.0.0.1:5173']]) {
       await assert.rejects(api.request(operation, { body, header: { Origin: origin } }), error => error instanceof ApiError && error.kind === 'invalid_input');
     }
     assert.equal(calls, 0);
   }
+});
+
+test('cookie family hint DTO cannot disclose authentication or user profile',()=>{
+ assert.equal(schemas.identifyBrowserSession_request({}),true);
+ assert.equal(schemas.identifyBrowserSession_request({refresh_token:'secret'}),false);
+ const hint={session_id:'00000000-0000-4000-8000-000000000001'};
+ assert.equal(schemas.schema_BrowserSessionHint(hint),true);
+ for(const extra of [{access_token:'secret'},{refresh_token:'secret'},{user:{id:'private'}}])assert.equal(schemas.schema_BrowserSessionHint({...hint,...extra}),false);
 });

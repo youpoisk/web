@@ -3,7 +3,7 @@
 Полный исходный scope: frontend-integration-plan.md и backend todo.md. Этот журнал фиксирует выполнение, не заменяет критерии MVP.
 
 - [x] WEB-001a: зеркало реально реализованного OpenAPI, provenance, генерируемые типы, проверка drift в build/CI и сопоставление текущих экранов с API (docs/api-contract.md).
-- [ ] WEB-001: полный контракт всех MVP-модулей и таблица полей/ошибок каждого экрана; существующие17 операций недостаточны для закрытия задачи.
+- [ ] WEB-001: полный контракт всех MVP-модулей и таблица полей/ошибок каждого экрана; существующие22 операции недостаточны для закрытия задачи.
 - [ ] WEB-003: типизированный fetch-клиент, timeout/abort, безопасная обработка ошибок и повторов, account isolation, unit coverage.
 - [ ] WEB-004/005: first-party auth broker, recoverable session и реальные браузерные проверки third-party cookies.
 - [ ] WEB-002/006+: разделение монолита и последовательное подключение экранов; остальные пункты исходного плана остаются открытыми.
@@ -20,3 +20,5 @@ DEC-WEB-005 — Вопрос review: как совместить Unicode email �
 DEC-WEB-006 — Вопрос: должен ли базовый fetch-клиент самостоятельно запускать cross-site refresh? Выбор: нет; business transport получает memory session provider и возвращает401/503 без неявной авторизации или повторной записи. Cookie-changing auth operations исключены, отдельный broker/coordinator обеспечит прозрачное recovery и один повтор исходной команды. Причина: непротестированная third-party cookie схема не должна создавать reuse/потерю очереди, а смена owner/epoch должна отбрасывать поздние ответы.
 DEC-WEB-007 — Вопрос review: достаточно ли strict UTF8 декодирования ответа? Выбор: дополнительно проверять scalar Unicode строк и ключей JSON, поскольку escape последовательности lone surrogates проходят JSON.parse и не являются корректными Unicode значениями. Причина: клиент не должен принимать или ставить в очередь payload, который строгий серверный decoder отвергнет. Валидные emoji/символ замены не запрещены.
 DEC-WEB-008 — Вопрос: включать ли новые browser grant endpoints в обычный типизированный business-клиент? Выбор: генерировать общий контракт/валидаторы, но исключить Issue/Exchange из genericApiClient и в типах, и доfetch. Отдельный authcoordinator должен проверять pendingstate/accountgeneration и не принимать позднюю авторизацию другого аккаунта. Причина: wireтипы не заменяют безопасность browserflow; бизнес-запросы не должны смешивать bearer/cookie/codeканалы. Type-onlynegativechecks входят в build.
+
+DEC-WEB-009 — Вопрос: может ли обычный fetch-клиент выполнять nativecookiehint? Выбор: нет, generatedDTO присутствует дляauthcoordinator, но genericAPIClient исключает identifyBrowserSession втипах/доfetch при любомaccountstate. Причина: егоcredentials:omit/memoryBearer канал не равенHttpOnlynativecookie; смешивание нарушитrecoverableflow. Referrerpolicy=no-referrer установлендоresource links длябудущегоcodecallback.

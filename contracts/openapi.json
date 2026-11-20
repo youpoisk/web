@@ -3,7 +3,7 @@
   "info": {
     "title": "YouPoisk current runtime API",
     "version": "0.1.0",
-    "description": "Partial implemented MVP contract:19business operations plus2health operations, not the full planned product. Standard JSON bodies8KiB, exact origins, access in memory, credentials/secrets never in URLs/logs/YouTube DOM. Database schema remains Go Code First; this external IDL is checked against actual Go route registrations and DTO responses. Int64 clients must reject unsafe numeric values rather than silently round. Mail and browser-broker protocols are not advertised as implemented."
+    "description": "Partial implemented MVP contract:20business operations plus2health operations, not the full planned product. Standard JSON bodies8KiB, exact origins, access in memory, credentials/secrets never in URLs/logs/YouTube DOM. Database schema remains Go Code First; this external IDL is checked against actual Go route registrations and DTO responses. Int64 clients must reject unsafe numeric values rather than silently round. Mail and browser-broker protocols are not advertised as implemented."
   },
   "servers": [
     {
@@ -2076,6 +2076,123 @@
           }
         }
       }
+    },
+    "/v1/auth/browser/session": {
+      "post": {
+        "operationId": "identifyBrowserSession",
+        "summary": "Identify a live first-party cookie family without granting access",
+        "tags": [
+          "Accounts"
+        ],
+        "description": "Exact native API Origin, no Authorization and exactly one HttpOnly refresh cookie required. Empty JSON object only, no query. Full token hash/live web user-session/expiry checked; an owned consumed parent can identify its family but never authorizes access or changes refresh-reuse rules. Response contains only session UUID, no user profile/access/refresh/Set-Cookie. Used to scope durable pending refresh attempt after account changes. Separate1800/min/directIP and64inflight admission; unknown/expired/revoked/extension cookie401, storage503. Browser coordinator/native page remains mandatory and is not implemented by this operation.",
+        "security": [
+          {
+            "WebRefreshCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Must equal configured API_PUBLIC_ORIGIN; first-party API page only."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Identify a live first-party cookie family without granting access",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Set-Cookie": {
+                "description": "Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserSessionHint"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3176,6 +3293,19 @@
           "state",
           "redirect_uri",
           "expires_at"
+        ],
+        "additionalProperties": false
+      },
+      "BrowserSessionHint": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "session_id"
         ],
         "additionalProperties": false
       }

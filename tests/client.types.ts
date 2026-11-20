@@ -10,5 +10,7 @@ export async function businessBoundary(api: ApiClient) {
   api.request('issueBrowserCode', { body: { redirect_uri: 'https://web.example/', state: 'A'.repeat(43), code_challenge: 'A'.repeat(43), code_challenge_method: 'S256' }, header: { Origin: 'https://api.example' } });
   // @ts-expect-error Exchanging a code requires pending flow/account checks outside this client.
   api.request('exchangeBrowserCode', { body: { authorization_code: 'A'.repeat(43), code_verifier: 'A'.repeat(43), redirect_uri: 'https://web.example/', state: 'A'.repeat(43) }, header: { Origin: 'https://web.example' } });
+  // @ts-expect-error Native HttpOnly-cookie hint belongs to the API-origin coordinator.
+  api.request('identifyBrowserSession', {body:{},header:{Origin:'https://api.example'}});
   return name;
 }

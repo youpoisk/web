@@ -1,7 +1,7 @@
 import type { operations } from './schema';
 import * as schemas from './validators.js';
 
-type Operation = Exclude<keyof operations, 'registerAccount' | 'loginAccount' | 'refreshSession' | 'issueBrowserCode' | 'exchangeBrowserCode'>;
+type Operation = Exclude<keyof operations, 'registerAccount' | 'loginAccount' | 'refreshSession' | 'issueBrowserCode' | 'exchangeBrowserCode' | 'identifyBrowserSession'>;
 type Part<T, N extends string> = [NonNullable<T>] extends [never] ? { [K in N]?: never }
   : undefined extends T ? { [K in N]?: NonNullable<T> } : { [K in N]: T };
 type Body<K extends Operation> = operations[K] extends { requestBody: { content: { 'application/json': infer B } } }
@@ -92,7 +92,7 @@ export class ApiClient {
   async request<K extends Operation>(operation: K, options: RequestOptions<K>): Promise<ResponseBody<K>> {
     if (!Object.hasOwn(schemas.contract, operation)) throw new ApiError('invalid_input');
     const entry = schemas.contract[operation];
-    if (!entry || ['registerAccount', 'loginAccount', 'refreshSession', 'issueBrowserCode', 'exchangeBrowserCode'].includes(operation)) throw new ApiError('invalid_input');
+    if (!entry || ['registerAccount', 'loginAccount', 'refreshSession', 'issueBrowserCode', 'exchangeBrowserCode', 'identifyBrowserSession'].includes(operation)) throw new ApiError('invalid_input');
     const scope = this.#session();
     if (entry.auth !== 'none' && (scope.state === 'recovering' || (entry.auth === 'required' && scope.state === 'guest'))) {
       throw new ApiError('authentication_unavailable');
