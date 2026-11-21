@@ -428,6 +428,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search the public catalog
+         * @description Public catalog search and listing; Authorization is not read and cards carry no my_state. q matches the title or current channel name (case-insensitive substring, 1..100 chars after trim, no control characters; %, _ and \ are literal). tag filters by normalized hashtag, repeatable up to 10, match=any (default) or all. sort=new (default: created_at desc, id desc), top (half-up average desc, then votes desc, id desc) or popular (votes desc, then average desc, id desc); unrated videos follow rated ones in top/popular. Ratings count only active users, as on the card. Keyset cursor pagination: pass next_cursor as after with the same sort (a cursor of another sort is 422); limit 1..100 (default 30). Unknown/repeated/malformed query keys 422 invalid_search_query; invalid tag/text/cursor 422 invalid_fields. Shares the bounded card-read capacity (429 busy, Retry-After 1).
+         */
+        get: operations["searchVideos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/videos/{id}": {
         parameters: {
             query?: never;
@@ -742,6 +762,11 @@ export interface components {
             later?: boolean;
             rating?: number | null;
         } | unknown | unknown | unknown;
+        /** @description One public search page; next_cursor is present only when more results follow. */
+        VideoSearchPage: {
+            items: components["schemas"]["VideoCard"][];
+            next_cursor?: string;
+        };
         VideoState: {
             added: boolean;
             later: boolean;
@@ -1951,6 +1976,67 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    searchVideos: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor, no duplicate keys. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+                /** @description Whether a video needs any or all of the tags. */
+                match?: "any" | "all";
+                /** @description Text filter; at most 100 characters after trimming. */
+                q?: string;
+                /** @description Transparent order, see the operation description. */
+                sort?: "new" | "top" | "popular";
+                /** @description Hashtag filter, repeat the key per tag; a leading # is accepted. */
+                tag?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Search the public catalog */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoSearchPage"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

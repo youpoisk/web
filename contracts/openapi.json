@@ -1526,6 +1526,166 @@
         }
       }
     },
+    "/v1/videos": {
+      "get": {
+        "operationId": "searchVideos",
+        "summary": "Search the public catalog",
+        "description": "Public catalog search and listing; Authorization is not read and cards carry no my_state. q matches the title or current channel name (case-insensitive substring, 1..100 chars after trim, no control characters; %, _ and \\ are literal). tag filters by normalized hashtag, repeatable up to 10, match=any (default) or all. sort=new (default: created_at desc, id desc), top (half-up average desc, then votes desc, id desc) or popular (votes desc, then average desc, id desc); unrated videos follow rated ones in top/popular. Ratings count only active users, as on the card. Keyset cursor pagination: pass next_cursor as after with the same sort (a cursor of another sort is 422); limit 1..100 (default 30). Unknown/repeated/malformed query keys 422 invalid_search_query; invalid tag/text/cursor 422 invalid_fields. Shares the bounded card-read capacity (429 busy, Retry-After 1).",
+        "tags": [
+          "Catalog"
+        ],
+        "security": [
+          {}
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string",
+              "maxLength": 400
+            },
+            "description": "Text filter; at most 100 characters after trimming."
+          },
+          {
+            "in": "query",
+            "name": "tag",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 101
+              }
+            },
+            "description": "Hashtag filter, repeat the key per tag; a leading # is accepted."
+          },
+          {
+            "in": "query",
+            "name": "match",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "any",
+                "all"
+              ],
+              "default": "any"
+            },
+            "description": "Whether a video needs any or all of the tags."
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "new",
+                "top",
+                "popular"
+              ],
+              "default": "new"
+            },
+            "description": "Transparent order, see the operation description."
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Opaque previous next_cursor, no duplicate keys."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": "Bounded page size; unknown/repeated/malformed query keys rejected."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search the public catalog",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoSearchPage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/videos/{id}": {
       "get": {
         "operationId": "getVideoCard",
@@ -3747,6 +3907,28 @@
           "items"
         ],
         "additionalProperties": false
+      },
+      "VideoSearchPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/VideoCard"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false,
+        "description": "One public search page; next_cursor is present only when more results follow."
       }
     },
     "parameters": {
