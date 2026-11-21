@@ -15,9 +15,10 @@ export type VideoState = components['schemas']['VideoState'];
 const operations = { library: 'listLibrary', watchlist: 'listWatchlist', ratings: 'listRatings' } as const;
 const palette = ['forest', 'city', 'mountain', 'music', 'tech', 'art'];
 
-/** Maps a hash route to the viewer's own server list, if any. */
+/** Maps a hash route to the viewer's own server list, if any. The site has no
+ * library page (customer decision 2026-11-21); 'library' stays an API list kind. */
 export function routeList(route: string): ListKind | null {
-  return route === '/library' ? 'library' : route === '/watchlist' ? 'watchlist' : route === '/ratings' ? 'ratings' : null;
+  return route === '/watchlist' ? 'watchlist' : route === '/ratings' ? 'ratings' : null;
 }
 
 /** Loads one page of the viewer's own list (live Bearer via the client scope). */

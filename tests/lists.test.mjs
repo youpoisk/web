@@ -11,7 +11,7 @@ const item = (over = {}) => ({
 });
 
 test('routes map to own server lists only', () => {
-  assert.equal(routeList('/library'), 'library');
+  assert.equal(routeList('/library'), null);
   assert.equal(routeList('/watchlist'), 'watchlist');
   assert.equal(routeList('/ratings'), 'ratings');
   assert.equal(routeList('/'), null);
