@@ -144,3 +144,10 @@ test('abort, timeout and network failures stay distinct', async () => {
   await assert.rejects(client(pending, undefined, 2).request('getMe', {}), fail('timeout'));
   await assert.rejects(client(async () => { throw new TypeError('private body must not appear'); }).request('getMe', {}), exception => fail('network')(exception) && !exception.message.includes('private'));
 });
+
+test('default transport calls the global fetch unbound, as browsers require', async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = function () { if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation'); return Promise.resolve(json(user)); };
+  try { assert.deepEqual(await new ApiClient({ baseUrl: 'https://api.example.invalid', session: () => signed }).request('getMe', {}), user); }
+  finally { globalThis.fetch = original; }
+});

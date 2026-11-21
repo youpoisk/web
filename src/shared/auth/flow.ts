@@ -101,7 +101,7 @@ export class PendingFlow {
     // Recheck after asynchronous digest: another begin may have completed.
     if (this.#read()) throw new FlowError('pending');
     try { this.#storage.setItem(this.#key, JSON.stringify(value)); } catch { throw new FlowError('storage'); }
-    return new URLSearchParams({ redirect_uri: value.callback, state, code_challenge: challenge, code_challenge_method: 'S256' });
+    return new URLSearchParams({ redirect_uri: value.callback, state, code_challenge: challenge, code_challenge_method: 'S256', intent });
   }
   capture(rawURL: string, replaceURL: (clean: string) => void): { code: string; pending: Pending } | null {
     let url: URL;
@@ -123,6 +123,26 @@ export class PendingFlow {
     replaceURL(this.#callback + pending.returnHash);
     return { code, pending };
   }
+  /** Broker refusal (`error`+`state`, no code). Scrubs the URL first; the
+   * caller must cancel the matched flow. Never carries credentials. */
+  captureDenied(rawURL: string, replaceURL: (clean: string) => void): { error: 'login_required' | 'access_denied'; pending: Pending } | null {
+    let url: URL;
+    try { url = new URL(rawURL); } catch { throw new FlowError('protocol'); }
+    const callback = new URL(this.#callback);
+    if (url.origin !== callback.origin) throw new FlowError('protocol');
+    if (!url.searchParams.has('error')) return null;
+    replaceURL(url.origin + url.pathname);
+    const error = url.searchParams.get('error');
+    const state = url.searchParams.get('state');
+    if (url.pathname !== callback.pathname || url.username || url.password || url.hash ||
+        [...url.searchParams.keys()].some(key => key !== 'error' && key !== 'state') ||
+        url.searchParams.getAll('error').length !== 1 || url.searchParams.getAll('state').length !== 1 ||
+        (error !== 'login_required' && error !== 'access_denied') || !schema_BrowserNonce(state)) throw new FlowError('protocol');
+    const pending = this.#read();
+    if (!pending || pending.state !== state) throw new FlowError('protocol');
+    replaceURL(this.#callback + pending.returnHash);
+    return { error, pending };
+  }
   acknowledge(state: string): void {
     const pending = this.#read();
     if (!pending || pending.state !== state) throw new FlowError('stale');
@@ -137,4 +157,10 @@ export class PendingFlow {
     try { this.#storage.removeItem(this.#key); } catch { throw new FlowError('storage'); }
     return { intent: pending.intent, returnHash: pending.returnHash, owner: pending.owner, epoch: pending.epoch };
   }
+}
+
+/** Top-level navigation target: the first-party broker page on the API origin. */
+export function authorizationURL(apiOrigin: string, params: URLSearchParams): string {
+  endpoint(apiOrigin, true);
+  return `${apiOrigin}/auth/authorize?${params}`;
 }

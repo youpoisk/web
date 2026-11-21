@@ -50,7 +50,8 @@ export class CodeExchange {
   readonly #timeout: number;
   #attempted: string | null = null;
   constructor(config: { flow: PendingFlow; fetch?: typeof fetch; timeoutMs?: number }) {
-    this.#flow = config.flow; this.#fetch = config.fetch ?? globalThis.fetch;
+    this.#flow = config.flow; // Never store the bare global: calling it as a method throws Illegal invocation in browsers.
+    this.#fetch = config.fetch ?? ((input, init) => globalThis.fetch(input, init));
     this.#timeout = config.timeoutMs ?? 15000;
     if (!Number.isSafeInteger(this.#timeout) || this.#timeout < 1 || this.#timeout > 120000) throw new ApiError('configuration');
   }

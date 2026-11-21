@@ -72,3 +72,8 @@ test('abort, timeout and network are distinct and uncertain attempts keep proof 
  const streamAbort=new AbortController();const bodyAbort=await fixture(async()=>{streamAbort.abort();return json(credentials)});await assert.rejects(bodyAbort.run(streamAbort.signal),failure('aborted'));
  const state=network.flow.pendingSummary().state;network.flow.cancel(state);assert.ok(await network.flow.begin('restore','#/watchlist'));
 });
+test('default transport calls the global fetch unbound, as browsers require',async()=>{
+ const original=globalThis.fetch;
+ globalThis.fetch=function(...args){if(this!==undefined&&this!==globalThis)throw new TypeError('Illegal invocation');return Promise.resolve(json(credentials))};
+ try{const f=await fixture(undefined);const result=await f.run();assert.deepEqual(result.credentials,credentials);}finally{globalThis.fetch=original}
+});

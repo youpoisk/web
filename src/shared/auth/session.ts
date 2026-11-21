@@ -1,4 +1,4 @@
-import { PendingFlow, FlowError } from './flow.ts';
+import { PendingFlow, FlowError, authorizationURL } from './flow.ts';
 import { CodeExchange } from './exchange.ts';
 import type { ExchangeResult } from './exchange.ts';
 import { ApiError } from '../api/client.ts';
@@ -19,12 +19,16 @@ export class BrowserSession {
   readonly #key: string;
   readonly #flow: PendingFlow;
   readonly #exchange: CodeExchange;
+  readonly #api: string;
+  readonly #fetch: typeof fetch;
+  readonly #timeout: number;
   #scope: Scope = { owner: null, epoch: '' };
   #credentials: components['schemas']['WebCredentials'] | null = null;
   #blocked = false;
   #reference: string | null = null;
   constructor(config: { storage: Storage; crypto: Crypto; clock: () => number; apiOrigin: string; callback: string; clearPrivate: () => void; fetch?: typeof fetch; timeoutMs?: number }) {
     this.#storage = config.storage; this.#crypto = config.crypto; this.#clearPrivate = config.clearPrivate;
+    this.#api = config.apiOrigin; this.#fetch = config.fetch ?? ((input, init) => globalThis.fetch(input, init)); this.#timeout = config.timeoutMs ?? 10000;
     this.#flow = new PendingFlow({ ...config, scope: () => this.#identity() });
     this.#exchange = new CodeExchange({ flow: this.#flow, fetch: config.fetch, timeoutMs: config.timeoutMs });
     this.#key = `yp.auth.scope.v1:${config.apiOrigin}:${encodeURIComponent(config.callback)}`;
@@ -89,8 +93,27 @@ export class BrowserSession {
     this.#clear();
     return params;
   }
-  async completeCallback(rawURL: string, replaceURL: (clean: string) => void, signal?: AbortSignal): Promise<{ returnHash: string } | null> {
+  /** Starts a flow and returns the broker page URL for top-level navigation. */
+  async authorize(intent: 'restore' | 'login' | 'register', returnHash: string): Promise<string> {
+    return authorizationURL(this.#api, await this.start(intent, returnHash));
+  }
+  async completeCallback(rawURL: string, replaceURL: (clean: string) => void, signal?: AbortSignal): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' } | null> {
     this.#identity();
+    const denied = this.#flow.captureDenied(rawURL, replaceURL);
+    if (denied) {
+      const live = this.#flow.pendingSummary()!.status === 'pending';
+      this.#flow.cancel(denied.pending.state);
+      // Only a current restore that found no live first-party session demotes
+      // the remembered owner to guest. A stale/expired flow changes nothing.
+      if (live && denied.error === 'login_required' && denied.pending.intent === 'restore') {
+        const next = { owner: null, epoch: this.#epoch() };
+        this.#credentials = null;
+        this.#clear();
+        this.#save(next);
+        this.#scope = next;
+      }
+      return { returnHash: denied.pending.returnHash, outcome: denied.error };
+    }
     const result = await this.#exchange.exchangeCallback(rawURL, replaceURL, signal);
     if (!result) return null;
     this.#current(result);
@@ -109,6 +132,21 @@ export class BrowserSession {
   }
   markRecovering(): void {
     this.#identity(); this.#credentials = null; this.#clear();
+  }
+  /** Revokes the current API session with its bearer, then clears local state.
+   * Network/401/503 outcomes still forget locally; a surviving cookie family
+   * is either already revoked or replaced by the next login. */
+  async logout(): Promise<'revoked' | 'local'> {
+    const token = this.#credentials?.access_token ?? null;
+    let result: 'revoked' | 'local' = 'local';
+    if (token) {
+      try {
+        const response = await this.#fetch(`${this.#api}/v1/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(this.#timeout) });
+        if (response.status === 204) result = 'revoked';
+      } catch { /* forget locally regardless */ }
+    }
+    this.forgetLocal();
+    return result;
   }
   /** Local privacy boundary only. Does not revoke an API session/cookie. */
   forgetLocal(): void {

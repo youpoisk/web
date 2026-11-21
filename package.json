@@ -13,7 +13,7 @@
     "api:check": "node scripts/contract.mjs check && node scripts/validators.mjs check",
     "api:check-source": "node scripts/contract.mjs check-source",
     "api:validators": "node scripts/validators.mjs generate",
-    "test:api": "node --disallow-code-generation-from-strings --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-include=src/shared/api/client.ts --test-coverage-include=src/shared/auth/flow.ts --test-coverage-include=src/shared/auth/exchange.ts --test-coverage-include=src/shared/auth/session.ts --test tests/*.test.mjs",
+    "test:api": "node --disallow-code-generation-from-strings --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-include=src/shared/api/client.ts --test-coverage-include=src/shared/auth/flow.ts --test-coverage-include=src/shared/auth/exchange.ts --test-coverage-include=src/shared/auth/session.ts --test-coverage-include=src/shared/auth/runtime.ts --test tests/*.test.mjs",
     "typecheck:api": "tsc -p tsconfig.type-tests.json",
     "demo:generate": "node scripts/demo-catalog.mjs",
     "demo:check": "node scripts/demo-catalog.mjs --check"

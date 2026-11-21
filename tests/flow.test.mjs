@@ -98,3 +98,21 @@ test('ordinary reload can inspect and explicitly cancel an interrupted flow with
  const cancelled=reloaded.cancel(summary.state);assert.equal(cancelled.returnHash,'#/draft');
  const next=await reloaded.begin('login',cancelled.returnHash);assert.notEqual(next.get('state'),summary.state);
 });
+
+test('broker refusal is scrubbed, matched to the pending flow and never carries a code',async()=>{
+ const{flow,data}=fixture();const params=await flow.begin('restore','#/draft');const state=params.get('state');
+ assert.equal(params.get('intent'),'restore');
+ assert.equal(flow.captureDenied(callback+'?code=x&state='+state,()=>assert.fail()),null);
+ assert.throws(()=>flow.captureDenied('bad',()=>assert.fail()),failure('protocol'));
+ assert.throws(()=>flow.captureDenied('https://evil.example/?error=access_denied&state='+state,()=>assert.fail()),failure('protocol'));
+ for(const raw of [callback+'?error=access_denied&state='+state+'&code='+code,callback+'?error=access_denied',callback+'?error=other&state='+state,callback+'?error=access_denied&error=login_required&state='+state,callback+'?error=access_denied&state=bad','https://web.example/wrong/?error=access_denied&state='+state,callback+'?error=access_denied&state='+state+'#x',callback+'?error=access_denied&state='+'B'.repeat(42)+'A']){
+  const cleaned=[];assert.throws(()=>flow.captureDenied(raw,v=>cleaned.push(v)),failure('protocol'));assert.equal(cleaned.length,1);assert.equal(cleaned[0].includes('?'),false);assert.equal(data.size,1);
+ }
+ for(const error of ['login_required','access_denied']){const cleaned=[];const result=flow.captureDenied(callback+'?'+new URLSearchParams({error,state}),v=>cleaned.push(v));assert.equal(result.error,error);assert.equal(result.pending.state,state);assert.deepEqual(cleaned,[callback,callback+'#/draft']);}
+ const empty=fixture();assert.throws(()=>empty.flow.captureDenied(callback+'?error=access_denied&state='+state,()=>{}),failure('protocol'));
+});
+test('authorization URL targets the API-origin broker page only',async()=>{
+ const{authorizationURL}=await import('../src/shared/auth/flow.ts');
+ assert.equal(authorizationURL('https://api.example',new URLSearchParams({a:'1'})),'https://api.example/auth/authorize?a=1');
+ assert.throws(()=>authorizationURL('https://api.example/x',new URLSearchParams()),failure('configuration'));
+});

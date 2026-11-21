@@ -85,7 +85,9 @@ export class ApiClient {
   readonly #timeout: number;
   constructor(config: { baseUrl: string; session: () => SessionScope; fetch?: typeof fetch; timeoutMs?: number }) {
     this.#origin = origin(config.baseUrl);
-    this.#session = config.session; this.#fetch = config.fetch ?? globalThis.fetch;
+    this.#session = config.session;
+    // Never store the bare global: calling it as a method throws Illegal invocation in browsers.
+    this.#fetch = config.fetch ?? ((input, init) => globalThis.fetch(input, init));
     this.#timeout = config.timeoutMs ?? 15000;
     if (!Number.isSafeInteger(this.#timeout) || this.#timeout < 1 || this.#timeout > 120000) throw new ApiError('configuration');
   }

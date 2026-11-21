@@ -78,3 +78,27 @@ test('another coordinator or external scope replacement cannot leave old access 
  const stale=fixture();await stale.session.completeCallback(await start(stale.session),()=>{});const active=stale.make();active.forgetLocal();stale.env.fetch=async()=>json({...credentials,user:{...credentials.user,id:'00000000-0000-4000-8000-000000000003'}});await active.completeCallback(await start(active),()=>{});const reference=stale.data.get(stale.scopeKey());
  assert.throws(()=>stale.session.forgetLocal(),fail('stale_session'));assert.equal(stale.data.get(stale.scopeKey()),reference);assert.equal(active.businessScope().state,'authenticated');assert.equal(stale.session.currentUser(),null);
 });
+test('authorize returns the broker URL with intent; refusals cancel the flow and only a live restore demotes to guest',async()=>{
+ const f=fixture();const target=await f.session.authorize('login','#/feed');const url=new URL(target);
+ assert.equal(url.origin+url.pathname,apiOrigin+'/auth/authorize');assert.equal(url.searchParams.get('intent'),'login');assert.equal(url.searchParams.get('redirect_uri'),callback);
+ const denied=callback+'?'+new URLSearchParams({error:'access_denied',state:url.searchParams.get('state')});
+ assert.deepEqual(await f.session.completeCallback(denied,()=>{}),{returnHash:'#/feed',outcome:'access_denied'});assert.equal(f.session.pendingSummary(),null);assert.deepEqual(f.session.businessScope(),{state:'guest'});
+ await f.session.completeCallback(await start(f.session),()=>{});const signed=f.session.businessScope();
+ const remembered=f.make();const restore=new URL(await remembered.authorize('restore','#/ratings'));
+ assert.deepEqual(await remembered.completeCallback(callback+'?'+new URLSearchParams({error:'access_denied',state:restore.searchParams.get('state')}),()=>{}),{returnHash:'#/ratings',outcome:'access_denied'});
+ assert.equal(remembered.businessScope().state,'recovering');
+ const again=new URL(await remembered.authorize('restore','#/ratings'));
+ assert.deepEqual(await remembered.completeCallback(callback+'?'+new URLSearchParams({error:'login_required',state:again.searchParams.get('state')}),()=>{}),{returnHash:'#/ratings',outcome:'login_required'});
+ assert.deepEqual(remembered.businessScope(),{state:'guest'});assert.notEqual(JSON.parse(f.data.get(f.scopeKey())).epoch,signed.epoch);
+ const expired=fixture();await expired.session.completeCallback(await start(expired.session),()=>{});const late=expired.make();const old=new URL(await late.authorize('restore','#/'));expired.env.now+=16*60*1000;
+ assert.equal((await late.completeCallback(callback+'?'+new URLSearchParams({error:'login_required',state:old.searchParams.get('state')}),()=>{})).outcome,'login_required');assert.equal(late.businessScope().state,'recovering');
+});
+test('logout revokes with the bearer then forgets locally even when the server is unreachable',async()=>{
+ const f=fixture();await f.session.completeCallback(await start(f.session),()=>{});const seen=[];
+ f.env.fetch=async(input,init)=>{seen.push([String(input),init.method,init.headers.Authorization,init.credentials]);return new Response(null,{status:204})};
+ assert.equal(await f.session.logout(),'revoked');assert.deepEqual(seen,[[apiOrigin+'/v1/auth/logout','POST','Bearer '+credentials.access_token,'omit']]);assert.deepEqual(f.session.businessScope(),{state:'guest'});
+ const g=fixture();await g.session.completeCallback(await start(g.session),()=>{});g.env.fetch=async()=>{throw Error('offline')};assert.equal(await g.session.logout(),'local');assert.deepEqual(g.session.businessScope(),{state:'guest'});
+ const h=fixture();await h.session.completeCallback(await start(h.session),()=>{});h.env.fetch=async()=>new Response(null,{status:401});assert.equal(await h.session.logout(),'local');
+ const guest=fixture();assert.equal(await guest.session.logout(),'local');
+ const dflt=fixture();const original=globalThis.fetch;const urls=[];globalThis.fetch=async input=>{urls.push(String(input));return String(input).endsWith('/v1/auth/logout')?new Response(null,{status:204}):json(credentials)};try{const s=new BrowserSession({...dflt.config,fetch:undefined});await s.completeCallback(await start(s),()=>{});assert.equal(s.businessScope().state,'authenticated');assert.equal(await s.logout(),'revoked');assert.equal(urls.at(-1),apiOrigin+'/v1/auth/logout');}finally{globalThis.fetch=original}
+});
