@@ -116,3 +116,5 @@ Password change UI (DEC-WEB-026): Settings → Безопасность «Сме
 
 Password change review PASS (docs/reviews/password-change-review.md), no MEDIUM+; LOW fix: passwordURL refuses without crypto randomness (no fixed nonce gating a local sign-out). test:api 96/96, frontend gate PASS.
 
+YP-079 site (DEC-WEB-027): contract import f69da06 (54 operations); Messages.tsx ConversationsList/ChatThread, #/messages and #/messages/<uuid> routes, nav «Сообщения», profile «Написать сообщение»; lists.ts loadConversations/loadMessages/sendMessage/markConversationRead/mergeMessages/messageError (lines/functions100). Frontend gate (typecheck+build+test:api 97/97+extension) PASS. Live browser check not possible from the browser pane (it does not follow the site's redirect to the API sign-in page).
+

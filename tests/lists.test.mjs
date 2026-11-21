@@ -389,3 +389,38 @@ test('feed video grouping merges authors across cursor pages without title joins
  assert.equal(groups[0].video,a);assert.equal(groups[0].items[0].rating,9);
  assert.equal(source.length,3);assert.notEqual(groups[0].items,source);
 });
+
+test('direct message helpers call the right operations and merge by seq', async () => {
+  const m = await import('../src/shared/library/lists.ts');
+  const { ApiError } = await import('../src/shared/api/client.ts');
+  const calls = [];
+  const client = { async request(op, options) { calls.push([op, options.path, options.query, options.body]);
+    if (op === 'listConversations') return calls.length === 1 ? { items: [{ id: 'c1' }], next_cursor: 'n1' } : { items: [] };
+    if (op === 'listMessages') return { items: [{ seq: 2 }], can_send: true };
+    if (op === 'sendMessage') return { created: true, message: { seq: 3 } };
+    return { read_seq: 3, unread_count: 0 }; } };
+  assert.deepEqual(await m.loadConversations(client, null), { items: [{ id: 'c1' }], next: 'n1' });
+  assert.deepEqual(await m.loadConversations(client, 'n1'), { items: [], next: null });
+  assert.equal((await m.loadMessages(client, 'u1', null)).can_send, true);
+  await m.loadMessages(client, 'u1', 7);
+  assert.deepEqual(await m.sendMessage(client, 'u1', 'k1', ' hi '), { seq: 3 });
+  await m.sendMessage(client, 'u1', 'k2', '   ', 'v1');
+  assert.deepEqual(await m.markConversationRead(client, 'u1', 3), { read_seq: 3, unread_count: 0 });
+  assert.deepEqual(calls.map(c => [c[0], c[1], c[2], c[3]]), [
+    ['listConversations', undefined, { limit: 30 }, undefined],
+    ['listConversations', undefined, { limit: 30, after: 'n1' }, undefined],
+    ['listMessages', { id: 'u1' }, { limit: 50 }, undefined],
+    ['listMessages', { id: 'u1' }, { limit: 50, before: 7 }, undefined],
+    ['sendMessage', { id: 'u1' }, undefined, { client_message_id: 'k1', body: ' hi ' }],
+    ['sendMessage', { id: 'u1' }, undefined, { client_message_id: 'k2', video_id: 'v1' }],
+    ['markConversationRead', { id: 'u1' }, undefined, { through_seq: 3 }]]);
+  const a = { seq: 1, body: 'a' }, b = { seq: 2, body: 'old' }, b2 = { seq: 2, body: 'new' }, c = { seq: 3, body: 'c' };
+  assert.deepEqual(m.mergeMessages([b, c], [a, b2]), [a, b2, c]);
+  assert.deepEqual(m.mergeMessages([], []), []);
+  for (const [status, text] of [[403, /друзьям/], [404, /недоступна/], [409, /другим текстом/], [422, /2000/], [429, /через минуту/], [503, /дубль не появится/]]) {
+    assert.match(m.messageError(new ApiError('http', status, 'x')), text);
+  }
+  assert.match(m.messageError(new ApiError('network')), /дубль не появится/);
+  assert.match(m.messageError(new Error('x')), /дубль не появится/);
+});
+

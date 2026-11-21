@@ -345,3 +345,47 @@ export function groupFeedByVideo(items:readonly FeedItem[]):FeedVideoGroup[]{
  }
  return [...groups.values()];
 }
+
+// Direct messages (YP-079). The server checks friendship/blocks on send.
+export type Conversation = components['schemas']['ConversationItem'];
+export type Message = components['schemas']['Message'];
+export type MessagePage = components['schemas']['MessagePage'];
+export const MAX_MESSAGE_LENGTH = 2000;
+export async function loadConversations(client: Pick<ApiClient, 'request'>, after: string | null, signal?: AbortSignal): Promise<{ items: Conversation[]; next: string | null }> {
+  const query: { limit: number; after?: string } = { limit: 30 };
+  if (after) query.after = after;
+  const page = await client.request('listConversations', { query, signal });
+  return { items: page.items, next: page.next_cursor ?? null };
+}
+export async function loadMessages(client: Pick<ApiClient, 'request'>, userId: string, before: number | null, signal?: AbortSignal): Promise<MessagePage> {
+  const query: { limit: number; before?: number } = { limit: 50 };
+  if (before) query.before = before;
+  return client.request('listMessages', { path: { id: userId }, query, signal });
+}
+/** clientMessageId must be reused when retrying the same message. */
+export async function sendMessage(client: Pick<ApiClient, 'request'>, userId: string, clientMessageId: string, text: string, videoId: string | null = null): Promise<Message> {
+  const body: { client_message_id: string; body?: string; video_id?: string } = { client_message_id: clientMessageId };
+  if (text.trim()) body.body = text;
+  if (videoId) body.video_id = videoId;
+  return (await client.request('sendMessage', { path: { id: userId }, body })).message;
+}
+export async function markConversationRead(client: Pick<ApiClient, 'request'>, userId: string, through: number) {
+  return client.request('markConversationRead', { path: { id: userId }, body: { through_seq: through } });
+}
+/** Oldest first, one entry per seq (a later copy replaces an earlier one). */
+export function mergeMessages(prev: Message[], next: Message[]): Message[] {
+  const bySeq = new Map<number, Message>();
+  for (const m of [...prev, ...next]) bySeq.set(m.seq, m);
+  return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
+}
+/** User-facing text for a failed send; the default keeps the same key for a retry. */
+export function messageError(error: unknown): string {
+  const status = error instanceof ApiError && error.kind === 'http' ? error.status : 0;
+  if (status === 403) return 'Писать можно только друзьям.';
+  if (status === 404) return 'Переписка недоступна.';
+  if (status === 409) return 'Это сообщение уже было отправлено с другим текстом. Обновите переписку.';
+  if (status === 422) return `Сообщение пустое или длиннее ${MAX_MESSAGE_LENGTH} символов.`;
+  if (status === 429) return 'Слишком много сообщений подряд. Попробуйте через минуту.';
+  return 'Не удалось отправить сообщение. Повторите — дубль не появится.';
+}
+
