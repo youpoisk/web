@@ -28,6 +28,21 @@ export async function loadList(client: Pick<ApiClient, 'request'>, kind: ListKin
   return { items: page.items, next: page.next_cursor ?? null };
 }
 
+export type SearchSort = 'new' | 'top' | 'popular';
+export type PublicCard = Omit<ListCard, 'uuid' | 'revision' | 'later' | 'myRating'> & { publicCard: true; votes: number };
+export type SearchPage = { items: PublicCard[]; next: string | null };
+
+/** One page of the public catalog search (no viewer state, no Authorization). */
+export async function searchCatalog(client: Pick<ApiClient, 'request'>, filter: { text: string; tag: string | null; sort: SearchSort }, after: string | null, signal?: AbortSignal): Promise<SearchPage> {
+  const query: { limit: number; sort: SearchSort; q?: string; tag?: string[]; after?: string } = { limit: 30, sort: filter.sort };
+  const text = filter.text.trim().slice(0, 100);
+  if (text) query.q = text;
+  if (filter.tag) query.tag = [filter.tag];
+  if (after) query.after = after;
+  const page = await client.request('searchVideos', { query, signal });
+  return { items: page.items.map(toPublicCard), next: page.next_cursor ?? null };
+}
+
 function duration(seconds: number | null): string {
   if (seconds === null) return '';
   const h = Math.floor(seconds / 3600), m = Math.floor((seconds % 3600) / 60), s = seconds % 60;
@@ -118,4 +133,27 @@ export async function loadCard(client: Pick<ApiClient, 'request'>, youtubeId: st
     if (error instanceof ApiError && error.kind === 'http' && error.status === 404) return null;
     throw error;
   }
+}
+
+/** Public search card → grid card without any own state. */
+export function toPublicCard(item: VideoCard): PublicCard {
+  const seed = [...item.youtube_video_id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  return {
+    id: item.youtube_video_id,
+    title: item.title ?? 'Название пока неизвестно',
+    channel: item.channel?.name ?? '',
+    handle: '',
+    channelId: item.channel?.youtube_channel_id ?? '',
+    durationSeconds: item.duration_seconds ?? 0,
+    duration: duration(item.duration_seconds),
+    hashtags: item.hashtags,
+    source: item.url,
+    channelSource: item.channel?.url ?? '',
+    checkedAt: '',
+    color: palette[seed % palette.length],
+    tag: item.hashtags[0] ?? '',
+    rating: item.rating.average ?? 0,
+    votes: item.rating.count,
+    publicCard: true
+  };
 }

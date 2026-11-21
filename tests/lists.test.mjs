@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { routeList, loadList, toCard } from '../src/shared/library/lists.ts';
+import { routeList, loadList, toCard, searchCatalog, toPublicCard } from '../src/shared/library/lists.ts';
 
 const item = (over = {}) => ({
   id: '00000000-0000-4000-8000-0000000000a1', youtube_video_id: 'AbCdEf_12-3', title: 'Видео', duration_seconds: 3725,
@@ -146,4 +146,22 @@ test('concurrent first writes share one lease request and a failed lease is retr
   await assert.rejects(writer.patch('a', 1, { later: true }));
   await Promise.all([writer.patch('a', 1, { later: true }), writer.patch('b', 1, { later: true })]);
   assert.equal(leases, 2, 'failed lease forgotten; then one shared lease request');
+});
+
+test('searchCatalog sends trimmed text, one tag, sort and cursor; cards carry no own state', async () => {
+  const calls = [];
+  const { my_state, listed_at, ...publicItem } = item();
+  const client = { async request(op, options) { calls.push([op, options.query]); return calls.length === 1 ? { items: [publicItem], next_cursor: 'n1' } : { items: [] }; } };
+  const page = await searchCatalog(client, { text: '  кот ' + 'x'.repeat(200), tag: 'обзор', sort: 'top' }, null);
+  assert.equal(page.next, 'n1');
+  assert.equal(page.items[0].publicCard, true);
+  assert.equal(page.items[0].votes, 2);
+  assert.equal(page.items[0].rating, 7.5);
+  assert.equal('uuid' in page.items[0] || 'later' in page.items[0] || 'myRating' in page.items[0], false);
+  assert.deepEqual(await searchCatalog(client, { text: ' ', tag: null, sort: 'new' }, 'n1'), { items: [], next: null });
+  assert.equal(calls[0][1].q.length, 100);
+  assert.deepEqual(calls[0][1].tag, ['обзор']);
+  assert.deepEqual(calls[1], ['searchVideos', { limit: 30, sort: 'new', after: 'n1' }]);
+  const bare = toPublicCard({ ...publicItem, title: null, duration_seconds: null, channel: null, hashtags: [], rating: { count: 0, average: null } });
+  assert.deepEqual([bare.title, bare.duration, bare.channel, bare.tag, bare.rating, bare.votes], ['Название пока неизвестно', '', '', '', 0, 0]);
 });

@@ -121,7 +121,11 @@ export class ApiClient {
         }
         if (!validates(parameter.validator, value)) throw new ApiError('invalid_input');
         if (location === 'path') path = path.replace(`{${parameter.name}}`, encodeURIComponent(String(value)));
-        else if (location === 'query') query.set(parameter.name, String(value));
+        else if (location === 'query') {
+          // Repeated keys for array parameters (style form, explode true).
+          if (Array.isArray(value)) for (const item of value) query.append(parameter.name, String(item));
+          else query.set(parameter.name, String(value));
+        }
         else {
           if (!/^[\x21-\x7E]{1,8192}$/.test(String(value))) throw new ApiError('invalid_input');
           headers.set(parameter.name, String(value));

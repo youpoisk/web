@@ -47,6 +47,14 @@ test('guest probes omit auth; no hidden guest fallback for private/recovering re
   await assert.rejects(c.request('loginAccount', { body: {} }), fail('invalid_input'));
 });
 
+test('array query parameters repeat their key; public search works while recovering', async () => {
+  const urls = [];
+  const recovering = client(async (url, options) => { urls.push([url, options.headers.get('Authorization')]); return json({ items: [] }); }, () => ({ state: 'recovering', owner: id, epoch: 'one' }));
+  await recovering.request('searchVideos', { query: { q: 'кот', tag: ['a', 'b'], match: 'all', sort: 'top', limit: 5 } });
+  assert.deepEqual(urls, [['https://api.example.invalid/v1/videos?q=%D0%BA%D0%BE%D1%82&tag=a&tag=b&match=all&sort=top&limit=5', null]]);
+  await assert.rejects(recovering.request('searchVideos', { query: { tag: Array(11).fill('a') } }), fail('invalid_input'));
+});
+
 test('path/query/header validation and immutable write serialization', async () => {
   const c = client(async (url, options) => {
     if (options.method === 'GET') {
