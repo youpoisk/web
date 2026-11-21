@@ -218,6 +218,15 @@ export async function changePrivacy(client: Pick<ApiClient, 'request'>, revision
   return (await client.request('patchPrivacy', { body: { expected_revision: revision, [field]: value } })).settings;
 }
 
+export type FeedItem = components['schemas']['FeedItem'];
+/** One page of «Рекомендации»: friends' visible ratings and reviews, newest first. */
+export async function loadFeed(client: Pick<ApiClient, 'request'>, after: string | null, signal?: AbortSignal): Promise<{ items: FeedItem[]; next: string | null }> {
+  const query: { limit: number; after?: string } = { limit: 30 };
+  if (after) query.after = after;
+  const page = await client.request('listFeed', { query, signal });
+  return { items: page.items, next: page.next_cursor ?? null };
+}
+
 /** True when a write failed because the server state moved on (reload needed). */
 export function conflicted(error: unknown): boolean {
   return error instanceof ApiError && error.kind === 'http' && error.status === 409;

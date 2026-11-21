@@ -290,3 +290,12 @@ test('loadPrivacy and changePrivacy send one policy at the known revision', asyn
   assert.equal((await changePrivacy(client, 1, 'reviews', 'friends')).reviews, 'friends');
   assert.deepEqual(calls, [['getPrivacy', undefined], ['patchPrivacy', { expected_revision: 1, reviews: 'friends' }]]);
 });
+
+test('loadFeed pages friends recommendations', async () => {
+  const { loadFeed } = await import('../src/shared/library/lists.ts');
+  const calls = [];
+  const client = { async request(op, options) { calls.push([op, options.query]); return calls.length === 1 ? { items: [{ rating: 9 }], next_cursor: 'n1' } : { items: [] }; } };
+  assert.deepEqual(await loadFeed(client, null), { items: [{ rating: 9 }], next: 'n1' });
+  assert.deepEqual(await loadFeed(client, 'n1'), { items: [], next: null });
+  assert.deepEqual(calls, [['listFeed', { limit: 30 }], ['listFeed', { limit: 30, after: 'n1' }]]);
+});
