@@ -1,4 +1,4 @@
-import {PeopleListSearch} from './PeopleListSearch.tsx';
+import {PeopleListSearch,peopleSearchPlaceholder} from './PeopleListSearch.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { filterPeopleList, acceptFriendRequest, deleteFriendRequest, friendLimitMessage, loadFriendRequests, searchPeople, sendFriendRequest, type FriendRequest, type Person } from '../shared/library/lists.ts';
@@ -118,7 +118,7 @@ export function PeopleSearch({ client }: { client: Pick<ApiClient, 'request'> })
   const status: Record<Person['relation'], string> = { self: 'Это вы', friend: 'У вас в друзьях', incoming: 'Ждёт вашего ответа во вкладке «Заявки»', outgoing: 'Заявка отправлена', none: '' };
   return <section className="panel">
     <h2>Найти людей</h2>
-    <input aria-label="Поиск людей по логину или имени" placeholder="Логин или имя, например @anna" value={text} maxLength={60} onChange={e => setText(e.target.value)}/>
+    <input aria-label="Поиск людей по логину или имени" placeholder={peopleSearchPlaceholder} value={text} maxLength={60} onChange={e => setText(e.target.value)}/>
     {loading && <p className="small muted" role="status">Ищем…</p>}
     {error && <p className="small" role="status">{error}</p>}
     {items && !loading && items.length === 0 && <p className="small muted">Никого не нашли.</p>}
