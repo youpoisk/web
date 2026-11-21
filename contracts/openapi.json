@@ -1314,6 +1314,218 @@
         }
       }
     },
+    "/v1/me/videos/{id}/review": {
+      "get": {
+        "operationId": "getVideoReview",
+        "summary": "Read my review of a video",
+        "description": "The viewer's own review of a video: revision 0 and text null when there was never one; after a delete, the last revision with text null. Live Bearer required; 404 for an unknown video.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read my review of a video",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoReviewResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putVideoReview",
+        "summary": "Set or delete my review of a video",
+        "description": "One review per author per video (plain text, 1..1000 characters after normalization: valid UTF-8, CRLF/CR as LF, NFC, trimmed, no control characters except tab and line feed). text=null deletes the review. The revision keeps counting across delete and re-create (a delete returns revision n with text null; create again with expected_revision n). Same rules as state writes: exact retry with the same Idempotency-Key replays the stored result before lease/version checks; a fresh execution needs a valid X-Offline-Lease (410 reconcile_required) and the current revision (409 conflict). An unchanged command returns change_seq null. Other viewers' reviews are not readable yet (privacy policies YP-056/078).",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Idempotency"
+          },
+          {
+            "$ref": "#/components/parameters/Lease"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Set or delete my review of a video",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoReviewResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me/channels/{id}/rating": {
       "get": {
         "operationId": "getChannelRating",
@@ -3929,6 +4141,87 @@
         ],
         "additionalProperties": false,
         "description": "One public search page; next_cursor is present only when more results follow."
+      },
+      "ReviewRequest": {
+        "type": "object",
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence."
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Review text; at most 1000 characters after normalization. null deletes. String is normalized to NFC/LF and trimmed, then limited to 1000 code points. The complete JSON request including escape sequences is limited to 8192 UTF-8 bytes; larger requests return 413. Idempotency compares decoded pre-normalization text, not normalized equivalence."
+          }
+        },
+        "required": [
+          "expected_revision",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "VideoReview": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence."
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "revision",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "VideoReviewResult": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "video_review"
+          },
+          "target_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "review": {
+            "$ref": "#/components/schemas/VideoReview"
+          },
+          "change_seq": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 1,
+            "description": "JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence. Write acknowledgment only, never a pull cursor. Explicit null for no-op/read."
+          }
+        },
+        "required": [
+          "kind",
+          "target_id",
+          "review",
+          "change_seq"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {

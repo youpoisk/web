@@ -11,7 +11,7 @@ test('every pinned operation has runtime request/response validators', () => {
   const spec = JSON.parse(readFileSync(new URL('../contracts/openapi.json', import.meta.url)));
   const operations = Object.entries(spec.paths).flatMap(([path, methods]) =>
     Object.entries(methods).map(([method, operation]) => ({ path, method, operation })));
-  assert.equal(operations.length, 26);
+  assert.equal(operations.length, 28);
   assert.equal(Object.keys(validators.contract).length, operations.length);
   for (const { path, method, operation } of operations) {
     const actual = validators.contract[operation.operationId];
@@ -86,4 +86,17 @@ test('browser bundle contains no runtime eval/Function or external imports', () 
   const text = readFileSync(new URL('../src/shared/api/validators.js', import.meta.url), 'utf8');
   assert.equal(/\b(?:eval\s*\(|new\s+Function\s*\()/.test(text), false);
   assert.equal(/\bfrom\s+["'](?:node:|ajv)|\bimport\s*\(/.test(text), false);
+});
+
+test('video review DTOs preserve deletion revision and forbid moderation/credential injection', () => {
+  assert.equal(validators.putVideoReview_request({ expected_revision: 4, text: null }), true);
+  assert.equal(validators.putVideoReview_request({ expected_revision: 0, text: 'Рецензия' }), true);
+  assert.equal(validators.putVideoReview_request({ expected_revision: 0 }), false);
+  assert.equal(validators.putVideoReview_request({ expected_revision: 0, text: 'x', moderation_status: 'visible' }), false);
+  const deleted = { kind: 'video_review', target_id: uid, review: { revision: 5, text: null }, change_seq: null };
+  assert.equal(validators.getVideoReview_response_200(deleted), true);
+  assert.equal(validators.putVideoReview_response_200({ ...deleted, change_seq: 7 }), true);
+  assert.equal(validators.getVideoReview_response_200({ ...deleted, refresh_token: 'forbidden' }), false);
+  assert.equal(validators.schema_VideoReview({ revision: 6, text: '😀'.repeat(1000) }), true);
+  assert.equal(validators.schema_VideoReview({ revision: 6, text: '😀'.repeat(1001) }), false);
 });

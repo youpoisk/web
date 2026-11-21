@@ -384,6 +384,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/videos/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read my review of a video
+         * @description The viewer's own review of a video: revision 0 and text null when there was never one; after a delete, the last revision with text null. Live Bearer required; 404 for an unknown video.
+         */
+        get: operations["getVideoReview"];
+        /**
+         * Set or delete my review of a video
+         * @description One review per author per video (plain text, 1..1000 characters after normalization: valid UTF-8, CRLF/CR as LF, NFC, trimmed, no control characters except tab and line feed). text=null deletes the review. The revision keeps counting across delete and re-create (a delete returns revision n with text null; create again with expected_revision n). Same rules as state writes: exact retry with the same Idempotency-Key replays the stored result before lease/version checks; a fresh execution needs a valid X-Offline-Lease (410 reconcile_required) and the current revision (409 conflict). An unchanged command returns change_seq null. Other viewers' reviews are not readable yet (privacy policies YP-056/078).
+         */
+        put: operations["putVideoReview"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/videos/{id}/state": {
         parameters: {
             query?: never;
@@ -695,6 +719,15 @@ export interface components {
             /** @description 8..128 Unicode code points, at most512 UTF8 bytes. Never trimmed/normalized/stored in client storage or an offline queue. Invalid Unicode JSON escapes are rejected. */
             password: string;
         };
+        ReviewRequest: {
+            /**
+             * Format: int64
+             * @description JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence.
+             */
+            expected_revision: number;
+            /** @description Review text; at most 1000 characters after normalization. null deletes. String is normalized to NFC/LF and trimmed, then limited to 1000 code points. The complete JSON request including escape sequences is limited to 8192 UTF-8 bytes; larger requests return 413. Idempotency compares decoded pre-normalization text, not normalized equivalence. */
+            text: string | null;
+        };
         User: {
             /** @description Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred. */
             email: string;
@@ -762,6 +795,26 @@ export interface components {
             later?: boolean;
             rating?: number | null;
         } | unknown | unknown | unknown;
+        VideoReview: {
+            /**
+             * Format: int64
+             * @description JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence.
+             */
+            revision: number;
+            text: string | null;
+        };
+        VideoReviewResult: {
+            /**
+             * Format: int64
+             * @description JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence. Write acknowledgment only, never a pull cursor. Explicit null for no-op/read.
+             */
+            change_seq: number | null;
+            /** @constant */
+            kind: "video_review";
+            review: components["schemas"]["VideoReview"];
+            /** Format: uuid */
+            target_id: string;
+        };
         /** @description One public search page; next_cursor is present only when more results follow. */
         VideoSearchPage: {
             items: components["schemas"]["VideoCard"][];
@@ -1814,6 +1867,115 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ObservationResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getVideoReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read my review of a video */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoReviewResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putVideoReview: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Stable UUID for the exact immutable queued body; scope is account+operation/target. */
+                "Idempotency-Key": components["parameters"]["Idempotency"];
+                /** @description Required on fresh personal writes; exact authorized receipt replay is checked first and may succeed without a new lease. */
+                "X-Offline-Lease"?: components["parameters"]["Lease"];
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Set or delete my review of a video */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoReviewResult"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
