@@ -3,14 +3,15 @@
   const demo=document.body.dataset.demo==='true';
   function context(){
     if(navigating)return null;
-    const id=demo?'aqz-KE-bpKQ':YPCore.videoId(location.href);
+    const sample=demo?globalThis.YPDemoCatalog?.[0]:null;
+    const id=demo?sample?.id:YPCore.videoId(location.href);
     if(!id)return null;
     const page=document.querySelector('ytd-watch-flexy');
     if(page?.getAttribute('video-id') && page.getAttribute('video-id')!==id)return null;
-    const title=demo?'Мир, который мы почти не замечаем':document.querySelector('ytd-watch-metadata h1 yt-formatted-string, #above-the-fold h1 yt-formatted-string, #title h1')?.textContent?.trim();
+    const title=demo?sample.title:document.querySelector('ytd-watch-metadata h1 yt-formatted-string, #above-the-fold h1 yt-formatted-string, #title h1')?.textContent?.trim();
     const owner=document.querySelector('#owner ytd-channel-name a, ytd-video-owner-renderer ytd-channel-name a');
     if(!title)return null;
-    return YPCore.metadata({id,title,channel:demo?'Наука рядом':owner?.textContent?.trim(),channelUrl:demo?'https://www.youtube.com/@YouTube':owner?.getAttribute('href')});
+    return YPCore.metadata({id,title,channel:demo?sample.channel:owner?.textContent?.trim(),channelUrl:demo?sample.channelUrl:owner?.getAttribute('href')});
   }
   function node(tag,text,className){const n=document.createElement(tag);if(text)n.textContent=text;if(className)n.className=className;return n;}
   function notify(text){const s=document.querySelector('#yp-panel .yp-status');if(s)s.textContent=text;}

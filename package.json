@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "pnpm api:check && pnpm typecheck:api && tsc -b && vite build",
+    "build": "pnpm demo:check && pnpm api:check && pnpm typecheck:api && tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test:extension": "node --test extension/tests/*.test.mjs",
     "api:import": "node scripts/contract.mjs import",
@@ -14,7 +14,9 @@
     "api:check-source": "node scripts/contract.mjs check-source",
     "api:validators": "node scripts/validators.mjs generate",
     "test:api": "node --disallow-code-generation-from-strings --experimental-test-coverage --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-include=src/shared/api/client.ts --test-coverage-include=src/shared/auth/flow.ts --test tests/*.test.mjs",
-    "typecheck:api": "tsc -p tsconfig.type-tests.json"
+    "typecheck:api": "tsc -p tsconfig.type-tests.json",
+    "demo:generate": "node scripts/demo-catalog.mjs",
+    "demo:check": "node scripts/demo-catalog.mjs --check"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
