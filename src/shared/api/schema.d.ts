@@ -264,6 +264,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * «Рекомендации»: my friends ratings and reviews
+         * @description All ratings and reviews of the viewer's accepted, active friends, newest first (customer decision: a rating or review is a recommendation). A friend's rating appears only if his ratings_visibility admits friends, a review only if reviews_visibility admits friends and it is published and not moderation-hidden; hidden parts never affect the order and items with nothing visible are filtered before the limit. One item per friend and video; changed_at is the latest visible change; order changed_at desc, user id desc, video id desc. Keyset after, limit 1..100 (default 30). Cards are public (no my_state). Followers join with subscriptions (YP-058); blocks with YP-083.
+         */
+        get: operations["listFeed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/friends": {
         parameters: {
             query?: never;
@@ -789,6 +809,18 @@ export interface components {
             /** @constant */
             client_type: "extension";
             refresh_token: string;
+        };
+        FeedItem: {
+            /** Format: date-time */
+            changed_at: string;
+            rating: number | null;
+            review: string | null;
+            user: components["schemas"]["FriendUser"];
+            video: components["schemas"]["VideoCard"];
+        };
+        FeedPage: {
+            items: components["schemas"]["FeedItem"][];
+            next_cursor?: string;
         };
         Friend: {
             /** Format: date-time */
@@ -1805,6 +1837,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChannelStateResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listFeed: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor, no duplicate keys. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recommendations feed */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedPage"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
