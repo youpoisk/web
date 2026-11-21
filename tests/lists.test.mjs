@@ -148,19 +148,20 @@ test('concurrent first writes share one lease request and a failed lease is retr
   assert.equal(leases, 2, 'failed lease forgotten; then one shared lease request');
 });
 
-test('searchCatalog sends trimmed text, one tag, sort and cursor; cards carry no own state', async () => {
+test('searchCatalog sends trimmed text, multiple tags, match mode, sort and cursor; cards carry no own state', async () => {
   const calls = [];
   const { my_state, listed_at, ...publicItem } = item();
   const client = { async request(op, options) { calls.push([op, options.query]); return calls.length === 1 ? { items: [publicItem], next_cursor: 'n1' } : { items: [] }; } };
-  const page = await searchCatalog(client, { text: '  кот ' + 'x'.repeat(200), tag: 'обзор', sort: 'top' }, null);
+  const page = await searchCatalog(client, { text: '  кот ' + 'x'.repeat(200), tags: ['обзор', 'игры'], match: 'all', sort: 'top' }, null);
   assert.equal(page.next, 'n1');
   assert.equal(page.items[0].publicCard, true);
   assert.equal(page.items[0].votes, 2);
   assert.equal(page.items[0].rating, 7.5);
   assert.equal('uuid' in page.items[0] || 'later' in page.items[0] || 'myRating' in page.items[0], false);
-  assert.deepEqual(await searchCatalog(client, { text: ' ', tag: null, sort: 'new' }, 'n1'), { items: [], next: null });
+  assert.deepEqual(await searchCatalog(client, { text: ' ', tags: [], match: 'any', sort: 'new' }, 'n1'), { items: [], next: null });
   assert.equal(calls[0][1].q.length, 100);
-  assert.deepEqual(calls[0][1].tag, ['обзор']);
+  assert.deepEqual(calls[0][1].tag, ['обзор', 'игры']);
+  assert.equal(calls[0][1].match, 'all');
   assert.deepEqual(calls[1], ['searchVideos', { limit: 30, sort: 'new', after: 'n1' }]);
   const bare = toPublicCard({ ...publicItem, title: null, duration_seconds: null, channel: null, hashtags: [], rating: { count: 0, average: null } });
   assert.deepEqual([bare.title, bare.duration, bare.channel, bare.tag, bare.rating, bare.votes], ['Название пока неизвестно', '', '', '', 0, 0]);
@@ -206,4 +207,14 @@ test('an uncertain review retains its original lease when another operation refr
  const client={async request(op,o){if(op==='issueOfflineLease')return{lease:'lease-'+ ++anchors};seen.push([op,o.header]);if(op==='putVideoReview'){if(++reviews===1)throw new ApiError('network');return{review:{revision:1,text:'text'}}}if(++patches===1)throw new ApiError('http',410);return{state:{revision:1}}}};
  const writer=new StateWriter(client,()=> 'k'+ ++n);await assert.rejects(writer.review('v',0,'text'));await writer.patch('v',0,{later:true});await writer.review('v',0,'text');
  const reviewCalls=seen.filter(c=>c[0]==='putVideoReview');assert.deepEqual(reviewCalls.map(c=>c[1]),[{'Idempotency-Key':'k1','X-Offline-Lease':'lease-1'},{'Idempotency-Key':'k1','X-Offline-Lease':'lease-1'}]);assert.equal(anchors,2);
+});
+
+test('searchCatalog preserves multiple tags and ANY mode on subsequent pages', async () => {
+  const tags = Object.freeze(['gta6', 'моряк']);
+  const client = { async request(operation, options) {
+    assert.equal(operation, 'searchVideos');
+    assert.deepEqual(options.query, {limit: 30, sort: 'popular', tag: ['gta6', 'моряк'], match: 'any', after: 'cursor-two'});
+    return {items: [], next_cursor: null};
+  }};
+  assert.deepEqual(await searchCatalog(client, {text: '', tags, match: 'any', sort: 'popular'}, 'cursor-two'), {items: [], next: null});
 });

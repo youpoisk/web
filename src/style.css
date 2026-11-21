@@ -49,3 +49,5 @@
 .over-limit{color:#d93025}
 
 .own-review-text{white-space:pre-wrap;unicode-bidi:plaintext}
+
+.tag-filter-settings{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 20px}.filters button:disabled{opacity:.45;cursor:not-allowed}

@@ -34,11 +34,11 @@ export type PublicCard = Omit<ListCard, 'uuid' | 'revision' | 'later' | 'myRatin
 export type SearchPage = { items: PublicCard[]; next: string | null };
 
 /** One page of the public catalog search (no viewer state, no Authorization). */
-export async function searchCatalog(client: Pick<ApiClient, 'request'>, filter: { text: string; tag: string | null; sort: SearchSort }, after: string | null, signal?: AbortSignal): Promise<SearchPage> {
-  const query: { limit: number; sort: SearchSort; q?: string; tag?: string[]; after?: string } = { limit: 30, sort: filter.sort };
+export async function searchCatalog(client: Pick<ApiClient, 'request'>, filter: { text: string; tags: readonly string[]; match: 'any' | 'all'; sort: SearchSort }, after: string | null, signal?: AbortSignal): Promise<SearchPage> {
+  const query: { limit: number; sort: SearchSort; q?: string; tag?: string[]; match?: 'any' | 'all'; after?: string } = { limit: 30, sort: filter.sort };
   const text = filter.text.trim().slice(0, 100);
   if (text) query.q = text;
-  if (filter.tag) query.tag = [filter.tag];
+  if (filter.tags.length) { query.tag = [...filter.tags]; query.match = filter.match; }
   if (after) query.after = after;
   const page = await client.request('searchVideos', { query, signal });
   return { items: page.items.map(toPublicCard), next: page.next_cursor ?? null };
