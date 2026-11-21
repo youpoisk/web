@@ -308,6 +308,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my conversations
+         * @description Direct messages (YP-079): one conversation per user pair. A block in either direction or an inactive counterpart hides the conversation (404, omitted from lists). Ordered by latest message desc, id desc; unread_count counts the counterpart's messages after my read position.
+         */
+        get: operations["listConversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a conversation
+         * @description Direct messages (YP-079): one conversation per user pair. A block in either direction or an inactive counterpart hides the conversation (404, omitted from lists). Newest first, strictly below before (default: latest). An empty page is returned for a visible counterpart without messages; can_send tells whether a new message is allowed.
+         */
+        get: operations["listMessages"];
+        put?: never;
+        /**
+         * Send a direct message
+         * @description Direct messages (YP-079): one conversation per user pair. A block in either direction or an inactive counterpart hides the conversation (404, omitted from lists). Needs a live mutual friendship (403 friendship_required); history stays readable after unfriend. 201 creates; repeating the same client_message_id with the same content returns 200 with the stored message; the same key with other content or recipient is 409 conflict. Unknown video 422. Rate limited: 30 sends per account per minute (429 rate_limited with Retry-After).
+         */
+        post: operations["sendMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/conversations/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark a conversation read
+         * @description Direct messages (YP-079): one conversation per user pair. A block in either direction or an inactive counterpart hides the conversation (404, omitted from lists). Moves my read position forward to min(through_seq, last seq); it never moves back. 404 without a conversation. Rate limited: 120 per account per minute.
+         */
+        post: operations["markConversationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/feed": {
         parameters: {
             query?: never;
@@ -991,6 +1055,19 @@ export interface components {
             /** Format: uuid */
             target_id: string;
         };
+        ConversationItem: {
+            /** @description Live mutual friendship and no block; history stays readable after unfriend. */
+            can_send: boolean;
+            /** Format: uuid */
+            id: string;
+            last_message: components["schemas"]["Message"];
+            unread_count: number;
+            user: components["schemas"]["FriendUser"];
+        };
+        ConversationPage: {
+            items: components["schemas"]["ConversationItem"][];
+            next_cursor?: string;
+        };
         Credentials: components["schemas"]["WebCredentials"] | components["schemas"]["ExtensionCredentials"];
         Device: {
             /** @enum {string} */
@@ -1108,6 +1185,39 @@ export interface components {
             /** @description 8..128 Unicode code points, at most512 UTF8 bytes. Never trimmed/normalized/stored in client storage or an offline queue. Invalid Unicode JSON escapes are rejected. */
             password: string;
         };
+        /** @description Immutable direct message: text and/or a catalog video. seq numbers messages within the conversation. */
+        Message: {
+            body: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            mine: boolean;
+            seq: number;
+            video: components["schemas"]["MessageVideo"] | null;
+        };
+        /** @description client_message_id makes retries idempotent. body (trimmed, 1..2000 code points after trimming) and/or video_id (catalog video UUID) is required. */
+        MessageCreate: {
+            body?: string;
+            /** Format: uuid */
+            client_message_id: string;
+            /** Format: uuid */
+            video_id?: string;
+        };
+        MessagePage: {
+            can_send: boolean;
+            items: components["schemas"]["Message"][];
+            next_before?: number;
+            other_read_seq: number;
+            read_seq: number;
+            user: components["schemas"]["FriendUser"];
+        };
+        MessageVideo: {
+            /** Format: uuid */
+            id: string;
+            title: string | null;
+            youtube_video_id: string;
+        };
         ObservationAdd: {
             /** @description Observed bounded handle text only; never an identity/merge key or a fetch URL. */
             channel_handle?: string | null;
@@ -1210,6 +1320,13 @@ export interface components {
              */
             count: number;
         } & unknown;
+        ReadMark: {
+            through_seq: number;
+        };
+        ReadState: {
+            read_seq: number;
+            unread_count: number;
+        };
         Ready: {
             /** @constant */
             status: "ready";
@@ -1259,6 +1376,10 @@ export interface components {
             request: components["schemas"]["FriendRequest"];
             /** @enum {string} */
             status: "created" | "exists" | "incoming";
+        };
+        SentMessage: {
+            created: boolean;
+            message: components["schemas"]["Message"];
         };
         User: {
             /** @description Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred. */
@@ -2243,6 +2364,236 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChannelStateResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listConversations: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List my conversations */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listMessages: {
+        parameters: {
+            query?: {
+                /** @description Previous next_before. */
+                before?: number;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Counterpart user id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read a conversation */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagePage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    sendMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Counterpart user id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageCreate"];
+            };
+        };
+        responses: {
+            /** @description Stored message returned for a retry */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentMessage"];
+                };
+            };
+            /** @description Message created */
+            201: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentMessage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    markConversationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Counterpart user id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadMark"];
+            };
+        };
+        responses: {
+            /** @description Mark a conversation read */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadState"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
