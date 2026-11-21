@@ -269,3 +269,14 @@ test('loadFriends pages the viewer friends', async () => {
   assert.deepEqual(await loadFriends(client, 'n1'), { items: [], next: null });
   assert.deepEqual(calls, [['listFriends', { limit: 30 }], ['listFriends', { limit: 30, after: 'n1' }]]);
 });
+
+test('loadUserProfile and loadUserRecommendations read another user', async () => {
+  const { loadUserProfile, loadUserRecommendations } = await import('../src/shared/library/lists.ts');
+  const calls = [];
+  const profile = { user: { id: 'u1', login: 'anna', name: 'Анна' }, relation: 'friend', ratings_visible: true, reviews_visible: false };
+  const client = { async request(op, options) { calls.push([op, options.path, options.query]); if (op === 'getUserProfile') return profile; return calls.length === 2 ? { items: [{ rating: 9 }], next_cursor: 'n1' } : { items: [] }; } };
+  assert.deepEqual(await loadUserProfile(client, 'u1'), profile);
+  assert.deepEqual(await loadUserRecommendations(client, 'u1', null), { items: [{ rating: 9 }], next: 'n1' });
+  assert.deepEqual(await loadUserRecommendations(client, 'u1', 'n1'), { items: [], next: null });
+  assert.deepEqual(calls, [['getUserProfile', { id: 'u1' }, undefined], ['listUserRecommendations', { id: 'u1' }, { limit: 30 }], ['listUserRecommendations', { id: 'u1' }, { limit: 30, after: 'n1' }]]);
+});

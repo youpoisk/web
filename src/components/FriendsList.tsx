@@ -45,6 +45,7 @@ export function FriendsList({ client }: { client: Pick<ApiClient, 'request'> }) 
       <span className={`avatar person-avatar color${i % 3 + 1}`} aria-hidden="true">{[...(it.user.name || it.user.login)][0]}</span>
       <h2>{it.user.name || it.user.login}</h2>
       <p className="muted">@{it.user.login} · друзья с {new Date(it.since).toLocaleDateString('ru-RU')}</p>
+      <a href={`#/user/${it.user.id}`}>Открыть профиль ↗</a>
     </div>)}</div>
     {next && <div className="actions"><button className="secondary" disabled={loading} onClick={() => void loadMore()}>Показать ещё</button></div>}
   </section>;

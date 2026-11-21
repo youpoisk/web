@@ -192,6 +192,20 @@ export async function loadFriends(client: Pick<ApiClient, 'request'>, after: str
   return { items: page.items, next: page.next_cursor ?? null };
 }
 
+export type UserProfile = components['schemas']['UserProfile'];
+export type Recommendation = components['schemas']['Recommendation'];
+/** Another user's profile header as this viewer may see it. */
+export async function loadUserProfile(client: Pick<ApiClient, 'request'>, userId: string, signal?: AbortSignal): Promise<UserProfile> {
+  return client.request('getUserProfile', { path: { id: userId }, signal });
+}
+/** One page of the user's visible ratings and reviews. */
+export async function loadUserRecommendations(client: Pick<ApiClient, 'request'>, userId: string, after: string | null, signal?: AbortSignal): Promise<{ items: Recommendation[]; next: string | null }> {
+  const query: { limit: number; after?: string } = { limit: 30 };
+  if (after) query.after = after;
+  const page = await client.request('listUserRecommendations', { path: { id: userId }, query, signal });
+  return { items: page.items, next: page.next_cursor ?? null };
+}
+
 /** True when a write failed because the server state moved on (reload needed). */
 export function conflicted(error: unknown): boolean {
   return error instanceof ApiError && error.kind === 'http' && error.status === 409;
