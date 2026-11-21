@@ -115,7 +115,7 @@ export class BrowserSession {
     this.#credentials = null;
     let state: string | undefined;
     let readError: unknown;
-    try { state = this.#flow.pendingSummary()?.state; }
+    try { this.#identity(); state = this.#flow.pendingSummary()?.state; }
     catch (error) { readError = error; }
     // Block late callbacks even when crypto/storage/cache invalidation fails.
     this.#blocked = true;

@@ -75,4 +75,6 @@ test('another coordinator or external scope replacement cannot leave old access 
  const fresh=f.make();fresh.forgetLocal();assert.equal(f.session.currentUser(),null);assert.throws(()=>f.session.businessScope(),fail('authentication_unavailable'));assert.ok(f.env.clears>clears);
  const g=fixture();await g.session.completeCallback(await start(g.session),()=>{});g.env.reads=true;assert.equal(g.session.currentUser(),null);assert.throws(()=>g.session.businessScope(),fail('authentication_unavailable'));
  const h=fixture();h.data.delete(h.scopeKey());assert.throws(()=>h.session.businessScope(),fail('stale_session'));
+ const stale=fixture();const active=stale.make();await active.completeCallback(await start(active),()=>{});const reference=stale.data.get(stale.scopeKey());
+ assert.throws(()=>stale.session.forgetLocal(),fail('stale_session'));assert.equal(stale.data.get(stale.scopeKey()),reference);assert.equal(active.businessScope().state,'authenticated');assert.equal(stale.session.currentUser(),null);
 });
