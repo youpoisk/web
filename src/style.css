@@ -51,3 +51,4 @@
 .own-review-text{white-space:pre-wrap;unicode-bidi:plaintext}
 
 .tag-filter-settings{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 20px}.filters button:disabled{opacity:.45;cursor:not-allowed}
+.friend-ratings .person-line{margin:12px 0}.friend-score{color:#1da1f2;font-size:14px}

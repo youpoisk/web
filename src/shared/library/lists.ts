@@ -174,6 +174,15 @@ export async function loadReview(client: Pick<ApiClient, 'request'>, videoId: st
   return (await client.request('getVideoReview', { path: { id: videoId }, signal })).review;
 }
 
+export type FriendRating = components['schemas']['FriendRating'];
+/** One page of friends' ratings of a video (accepted friends whose privacy admits it). */
+export async function loadFriendRatings(client: Pick<ApiClient, 'request'>, videoId: string, after: string | null, signal?: AbortSignal): Promise<{ items: FriendRating[]; next: string | null }> {
+  const query: { limit: number; after?: string } = { limit: 20 };
+  if (after) query.after = after;
+  const page = await client.request('listFriendRatings', { path: { id: videoId }, query, signal });
+  return { items: page.items, next: page.next_cursor ?? null };
+}
+
 /** True when a write failed because the server state moved on (reload needed). */
 export function conflicted(error: unknown): boolean {
   return error instanceof ApiError && error.kind === 'http' && error.status === 409;

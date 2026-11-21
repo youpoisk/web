@@ -249,3 +249,13 @@ test('channel rating retries preserve receipt and original lease, independent of
  assert.deepEqual(await writer.channelRating('same-id',1,null),{revision:2,rating:null});
  assert.equal(calls.filter(([op])=>op==='issueOfflineLease').length,1);
 });
+
+test('loadFriendRatings pages friends ratings of a video', async () => {
+  const { loadFriendRatings } = await import('../src/shared/library/lists.ts');
+  const calls = [];
+  const rating = { user: { id: '00000000-0000-4000-8000-0000000000e1', login: 'anna', name: 'Анна' }, rating: 9, rated_at: '2026-11-21T10:00:00Z' };
+  const client = { async request(op, options) { calls.push([op, options.path, options.query]); return calls.length === 1 ? { items: [rating], next_cursor: 'n1' } : { items: [] }; } };
+  assert.deepEqual(await loadFriendRatings(client, 'v1', null), { items: [rating], next: 'n1' });
+  assert.deepEqual(await loadFriendRatings(client, 'v1', 'n1'), { items: [], next: null });
+  assert.deepEqual(calls, [['listFriendRatings', { id: 'v1' }, { limit: 20 }], ['listFriendRatings', { id: 'v1' }, { limit: 20, after: 'n1' }]]);
+});
