@@ -59,29 +59,45 @@ export function toCard(item: ListItem): ListCard {
   };
 }
 
-/** Own-state writes from the site: one offline lease per page session, a fresh
- * Idempotency-Key per command; an expired/absent lease (410) is renewed once. */
+/** Own-state writes from the site. One offline lease per page session (the
+ * request itself is shared, so concurrent first writes issue one lease). A
+ * command whose outcome is uncertain (network/timeout/429/5xx) keeps its
+ * Idempotency-Key: repeating the identical command replays it, so a request
+ * that actually committed returns its original result instead of a false 409.
+ * The key is dropped on any definite answer; 410 (no receipt stored) renews
+ * the lease once and retries with a fresh key. */
 export class StateWriter {
   readonly #client: Pick<ApiClient, 'request'>;
   readonly #uuid: () => string;
-  #lease: string | null = null;
+  #lease: Promise<string> | null = null;
+  readonly #uncertain = new Map<string, { key: string; fingerprint: string }>();
   constructor(client: Pick<ApiClient, 'request'>, uuid: () => string) { this.#client = client; this.#uuid = uuid; }
-  async #anchor(): Promise<string> {
-    if (this.#lease === null) this.#lease = (await this.#client.request('issueOfflineLease', {})).lease;
+  #anchor(): Promise<string> {
+    if (this.#lease === null) {
+      const pending = this.#client.request('issueOfflineLease', {}).then((r) => r.lease);
+      this.#lease = pending;
+      pending.catch(() => { if (this.#lease === pending) this.#lease = null; });
+    }
     return this.#lease;
   }
   async patch(videoId: string, expected: number, change: { rating?: number | null; later?: boolean; added?: boolean }): Promise<VideoState> {
+    const body = { expected_revision: expected, ...change };
+    const fingerprint = JSON.stringify(body);
+    const previous = this.#uncertain.get(videoId);
+    let key = previous && previous.fingerprint === fingerprint ? previous.key : this.#uuid();
     for (let attempt = 0; ; attempt++) {
       const lease = await this.#anchor();
+      this.#uncertain.set(videoId, { key, fingerprint });
       try {
         const result = await this.#client.request('patchVideoState', {
-          path: { id: videoId },
-          header: { 'Idempotency-Key': this.#uuid(), 'X-Offline-Lease': lease },
-          body: { expected_revision: expected, ...change }
+          path: { id: videoId }, header: { 'Idempotency-Key': key, 'X-Offline-Lease': lease }, body
         });
+        this.#uncertain.delete(videoId);
         return result.state;
       } catch (error) {
-        if (attempt === 0 && error instanceof ApiError && error.kind === 'http' && error.status === 410) { this.#lease = null; continue; }
+        const definite = error instanceof ApiError && error.kind === 'http' && error.status !== 429 && error.status < 500;
+        if (definite) this.#uncertain.delete(videoId);
+        if (attempt === 0 && error instanceof ApiError && error.kind === 'http' && error.status === 410) { this.#lease = null; key = this.#uuid(); continue; }
         throw error;
       }
     }

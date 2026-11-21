@@ -101,3 +101,49 @@ test('loadCard reads by YouTube id and maps 404 to null', async () => {
   assert.equal(await loadCard({ async request() { throw new ApiError('http', 404, 'not_found'); } }, 'AbCdEf_12-3'), null);
   await assert.rejects(loadCard({ async request() { throw new ApiError('http', 503); } }, 'AbCdEf_12-3'), (e) => e.status === 503);
 });
+
+test('an uncertain write keeps its key for an identical retry; a definite answer drops it', async () => {
+  const { StateWriter } = await import('../src/shared/library/lists.ts');
+  const { ApiError } = await import('../src/shared/api/client.ts');
+  const keys = [];
+  let leases = 0;
+  const outcomes = [new ApiError('network'), new ApiError('http', 503), 'ok', new ApiError('http', 409), 'ok'];
+  const client = {
+    async request(op, options) {
+      if (op === 'issueOfflineLease') { leases++; return { lease: 'l', valid_for_seconds: 604800 }; }
+      keys.push(options.header['Idempotency-Key']);
+      const next = outcomes.shift();
+      if (next !== 'ok') throw next;
+      return { kind: 'video_state', target_id: 'v', state: { revision: options.body.expected_revision + 1, later: options.body.later }, change_seq: 1 };
+    }
+  };
+  let n = 0;
+  const writer = new StateWriter(client, () => 'k' + ++n);
+  await assert.rejects(writer.patch('v', 1, { later: true }));
+  await assert.rejects(writer.patch('v', 1, { later: true }));
+  await writer.patch('v', 1, { later: true });
+  assert.deepEqual(keys, ['k1', 'k1', 'k1'], 'identical retries replay the same key');
+  await assert.rejects(writer.patch('v', 2, { later: false }));
+  await writer.patch('v', 2, { later: false });
+  assert.deepEqual(keys.slice(3), ['k2', 'k3'], 'a definite 409 drops the key');
+  const other = new StateWriter({ async request(op) { if (op === 'issueOfflineLease') return { lease: 'l', valid_for_seconds: 604800 }; throw new ApiError('network'); } }, () => 'x' + ++n);
+  await assert.rejects(other.patch('v', 1, { later: true }));
+  await assert.rejects(other.patch('v', 1, { rating: 5 }), 'a different command gets a new key');
+  assert.equal(leases, 1);
+});
+
+test('concurrent first writes share one lease request and a failed lease is retried later', async () => {
+  const { StateWriter } = await import('../src/shared/library/lists.ts');
+  let leases = 0;
+  let failLease = true;
+  const client = {
+    async request(op, options) {
+      if (op === 'issueOfflineLease') { leases++; if (failLease) { failLease = false; throw new Error('offline'); } return { lease: 'l' + leases, valid_for_seconds: 604800 }; }
+      return { kind: 'video_state', target_id: options.path.id, state: { revision: 2 }, change_seq: 1 };
+    }
+  };
+  const writer = new StateWriter(client, () => 'k');
+  await assert.rejects(writer.patch('a', 1, { later: true }));
+  await Promise.all([writer.patch('a', 1, { later: true }), writer.patch('b', 1, { later: true })]);
+  assert.equal(leases, 2, 'failed lease forgotten; then one shared lease request');
+});
