@@ -123,3 +123,34 @@ test('per-tab flow storage: another tab cannot see or cancel this tab sign-in; a
  const c=new BrowserSession({...f.config,flowStorage:mk(new Map())});const restore=callback+'?'+new URLSearchParams({code,state:(await c.start('restore','#/')).get('state')});
  await c.completeCallback(restore,()=>{});const now=c.businessScope();assert.equal(now.owner,other);assert.notEqual(now.epoch,remembered.epoch);
 });
+test('password page: nonce-bound outcomes end the local sign-in; cancelled or forged returns change nothing',async()=>{
+ const signed=async()=>{const f=fixture();await f.session.completeCallback(await start(f.session),()=>{});assert.equal(f.session.businessScope().state,'authenticated');return f;};
+ const f=await signed();const url=new URL(f.session.passwordURL('#/settings'));
+ assert.equal(url.origin+url.pathname,apiOrigin+'/auth/password');assert.deepEqual([...url.searchParams.keys()].sort(),['redirect_uri','state']);
+ assert.equal(url.searchParams.get('redirect_uri'),callback);assert.match(url.searchParams.get('state'),/^[A-Za-z0-9_-]{43}$/);
+ const ret=(value,state=url.searchParams.get('state'))=>callback+'?'+new URLSearchParams({password:value,state});
+ const cleaned=[];assert.deepEqual(await f.session.completeCallback(ret('changed'),v=>cleaned.push(v)),{returnHash:'#/',outcome:'password_changed'});
+ assert.deepEqual(cleaned,[callback]);assert.deepEqual(f.session.businessScope(),{state:'guest'});assert.deepEqual(f.make().businessScope(),{state:'guest'},'scope demoted durably');
+ const again=[];assert.equal(await f.session.completeCallback(ret('changed'),v=>again.push(v)),null,'nonce is single-use');assert.deepEqual(again,[callback]);
+ for(const [value,outcome] of [['uncertain','password_uncertain'],['session','password_session']]){
+  const g=await signed();const st=new URL(g.session.passwordURL('#/settings')).searchParams.get('state');
+  assert.deepEqual(await g.session.completeCallback(callback+'?'+new URLSearchParams({password:value,state:st}),()=>{}),{returnHash:'#/',outcome});assert.deepEqual(g.session.businessScope(),{state:'guest'});
+ }
+ const c=await signed();const cs=new URL(c.session.passwordURL('#/settings')).searchParams.get('state');const back=[];
+ assert.equal(await c.session.completeCallback(callback+'?'+new URLSearchParams({password:'cancelled',state:cs}),v=>back.push(v)),null);
+ assert.deepEqual(back,[callback+'#/settings'],'cancel keeps the settings route for the normal restore');assert.equal(c.session.businessScope().state,'authenticated');
+ const forged=await signed();forged.session.passwordURL('#/settings');const fs=[];
+ assert.equal(await forged.session.completeCallback(callback+'?password=changed&state='+'B'.repeat(43),v=>fs.push(v)),null);assert.deepEqual(fs,[callback]);assert.equal(forged.session.businessScope().state,'authenticated');
+ const none=await signed();assert.equal(await none.session.completeCallback(callback+'?password=changed&state='+'B'.repeat(43),()=>{}),null,'no saved nonce');assert.equal(none.session.businessScope().state,'authenticated');
+ const odd=await signed();const os=new URL(odd.session.passwordURL('#/x')).searchParams.get('state');
+ assert.equal(await odd.session.completeCallback(callback+'?'+new URLSearchParams({password:'other',state:os}),()=>{}),null,'unknown outcome');
+ const dup=await signed();const ds=new URL(dup.session.passwordURL('#/settings')).searchParams.get('state');
+ assert.equal(await dup.session.completeCallback(callback+'?password=changed&password=changed&state='+ds,()=>{}),null,'duplicate outcome');
+ const bad=await signed();bad.session.passwordURL('#/settings');const key=[...bad.data.keys()].find(k=>k.startsWith('yp.auth.password.'));
+ bad.data.set(key,'{broken');assert.equal(await bad.session.completeCallback(callback+'?password=changed&state=x',()=>{}),null,'damaged record');
+ bad.data.set(key,JSON.stringify({state:'S'.repeat(43),returnHash:5}));const bh=[];
+ assert.equal(await bad.session.completeCallback(callback+'?password=cancelled&state='+'S'.repeat(43),v=>bh.push(v)),null);assert.deepEqual(bh,[callback],'non-hash return ignored');
+ const ws=await signed();ws.env.writes=true;assert.throws(()=>ws.session.passwordURL('#/settings'),fail('storage'));
+ const cr=await signed();cr.config.crypto.getRandomValues=()=>{throw Error('no crypto')};assert.equal(new URL(cr.session.passwordURL('#/settings')).searchParams.get('state'),'A'.repeat(43));
+});
+

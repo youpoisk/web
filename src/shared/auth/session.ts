@@ -114,9 +114,49 @@ export class BrowserSession {
     try { expected = this.#flowStorage.getItem(this.#logoutKey); this.#flowStorage.removeItem(this.#logoutKey); } catch { expected = null; }
     return expected !== null && url.searchParams.get('logout') === 'done' && url.searchParams.getAll('state').length === 1 && url.searchParams.get('state') === expected;
   }
-  async completeCallback(rawURL: string, replaceURL: (clean: string) => void, signal?: AbortSignal): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' | 'logged_out' } | null> {
+  #nonce(): string {
+    let state = 'A'.repeat(43); // valid placeholder: the nonce only gates a notice
+    try { state = btoa(String.fromCharCode(...this.#crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); } catch { /* keep placeholder */ }
+    return state;
+  }
+  get #passwordKey(): string { return `yp.auth.password.v1:${this.#api}:${encodeURIComponent(this.#callback)}`; }
+  /** URL of the API-origin password page (YP-047). The site never sees the
+   * passwords; the page returns only a nonce-bound outcome. */
+  passwordURL(returnHash: string): string {
+    this.#identity();
+    const state = this.#nonce();
+    try { this.#flowStorage.setItem(this.#passwordKey, JSON.stringify({ state, returnHash })); } catch { throw new FlowError('storage'); }
+    return `${this.#api}/auth/password?${new URLSearchParams({ redirect_uri: this.#callback, state })}`;
+  }
+  /** Return from the password page. A forged or cancelled return changes
+   * nothing (null: the normal restore runs). changed/uncertain/session end
+   * the local sign-in, because the server revoked (or may have revoked) every
+   * session of the account. undefined: not a password return. */
+  #capturePassword(rawURL: string, replaceURL: (clean: string) => void): { returnHash: string; outcome: 'password_changed' | 'password_uncertain' | 'password_session' } | null | undefined {
+    let url: URL;
+    try { url = new URL(rawURL); } catch { return undefined; }
+    if (!url.searchParams.has('password')) return undefined;
+    let saved: { state?: unknown; returnHash?: unknown } | null = null;
+    try { const raw = this.#flowStorage.getItem(this.#passwordKey); this.#flowStorage.removeItem(this.#passwordKey); saved = raw === null ? null : JSON.parse(raw); } catch { saved = null; }
+    const valid = saved !== null && typeof saved.state === 'string' && url.searchParams.getAll('state').length === 1 && url.searchParams.get('state') === saved.state &&
+      url.searchParams.getAll('password').length === 1;
+    const hash = valid && typeof saved!.returnHash === 'string' && saved!.returnHash.startsWith('#/') ? saved!.returnHash : '';
+    const outcome = valid ? ({ changed: 'password_changed', uncertain: 'password_uncertain', session: 'password_session' } as const)[url.searchParams.get('password') as 'changed'] ?? null : null;
+    replaceURL(url.origin + url.pathname + (outcome ? '' : hash));
+    if (!outcome) return null;
+    this.#identity();
+    const next = { owner: null, epoch: this.#epoch() };
+    this.#credentials = null;
+    this.#clear();
+    this.#save(next);
+    this.#scope = next;
+    return { returnHash: '#/', outcome };
+  }
+  async completeCallback(rawURL: string, replaceURL: (clean: string) => void, signal?: AbortSignal): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' | 'logged_out' | 'password_changed' | 'password_uncertain' | 'password_session' } | null> {
     const logout = this.#captureLogout(rawURL, replaceURL);
     if (logout !== null) return logout ? { returnHash: '#/', outcome: 'logged_out' } : null;
+    const password = this.#capturePassword(rawURL, replaceURL);
+    if (password !== undefined) return password;
     this.#identity();
     const denied = this.#flow.captureDenied(rawURL, replaceURL);
     if (denied) {
@@ -172,8 +212,7 @@ export class BrowserSession {
     // Expired/absent bearer or network failure: the HttpOnly cookie family may
     // still be live. The first-party page revokes it by its own cookie. The
     // nonce only controls the "logged out" notice; losing it never blocks logout.
-    let state = 'A'.repeat(43); // valid placeholder: the nonce only gates a notice
-    try { state = btoa(String.fromCharCode(...this.#crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); } catch { /* keep placeholder */ }
+    const state = this.#nonce();
     try { this.#flowStorage.setItem(this.#logoutKey, state); } catch { /* notice lost, logout continues */ }
     return { result: 'broker', url: `${this.#api}/auth/logout?${new URLSearchParams({ redirect_uri: this.#callback, state })}` };
   }

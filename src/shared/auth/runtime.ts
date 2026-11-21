@@ -10,7 +10,8 @@ export type SessionPort = {
   pendingSummary(): { state: string; status: 'pending' | 'expired' | 'stale' } | null;
   cancel(state: string): unknown;
   authorize(intent: 'restore' | Intent, returnHash: string): Promise<string>;
-  completeCallback(rawURL: string, replaceURL: (clean: string) => void): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' | 'logged_out' } | null>;
+  completeCallback(rawURL: string, replaceURL: (clean: string) => void): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' | 'logged_out' | 'password_changed' | 'password_uncertain' | 'password_session' } | null>;
+  passwordURL(returnHash: string): string;
   logout(): Promise<{ result: 'revoked' } | { result: 'broker'; url: string }>;
 };
 export type AuthView =
@@ -38,7 +39,7 @@ export function authConfig(env: Record<string, string | boolean | undefined>, lo
 export function scrubCallback(browser: Pick<Browser, 'href' | 'replace'>): void {
   let url: URL;
   try { url = new URL(browser.href); } catch { return; }
-  if (['code', 'state', 'error', 'logout'].some((key) => url.searchParams.has(key))) browser.replace(url.origin + url.pathname + url.hash);
+  if (['code', 'state', 'error', 'logout', 'password'].some((key) => url.searchParams.has(key))) browser.replace(url.origin + url.pathname + url.hash);
 }
 
 export function startupFailure(error: unknown): AuthView {
@@ -75,6 +76,9 @@ export async function bootAuth(session: SessionPort, browser: Browser): Promise<
     if (done) {
       if (done.outcome === 'access_denied') return settled(session, 'Вход отменён.');
       if (done.outcome === 'logged_out') return settled(session, 'Вы вышли из аккаунта.');
+      if (done.outcome === 'password_changed') return settled(session, 'Пароль изменён. Все входы завершены — войдите с новым паролем.');
+      if (done.outcome === 'password_uncertain') return settled(session, 'Не удалось подтвердить смену пароля. Войдите снова: если смена прошла, подойдёт новый пароль.');
+      if (done.outcome === 'password_session') return settled(session, 'Сессия завершилась. Войдите снова, чтобы сменить пароль.');
       return settled(session);
     }
     const pending = session.pendingSummary();
@@ -99,6 +103,16 @@ export async function signIn(session: SessionPort, browser: Browser, intent: Int
     return { status: 'redirecting', user: null };
   } catch (error) {
     return failure(error);
+  }
+}
+
+/** Opens the API-origin password page; the site never handles passwords. */
+export function changePassword(session: SessionPort, browser: Browser, returnHash = '#/settings'): AuthView {
+  try {
+    browser.assign(session.passwordURL(route(returnHash)));
+    return { status: 'redirecting', user: null };
+  } catch {
+    return { status: 'error', user: null, message: 'Не удалось открыть смену пароля. Обновите страницу и попробуйте ещё раз.' };
   }
 }
 
