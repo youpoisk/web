@@ -77,3 +77,5 @@ YP-054 website: pinned backend b7f335e (29 operations), generated validators/typ
 e2017fb independent review PASS; no MEDIUM/HIGH. Independent generated/provenance/typecheck,79 CSP tests and9 extension tests PASS. Report docs/reviews/channel-pages.md. Backend runtime ready/swagger/channelcard200 and full auth-e2e PASS after deployment.
 
 YP-096 website: «Оценки друзей» panel on the server video page for a signed-in viewer (GET /v1/me/videos/{id}/friend-ratings): friend name/login, rating, date, «Показать ещё»; empty result shows «Никто из друзей не оценил это видео»; load error offers a retry; guests see no panel. Contract c28a1b6 (30 operations). test:api 80 (lists.ts 100% lines/functions), frontend gate PASS. Browser check pending.
+
+YP-057 step 1 website: #/friends «Все»/«Мои друзья» for a signed-in viewer list real friends from GET /v1/me/friends (name, @login, friends since, «Показать ещё», retry of the failed page); «Заявки»/«Отправленные» say requests and people search come next; guests are asked to sign in. Contract ed162f2 (31 operations). test:api 81, frontend gate PASS. Browser check pending.

@@ -183,6 +183,15 @@ export async function loadFriendRatings(client: Pick<ApiClient, 'request'>, vide
   return { items: page.items, next: page.next_cursor ?? null };
 }
 
+export type Friend = components['schemas']['Friend'];
+/** One page of the viewer's accepted friends, newest friendship first. */
+export async function loadFriends(client: Pick<ApiClient, 'request'>, after: string | null, signal?: AbortSignal): Promise<{ items: Friend[]; next: string | null }> {
+  const query: { limit: number; after?: string } = { limit: 30 };
+  if (after) query.after = after;
+  const page = await client.request('listFriends', { query, signal });
+  return { items: page.items, next: page.next_cursor ?? null };
+}
+
 /** True when a write failed because the server state moved on (reload needed). */
 export function conflicted(error: unknown): boolean {
   return error instanceof ApiError && error.kind === 'http' && error.status === 409;

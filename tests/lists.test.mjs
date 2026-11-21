@@ -259,3 +259,13 @@ test('loadFriendRatings pages friends ratings of a video', async () => {
   assert.deepEqual(await loadFriendRatings(client, 'v1', 'n1'), { items: [], next: null });
   assert.deepEqual(calls, [['listFriendRatings', { id: 'v1' }, { limit: 20 }], ['listFriendRatings', { id: 'v1' }, { limit: 20, after: 'n1' }]]);
 });
+
+test('loadFriends pages the viewer friends', async () => {
+  const { loadFriends } = await import('../src/shared/library/lists.ts');
+  const calls = [];
+  const friend = { user: { id: '00000000-0000-4000-8000-0000000000e1', login: 'anna', name: null }, since: '2026-11-21T10:00:00Z' };
+  const client = { async request(op, options) { calls.push([op, options.query]); return calls.length === 1 ? { items: [friend], next_cursor: 'n1' } : { items: [] }; } };
+  assert.deepEqual(await loadFriends(client, null), { items: [friend], next: 'n1' });
+  assert.deepEqual(await loadFriends(client, 'n1'), { items: [], next: null });
+  assert.deepEqual(calls, [['listFriends', { limit: 30 }], ['listFriends', { limit: 30, after: 'n1' }]]);
+});
