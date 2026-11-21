@@ -343,7 +343,7 @@ export interface paths {
         put?: never;
         /**
          * Send a direct message
-         * @description Direct messages (YP-079): one conversation per user pair. A block in either direction or an inactive counterpart hides the conversation (404, omitted from lists). Needs a live mutual friendship (403 friendship_required); history stays readable after unfriend. 201 creates; repeating the same client_message_id with the same content returns 200 with the stored message; the same key with other content or recipient is 409 conflict. Unknown video 422. Rate limited: 30 sends per account per minute (429 rate_limited with Retry-After).
+         * @description Direct messages (YP-079): one conversation per user pair. A block in either direction or an inactive counterpart hides the conversation (404, omitted from lists). Needs a live mutual friendship (403 friendship_required); history stays readable after unfriend. 201 creates; repeating the same client_message_id with the same content returns 200 with the stored message; the same key with other content or recipient is 409 conflict. Unknown video 422. Rate limited: 30 sends per account per minute (429 rate_limited with Retry-After). A retry is answered from the stored message only while the counterpart is still visible: after a block it is 404 (the message was stored), after an unfriend it is 200.
          */
         post: operations["sendMessage"];
         delete?: never;
@@ -1196,13 +1196,13 @@ export interface components {
             seq: number;
             video: components["schemas"]["MessageVideo"] | null;
         };
-        /** @description client_message_id makes retries idempotent. body (trimmed, 1..2000 code points after trimming) and/or video_id (catalog video UUID) is required. */
+        /** @description client_message_id makes retries idempotent per sender. body is trimmed; an empty or whitespace-only body (or null) means no text. After trimming, text (1..2000 code points, no NUL) and/or video_id (catalog video UUID) is required. The request body is limited to 8192 bytes, so send text as UTF-8 rather than \u-escaped. */
         MessageCreate: {
-            body?: string;
+            body?: string | null;
             /** Format: uuid */
             client_message_id: string;
             /** Format: uuid */
-            video_id?: string;
+            video_id?: string | null;
         };
         MessagePage: {
             can_send: boolean;

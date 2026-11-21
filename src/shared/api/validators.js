@@ -5638,6 +5638,7 @@ function validate132(data, { instancePath = "", parentData, parentDataProperty, 
 }
 validate132.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_MessageCreate = validate134;
+var schema66 = { "type": "object", "description": "client_message_id makes retries idempotent per sender. body is trimmed; an empty or whitespace-only body (or null) means no text. After trimming, text (1..2000 code points, no NUL) and/or video_id (catalog video UUID) is required. The request body is limited to 8192 bytes, so send text as UTF-8 rather than \\u-escaped.", "properties": { "client_message_id": { "type": "string", "format": "uuid" }, "body": { "type": ["string", "null"] }, "video_id": { "type": ["string", "null"], "format": "uuid" } }, "required": ["client_message_id"], "additionalProperties": false };
 function validate134(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -5686,9 +5687,10 @@ function validate134(data, { instancePath = "", parentData, parentDataProperty, 
           }
           if (valid0) {
             if (data.body !== void 0) {
+              let data1 = data.body;
               const _errs4 = errors;
-              if (typeof data.body !== "string") {
-                validate134.errors = [{ instancePath: instancePath + "/body", schemaPath: "#/properties/body/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+              if (typeof data1 !== "string" && data1 !== null) {
+                validate134.errors = [{ instancePath: instancePath + "/body", schemaPath: "#/properties/body/type", keyword: "type", params: { type: schema66.properties.body.type }, message: "must be string,null" }];
                 return false;
               }
               var valid0 = _errs4 === errors;
@@ -5699,6 +5701,10 @@ function validate134(data, { instancePath = "", parentData, parentDataProperty, 
               if (data.video_id !== void 0) {
                 let data2 = data.video_id;
                 const _errs6 = errors;
+                if (typeof data2 !== "string" && data2 !== null) {
+                  validate134.errors = [{ instancePath: instancePath + "/video_id", schemaPath: "#/properties/video_id/type", keyword: "type", params: { type: schema66.properties.video_id.type }, message: "must be string,null" }];
+                  return false;
+                }
                 if (errors === _errs6) {
                   if (errors === _errs6) {
                     if (typeof data2 === "string") {
@@ -5706,9 +5712,6 @@ function validate134(data, { instancePath = "", parentData, parentDataProperty, 
                         validate134.errors = [{ instancePath: instancePath + "/video_id", schemaPath: "#/properties/video_id/format", keyword: "format", params: { format: "uuid" }, message: 'must match format "uuid"' }];
                         return false;
                       }
-                    } else {
-                      validate134.errors = [{ instancePath: instancePath + "/video_id", schemaPath: "#/properties/video_id/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                      return false;
                     }
                   }
                 }
@@ -30991,9 +30994,10 @@ function validate483(data, { instancePath = "", parentData, parentDataProperty, 
           }
           if (valid0) {
             if (data.body !== void 0) {
+              let data1 = data.body;
               const _errs4 = errors;
-              if (typeof data.body !== "string") {
-                validate483.errors = [{ instancePath: instancePath + "/body", schemaPath: "#/properties/body/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+              if (typeof data1 !== "string" && data1 !== null) {
+                validate483.errors = [{ instancePath: instancePath + "/body", schemaPath: "#/properties/body/type", keyword: "type", params: { type: schema66.properties.body.type }, message: "must be string,null" }];
                 return false;
               }
               var valid0 = _errs4 === errors;
@@ -31004,6 +31008,10 @@ function validate483(data, { instancePath = "", parentData, parentDataProperty, 
               if (data.video_id !== void 0) {
                 let data2 = data.video_id;
                 const _errs6 = errors;
+                if (typeof data2 !== "string" && data2 !== null) {
+                  validate483.errors = [{ instancePath: instancePath + "/video_id", schemaPath: "#/properties/video_id/type", keyword: "type", params: { type: schema66.properties.video_id.type }, message: "must be string,null" }];
+                  return false;
+                }
                 if (errors === _errs6) {
                   if (errors === _errs6) {
                     if (typeof data2 === "string") {
@@ -31011,9 +31019,6 @@ function validate483(data, { instancePath = "", parentData, parentDataProperty, 
                         validate483.errors = [{ instancePath: instancePath + "/video_id", schemaPath: "#/properties/video_id/format", keyword: "format", params: { format: "uuid" }, message: 'must match format "uuid"' }];
                         return false;
                       }
-                    } else {
-                      validate483.errors = [{ instancePath: instancePath + "/video_id", schemaPath: "#/properties/video_id/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                      return false;
                     }
                   }
                 }
