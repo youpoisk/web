@@ -404,6 +404,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/videos/{id}/friend-ratings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ratings of a video by my friends
+         * @description Ratings of this video by the viewer's accepted mutual friends whose ratings_visibility admits friends (public, friends, friends_and_followers); private ratings and inactive accounts are left out before the limit and no count is exposed. Newest rating change first (rated_at desc, user id desc). Live Bearer required. Keyset cursor: pass next_cursor as after; limit 1..100 (default 20); unknown/repeated/malformed query keys 422. 404 for an unknown video. An empty items array means no friend rating is visible (the site shows «Никто из друзей не оценил это видео»).
+         */
+        get: operations["listFriendRatings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/videos/{id}/review": {
         parameters: {
             query?: never;
@@ -665,6 +685,22 @@ export interface components {
             /** @constant */
             client_type: "extension";
             refresh_token: string;
+        };
+        FriendRating: {
+            /** Format: date-time */
+            rated_at: string;
+            rating: number;
+            user: components["schemas"]["FriendUser"];
+        };
+        FriendRatingPage: {
+            items: components["schemas"]["FriendRating"][];
+            next_cursor?: string;
+        };
+        FriendUser: {
+            /** Format: uuid */
+            id: string;
+            login: string;
+            name: string | null;
         };
         Healthy: {
             /** @constant */
@@ -1946,6 +1982,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ObservationResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listFriendRatings: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor, no duplicate keys. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ratings of a video by my friends */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendRatingPage"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
