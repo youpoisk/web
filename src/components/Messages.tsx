@@ -50,11 +50,16 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
   const [loading, setLoading] = useState(true), [error, setError] = useState(''), [text, setText] = useState(''), [sending, setSending] = useState(false), [notice, setNotice] = useState('');
   const [olderLoading, setOlderLoading] = useState(false);
   const pending = useRef<{ key: string; text: string } | null>(null), generation = useRef(0), serial = useRef(0), readUpTo = useRef(0);
-  const loaded = useRef<Message[]>([]), initialized = useRef(false), olderBusy = useRef(false);
+  const loaded = useRef<Message[]>([]), initialized = useRef(false), olderBusy = useRef(false), polling = useRef(false);
   // The ref mirrors the rendered list so async merges never use a stale copy.
   const apply = (incoming: Message[]) => { loaded.current = mergeMessages(loaded.current, incoming); setItems(loaded.current); };
+  // A poll tick is skipped while a refresh (possibly a long gap fill) runs.
+  function poll(signal: AbortSignal) {
+    if (document.visibilityState === 'visible' && !polling.current) void refresh(signal);
+  }
   async function refresh(signal?: AbortSignal) {
     const stamp = generation.current, read = ++serial.current;
+    polling.current = true;
     const live = () => stamp === generation.current && read === serial.current;
     try {
       const page = await loadMessages(client, userId, null, signal);
@@ -79,14 +84,14 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
       }
     } catch (failure) {
       if (live() && !signal?.aborted) setError(failure instanceof ApiError && failure.status === 404 ? 'Переписка недоступна: пользователь не найден или ограничил общение.' : 'Не удалось загрузить переписку.');
-    } finally { if (stamp === generation.current) setLoading(false); }
+    } finally { if (live()) { setLoading(false); polling.current = false; } }
   }
   useEffect(() => {
-    generation.current++; readUpTo.current = 0; pending.current = null; loaded.current = []; initialized.current = false;
+    generation.current++; readUpTo.current = 0; pending.current = null; loaded.current = []; initialized.current = false; polling.current = false;
     setItems([]); setUser(null); setOlder(null); setLoading(true); setError(''); setText(''); setNotice('');
     const ctl = new AbortController(); void refresh(ctl.signal);
-    const timer = setInterval(() => { if (document.visibilityState === 'visible') void refresh(ctl.signal); }, POLL_MS);
-    const onVisible = () => { if (document.visibilityState === 'visible') void refresh(ctl.signal); };
+    const timer = setInterval(() => poll(ctl.signal), POLL_MS);
+    const onVisible = () => poll(ctl.signal);
     document.addEventListener('visibilitychange', onVisible);
     return () => { generation.current++; ctl.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
   }, [client, userId]);

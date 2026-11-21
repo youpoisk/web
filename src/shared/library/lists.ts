@@ -378,14 +378,18 @@ export function mergeMessages(prev: Message[], next: Message[]): Message[] {
   for (const m of [...prev, ...next]) bySeq.set(m.seq, m);
   return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
 }
-/** seq is consecutive per conversation. Given the loaded messages (any order)
- * and a newest-first page, returns the before-cursor that fetches the missing
- * range between them, or null when the page connects to what is loaded. */
+/** seq is consecutive per conversation. Given the loaded messages (any order,
+ * including the viewer's own just-sent ones) and a newest-first page, returns
+ * the before-cursor that fetches the highest missing seq between the oldest
+ * loaded message and the page, or null when that whole range is present. */
 export function messageGap(loaded: Message[], page: Message[]): number | null {
   if (!loaded.length || !page.length) return null;
-  const newestLoaded = Math.max(...loaded.map(m => m.seq));
-  const oldestPage = Math.min(...page.map(m => m.seq));
-  return oldestPage > newestLoaded + 1 ? oldestPage : null;
+  const present = new Set([...loaded, ...page].map(m => m.seq));
+  const lowest = Math.min(...loaded.map(m => m.seq));
+  for (let seq = Math.min(...page.map(m => m.seq)) - 1; seq > lowest; seq--) {
+    if (!present.has(seq)) return seq + 1;
+  }
+  return null;
 }
 /** User-facing text for a failed send; the default keeps the same key for a retry. */
 export function messageError(error: unknown): string {
