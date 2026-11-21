@@ -80,14 +80,26 @@ export function toCard(item: ListItem): ListCard {
  * command whose outcome is uncertain (network/timeout/429/5xx) keeps its
  * Idempotency-Key: repeating the identical command replays it, so a request
  * that actually committed returns its original result instead of a false 409.
- * The key is dropped on any definite answer; 410 (no receipt stored) renews
- * the lease once and retries with a fresh key. */
+ * The key is dropped on a definite answer; a fresh command can renew an
+ * expired lease once. A prior uncertain command returning 410 must reconcile. */
+export type VideoReview = components['schemas']['VideoReview'];
+type StateBody = { expected_revision: number; rating?: number | null; later?: boolean; added?: boolean };
+type ReviewBody = { expected_revision: number; text: string | null };
+type WriteCommand = { operation: 'patchVideoState'; body: StateBody } | { operation: 'putVideoReview'; body: ReviewBody };
+
 export class StateWriter {
   readonly #client: Pick<ApiClient, 'request'>;
   readonly #uuid: () => string;
+  readonly #scope: () => string;
+  #context: string | null = null;
   #lease: Promise<string> | null = null;
-  readonly #uncertain = new Map<string, { key: string; fingerprint: string }>();
-  constructor(client: Pick<ApiClient, 'request'>, uuid: () => string) { this.#client = client; this.#uuid = uuid; }
+  readonly #uncertain = new Map<string, { key: string; fingerprint: string; lease: string }>();
+  constructor(client: Pick<ApiClient, 'request'>, uuid: () => string, scope: () => string = () => 'session') {
+    this.#client = client; this.#uuid = uuid; this.#scope = scope;
+  }
+  #check(context: string): void {
+    if (this.#scope() !== context) throw new ApiError('stale_session');
+  }
   #anchor(): Promise<string> {
     if (this.#lease === null) {
       const pending = this.#client.request('issueOfflineLease', {}).then((r) => r.lease);
@@ -96,28 +108,54 @@ export class StateWriter {
     }
     return this.#lease;
   }
-  async patch(videoId: string, expected: number, change: { rating?: number | null; later?: boolean; added?: boolean }): Promise<VideoState> {
-    const body = { expected_revision: expected, ...change };
-    const fingerprint = JSON.stringify(body);
-    const previous = this.#uncertain.get(videoId);
-    let key = previous && previous.fingerprint === fingerprint ? previous.key : this.#uuid();
+  patch(videoId: string, expected: number, change: { rating?: number | null; later?: boolean; added?: boolean }): Promise<VideoState> {
+    return this.#write(videoId, { operation: 'patchVideoState', body: { expected_revision: expected, ...change } });
+  }
+  review(videoId: string, expected: number, text: string | null): Promise<VideoReview> {
+    return this.#write(videoId, { operation: 'putVideoReview', body: { expected_revision: expected, text } });
+  }
+  #write(videoId: string, command: { operation: 'patchVideoState'; body: StateBody }): Promise<VideoState>;
+  #write(videoId: string, command: { operation: 'putVideoReview'; body: ReviewBody }): Promise<VideoReview>;
+  async #write(videoId: string, command: WriteCommand): Promise<VideoState | VideoReview> {
+    const context = this.#scope();
+    if (context !== this.#context) { this.#context = context; this.#lease = null; this.#uncertain.clear(); }
+    const slot = command.operation + ':' + videoId;
+    const fingerprint = JSON.stringify(command.body);
+    const previous = this.#uncertain.get(slot);
+    const reusing = previous?.fingerprint === fingerprint;
+    let key = reusing ? previous.key : this.#uuid();
+    let originalLease = reusing ? previous.lease : null;
     for (let attempt = 0; ; attempt++) {
-      const lease = await this.#anchor();
-      this.#uncertain.set(videoId, { key, fingerprint });
+      const lease = originalLease ?? await this.#anchor();
+      this.#check(context);
+      this.#uncertain.set(slot, { key, fingerprint, lease });
       try {
-        const result = await this.#client.request('patchVideoState', {
-          path: { id: videoId }, header: { 'Idempotency-Key': key, 'X-Offline-Lease': lease }, body
-        });
-        this.#uncertain.delete(videoId);
-        return result.state;
+        const options = { path: { id: videoId }, header: { 'Idempotency-Key': key, 'X-Offline-Lease': lease } };
+        const result = command.operation === 'putVideoReview'
+          ? (await this.#client.request('putVideoReview', { ...options, body: command.body })).review
+          : (await this.#client.request('patchVideoState', { ...options, body: command.body })).state;
+        this.#check(context);
+        if (this.#uncertain.get(slot)?.key === key) this.#uncertain.delete(slot);
+        return result;
       } catch (error) {
+        this.#check(context);
         const definite = error instanceof ApiError && error.kind === 'http' && error.status !== 429 && error.status < 500;
-        if (definite) this.#uncertain.delete(videoId);
-        if (attempt === 0 && error instanceof ApiError && error.kind === 'http' && error.status === 410) { this.#lease = null; key = this.#uuid(); continue; }
+        if (definite && this.#uncertain.get(slot)?.key === key) this.#uncertain.delete(slot);
+        if (error instanceof ApiError && error.kind === 'http' && error.status === 410) {
+          this.#lease = null;
+          // A fresh key cannot have an expired receipt. An uncertain prior
+          // command can: never renew that old intent without reconciliation.
+          if (attempt === 0 && !reusing) { key = this.#uuid(); originalLease = null; continue; }
+        }
         throw error;
       }
     }
   }
+}
+
+/** Own review includes a persistent revision even when text is null. */
+export async function loadReview(client: Pick<ApiClient, 'request'>, videoId: string, signal?: AbortSignal): Promise<VideoReview> {
+  return (await client.request('getVideoReview', { path: { id: videoId }, signal })).review;
 }
 
 /** True when a write failed because the server state moved on (reload needed). */

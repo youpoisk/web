@@ -165,3 +165,45 @@ test('searchCatalog sends trimmed text, one tag, sort and cursor; cards carry no
   const bare = toPublicCard({ ...publicItem, title: null, duration_seconds: null, channel: null, hashtags: [], rating: { count: 0, average: null } });
   assert.deepEqual([bare.title, bare.duration, bare.channel, bare.tag, bare.rating, bare.votes], ['Название пока неизвестно', '', '', '', 0, 0]);
 });
+
+test('own reviews load and write through distinct idempotency scopes with one shared lease', async () => {
+  const { StateWriter, loadReview } = await import('../src/shared/library/lists.ts');
+  const calls=[];let n=0;
+  const client={async request(op,options){calls.push([op,options]);if(op==='issueOfflineLease')return{lease:'lease'};if(op==='getVideoReview')return{review:{revision:7,text:null}};if(op==='putVideoReview')return{review:{revision:options.body.expected_revision+1,text:options.body.text}};return{state:{revision:1}}}};
+  const controller=new AbortController();assert.deepEqual(await loadReview(client,'v',controller.signal),{revision:7,text:null});assert.equal(calls[0][1].signal,controller.signal);
+  const writer=new StateWriter(client,()=> 'key-'+ ++n);
+  assert.deepEqual(await writer.review('v',7,'Текст'),{revision:8,text:'Текст'});assert.deepEqual(await writer.review('v',8,null),{revision:9,text:null});await writer.patch('v',0,{later:true});
+  assert.equal(calls.filter(c=>c[0]==='issueOfflineLease').length,1);
+  assert.deepEqual(calls.filter(c=>c[0]==='putVideoReview').map(c=>c[1].body),[{expected_revision:7,text:'Текст'},{expected_revision:8,text:null}]);
+  assert.deepEqual(calls.filter(c=>c[0]==='putVideoReview').map(c=>c[1].header['Idempotency-Key']),['key-1','key-2']);
+});
+
+test('uncertain state and review commands never clobber each other, and old receipts require reconciliation',async()=>{
+  const {StateWriter}=await import('../src/shared/library/lists.ts');const{ApiError}=await import('../src/shared/api/client.ts');let n=0;const seen=[];let fail=true,expired=false;
+  const client={async request(op,o){if(op==='issueOfflineLease')return{lease:'l'};seen.push([op,o.header['Idempotency-Key']]);if(expired)throw new ApiError('http',410);if(fail)throw new ApiError('network');return op==='putVideoReview'?{review:{revision:1,text:o.body.text}}:{state:{revision:1}}}};
+  const writer=new StateWriter(client,()=> 'k'+ ++n);
+  await assert.rejects(writer.patch('v',0,{later:true}));await assert.rejects(writer.review('v',0,'text'));fail=false;
+  await writer.patch('v',0,{later:true});await writer.review('v',0,'text');assert.deepEqual(seen.map(c=>c[1]),['k1','k2','k1','k2']);
+  fail=true;await assert.rejects(writer.review('v',1,'changed'));expired=true;const before=seen.length;await assert.rejects(writer.review('v',1,'changed'),e=>e.status===410);assert.equal(seen.length,before+1,'uncertain intent must not silently renew after 410');
+});
+
+test('late writes cannot clear a newer uncertain command for the same object',async()=>{
+ const {StateWriter}=await import('../src/shared/library/lists.ts');const{ApiError}=await import('../src/shared/api/client.ts');let release,n=0;const keys=[];let attempt=0;
+ const client={async request(op,o){if(op==='issueOfflineLease')return{lease:'l'};keys.push(o.header['Idempotency-Key']);if(++attempt===1)return new Promise(resolve=>{release=resolve});if(attempt===2)throw new ApiError('network');return{review:{revision:2,text:o.body.text}}}};
+ const writer=new StateWriter(client,()=> 'k'+ ++n);const older=writer.review('v',0,'old');await new Promise(r=>setImmediate(r));await assert.rejects(writer.review('v',1,'new'));release({review:{revision:1,text:'old'}});await older;await writer.review('v',1,'new');assert.deepEqual(keys,['k1','k2','k2']);
+});
+
+test('account changes discard late replies and do not reuse another account lease or uncertain key',async()=>{
+ const {StateWriter}=await import('../src/shared/library/lists.ts');const{ApiError}=await import('../src/shared/api/client.ts');let scope='A',n=0,release;const seen=[];
+ const client={async request(op,o){seen.push([op,o]);if(op==='issueOfflineLease')return{lease:'lease-'+scope};if(scope==='A')return new Promise(resolve=>{release=resolve});return{review:{revision:1,text:'B'}}}};
+ const writer=new StateWriter(client,()=> 'k'+ ++n,()=>scope);const old=writer.review('v',0,'A');await new Promise(r=>setImmediate(r));scope='B';assert.equal((await writer.review('v',0,'B')).text,'B');release({review:{revision:1,text:'A'}});await assert.rejects(old,e=>e instanceof ApiError&&e.kind==='stale_session');
+ assert.deepEqual(seen.filter(c=>c[0]==='putVideoReview').map(c=>c[1].header['X-Offline-Lease']),['lease-A','lease-B']);
+ let deliver;scope='A';const anchorWriter=new StateWriter({async request(op){if(op==='issueOfflineLease')return new Promise(resolve=>{deliver=resolve});throw Error('must not send old intent')}},()=> 'key',()=>scope);const pending=anchorWriter.review('v',0,'A');scope='B';deliver({lease:'A'});await assert.rejects(pending,e=>e.kind==='stale_session');
+});
+
+test('an uncertain review retains its original lease when another operation refreshes the shared lease',async()=>{
+ const {StateWriter}=await import('../src/shared/library/lists.ts');const{ApiError}=await import('../src/shared/api/client.ts');let n=0,anchors=0,reviews=0,patches=0;const seen=[];
+ const client={async request(op,o){if(op==='issueOfflineLease')return{lease:'lease-'+ ++anchors};seen.push([op,o.header]);if(op==='putVideoReview'){if(++reviews===1)throw new ApiError('network');return{review:{revision:1,text:'text'}}}if(++patches===1)throw new ApiError('http',410);return{state:{revision:1}}}};
+ const writer=new StateWriter(client,()=> 'k'+ ++n);await assert.rejects(writer.review('v',0,'text'));await writer.patch('v',0,{later:true});await writer.review('v',0,'text');
+ const reviewCalls=seen.filter(c=>c[0]==='putVideoReview');assert.deepEqual(reviewCalls.map(c=>c[1]),[{'Idempotency-Key':'k1','X-Offline-Lease':'lease-1'},{'Idempotency-Key':'k1','X-Offline-Lease':'lease-1'}]);assert.equal(anchors,2);
+});
