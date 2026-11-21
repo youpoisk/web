@@ -41,3 +41,5 @@
 @media(max-width:800px){.header-brand .wordmark-image{width:128px}}
 @media(max-width:560px){.header-brand .wordmark-image{width:93px}}
 /* Company signature applies only to the footer; existing YouPoisk marks stay unchanged. */footer .brand .footer-separator{color:#000;white-space:pre}footer .brand .footer-company{color:#f7cac9;white-space:pre}
+
+.guest-account{display:flex;flex-direction:column;gap:12px;padding:12px 0}.guest-account strong{font-size:13px}.guest-header{display:flex;align-items:center;gap:14px;white-space:nowrap;font-size:13px}.demo-logout{width:100%;background:transparent;border:0;cursor:pointer;text-align:left}.guest-gate{margin-top:24px}@media(max-width:600px){.guest-header{gap:8px;font-size:12px}.guest-header a:last-child{display:none}}
