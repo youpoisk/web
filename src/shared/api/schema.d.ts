@@ -284,6 +284,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/friend-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my friend requests
+         * @description Pending requests to the viewer (incoming) or from the viewer (outgoing), newest first (created_at desc, id desc); only active counterparts. Live Bearer; keyset after, limit 1..100 (default 30); unknown/repeated/malformed query keys 422.
+         */
+        get: operations["listFriendRequests"];
+        put?: never;
+        /**
+         * Send a friend request
+         * @description Creates a pending request to an active user (404 otherwise; self 422; already friends 409 conflict). Repeating returns the same pending request with status exists; if the target already asked the viewer, returns that incoming request with status incoming without accepting it (accept is explicit). Live Bearer; online operation without Idempotency-Key: a retry returns the existing request.
+         */
+        post: operations["sendFriendRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/friend-requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Decline or cancel a friend request
+         * @description The recipient declines or the sender cancels a pending request; 404 when it no longer exists (a retry after success also returns 404).
+         */
+        delete: operations["deleteFriendRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/friend-requests/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a friend request
+         * @description Recipient only (404 for anyone else or a missing request). Creates the canonical friendship, removes pending requests in both directions and invalidates the social sync scope of both accounts in one transaction that locks both accounts in a fixed order.
+         */
+        post: operations["acceptFriendRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/friends": {
         parameters: {
             query?: never;
@@ -299,6 +363,26 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/friends/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a friend
+         * @description Removes the friendship for both users (404 if not friends), clears pending requests between them and invalidates both social sync scopes.
+         */
+        delete: operations["deleteFriend"];
         options?: never;
         head?: never;
         patch?: never;
@@ -565,7 +649,7 @@ export interface paths {
         };
         /**
          * Find people
-         * @description Signed-in viewers find active accounts by login or display name (case-insensitive substring; email is never searched). q is required: 2..50 characters after collapsing whitespace and NFC, a leading @ is ignored, no control characters; %, _ and \ are literal. Ordered by login; limit 1..50 (default 20), no cursor. relation is self, friend (accepted mutual friendship) or none; friend requests and blocks arrive later in YP-057/083. Unknown/repeated/malformed query keys 422 invalid_people_query; invalid q 422 invalid_fields.
+         * @description Signed-in viewers find active accounts by login or display name (case-insensitive substring; email is never searched). q is required: 2..50 characters after collapsing whitespace and NFC, a leading @ is ignored, no control characters; %, _ and \ are literal. Ordered by login; limit 1..50 (default 20), no cursor. relation is self, friend (accepted mutual friendship), incoming / outgoing (pending friend request) or none; blocks arrive with YP-083. Unknown/repeated/malformed query keys 422 invalid_people_query; invalid q 422 invalid_fields.
          */
         get: operations["searchPeople"];
         put?: never;
@@ -841,6 +925,23 @@ export interface components {
             items: components["schemas"]["FriendRating"][];
             next_cursor?: string;
         };
+        FriendRequest: {
+            /** Format: date-time */
+            created_at: string;
+            /** @enum {string} */
+            direction: "incoming" | "outgoing";
+            /** Format: uuid */
+            id: string;
+            user: components["schemas"]["FriendUser"];
+        };
+        FriendRequestCreate: {
+            /** Format: uuid */
+            user_id: string;
+        };
+        FriendRequestPage: {
+            items: components["schemas"]["FriendRequest"][];
+            next_cursor?: string;
+        };
         FriendUser: {
             /** Format: uuid */
             id: string;
@@ -909,7 +1010,7 @@ export interface components {
         };
         Person: {
             /** @enum {string} */
-            relation: "self" | "friend" | "none";
+            relation: "self" | "friend" | "incoming" | "outgoing" | "none";
             user: components["schemas"]["FriendUser"];
         };
         PrivacyPatch: {
@@ -1002,6 +1103,11 @@ export interface components {
             expected_revision: number;
             /** @description Review text; at most 1000 characters after normalization. null deletes. String is normalized to NFC/LF and trimmed, then limited to 1000 code points. The complete JSON request including escape sequences is limited to 8192 UTF-8 bytes; larger requests return 413. Idempotency compares decoded pre-normalization text, not normalized equivalence. */
             text: string | null;
+        };
+        SendFriendRequestResult: {
+            request: components["schemas"]["FriendRequest"];
+            /** @enum {string} */
+            status: "created" | "exists" | "incoming";
         };
         User: {
             /** @description Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred. */
@@ -1920,6 +2026,210 @@ export interface operations {
             };
         };
     };
+    listFriendRequests: {
+        parameters: {
+            query: {
+                /** @description Opaque previous next_cursor, no duplicate keys. */
+                after?: string;
+                direction: "incoming" | "outgoing";
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List my friend requests */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendRequestPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    sendFriendRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FriendRequestCreate"];
+            };
+        };
+        responses: {
+            /** @description Send a friend request */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendFriendRequestResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteFriendRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Decline or cancel a friend request */
+            204: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    acceptFriendRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accept a friend request */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Friend"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     listFriends: {
         parameters: {
             query?: {
@@ -1944,6 +2254,54 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["FriendPage"];
                 };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteFriend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Remove a friend */
+            204: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
             403: {
