@@ -1,22 +1,25 @@
+import {PeopleListSearch} from './PeopleListSearch.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
 import { ApiError } from '../shared/api/client.ts';
-import { friendLimitMessage, loadFriends, removeFriend, type Friend } from '../shared/library/lists.ts';
+import { filterPeopleList, friendLimitMessage, loadFriends, removeFriend, type Friend } from '../shared/library/lists.ts';
 
 const confirmRemove = (it: Friend) => typeof window === 'undefined' || window.confirm(`Удалить ${it.user.name || it.user.login} из друзей?`);
 
 /** «Мои друзья» from the API with removal. Parent keys it by viewer. */
-export function FriendsList({ client }: { client: Pick<ApiClient, 'request'> }) {
+export function FriendsList({ client, searchable = false }: { client: Pick<ApiClient, 'request'>; searchable?: boolean }) {
+  const [searchText,setSearchText]=useState('');
   const [items, setItems] = useState<Friend[]>([]);
   const [next, setNext] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [failedAfter, setFailedAfter] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null), [message, setMessage] = useState('');
+  const reading = useRef(false);
   const generation = useRef(0), more = useRef(false);
 
   async function remove(it: Friend) {
-    if (busy || !confirmRemove(it)) return;
+    if (busy || loading || !confirmRemove(it)) return;
     setBusy(it.user.id); setMessage('');
     try {
       await removeFriend(client, it.user.id);
@@ -31,6 +34,8 @@ export function FriendsList({ client }: { client: Pick<ApiClient, 'request'> }) 
   }
 
   async function load(after: string | null, signal?: AbortSignal) {
+    if(reading.current)return;
+    reading.current=true;
     const stamp = generation.current;
     setLoading(true); setError(false);
     try {
@@ -41,14 +46,14 @@ export function FriendsList({ client }: { client: Pick<ApiClient, 'request'> }) 
     } catch {
       if (stamp === generation.current && !signal?.aborted) { setError(true); setFailedAfter(after); }
     } finally {
-      if (stamp === generation.current) setLoading(false);
+      if (stamp === generation.current) {reading.current=false;setLoading(false);}
     }
   }
   useEffect(() => {
     generation.current++;
     const ctl = new AbortController();
     void load(null, ctl.signal);
-    return () => { generation.current++; ctl.abort(); };
+    return () => { generation.current++; reading.current=false; ctl.abort(); };
   }, [client]);
 
   async function loadMore() {
@@ -56,18 +61,24 @@ export function FriendsList({ client }: { client: Pick<ApiClient, 'request'> }) 
     more.current = true;
     try { await load(next); } finally { more.current = false; }
   }
+  const searchTerm=searchable ? searchText.trim() : '';
+  const visible=filterPeopleList(items,searchTerm);
+  useEffect(()=>{if(searchTerm && next && !loading && !error && busy===null)void load(next);},[searchTerm,next,loading,error,busy]);
   return <section aria-busy={loading}>
+    {searchable && <PeopleListSearch value={searchText} onChange={setSearchText}/>}
+    {searchTerm && (loading || next!==null) && !error && <p className="muted" role="status">Ищем по всему списку…</p>}
+    {searchTerm && !loading && !error && !next && visible.length===0 && <p className="notice" role="status">По вашему запросу никого не найдено.</p>}
     {loading && items.length === 0 && <p className="muted" role="status">Загружаем друзей…</p>}
-    {error && <p className="notice" role="status">Не удалось загрузить друзей. <button className="text-button" onClick={() => void load(failedAfter)}>Повторить</button></p>}
-    {!loading && !error && items.length === 0 && <p className="notice">У вас пока нет друзей в YouPoisk. Найдите людей во вкладке «Все».</p>}
+    {error && <p className="notice" role="status">Не удалось загрузить друзей. <button className="text-button" disabled={loading || busy!==null} onClick={() => void load(failedAfter)}>Повторить</button></p>}
+    {!searchTerm && !loading && !error && items.length === 0 && <p className="notice">У вас пока нет друзей в YouPoisk. Найдите людей во вкладке «Все».</p>}
     {message && <p role="status" className="small">{message}</p>}
-    <div className="people-grid">{items.map((it, i) => <div className="panel person-card" key={it.user.id}>
+    <div className="people-grid">{visible.map((it, i) => <div className="panel person-card" key={it.user.id}>
       <span className={`avatar person-avatar color${i % 3 + 1}`} aria-hidden="true">{[...(it.user.name || it.user.login)][0]}</span>
       <h2>{it.user.name || it.user.login}</h2>
       <p className="muted">@{it.user.login} · друзья с {new Date(it.since).toLocaleDateString('ru-RU')}</p>
       <a href={`#/user/${it.user.id}`}>Открыть профиль</a>
-      <div className="actions"><button className="text-button" disabled={busy !== null} onClick={() => void remove(it)}>Удалить из друзей</button></div>
+      <div className="actions"><button className="text-button" disabled={busy !== null || loading} onClick={() => void remove(it)}>Удалить из друзей</button></div>
     </div>)}</div>
-    {next && <div className="actions"><button className="secondary" disabled={loading} onClick={() => void loadMore()}>Показать ещё</button></div>}
+    {!searchTerm && next && <div className="actions"><button className="secondary" disabled={loading} onClick={() => void loadMore()}>Показать ещё</button></div>}
   </section>;
 }

@@ -341,3 +341,20 @@ test('subscriptions map independent reads and idempotent writes without JSON bod
  assert.deepEqual(await loadFollowing(client,'followers','cursor'),{items:[],next:null});
  assert.deepEqual(calls,[['getRelationship',{path:{id},signal:ctl.signal}],['followUser',{path:{id}}],['unfollowUser',{path:{id}}],['listFollowing',{query:{limit:30},signal:ctl.signal}],['listFollowers',{query:{limit:30,after:'cursor'},signal:undefined}]]);
 });
+
+test('current-list people filter matches name/login with Unicode normalization and never mutates source', async () => {
+ const {filterPeopleList}=await import('../src/shared/library/lists.ts');
+ const anna={user:{id:'a',login:'qa_friend_anna',name:'Анна QA'}};
+ const sofia={user:{id:'s',login:'qa_friend_sofia',name:'София QA'}};
+ const short={user:{id:'i',login:'qa_ivan',name:'Иван Майский'}};
+ const unnamed={user:{id:'n',login:'anonymous',name:null}};
+ const users=Object.freeze([anna,sofia,short,unnamed]);
+ assert.deepEqual(filterPeopleList(users,' @QA_FRIEND_SOFIA '),[sofia]);
+ assert.deepEqual(filterPeopleList(users,'аНнА'),[anna]);
+ assert.deepEqual(filterPeopleList(users,short.user.name.normalize('NFD')),[short]);
+ assert.deepEqual(filterPeopleList(users,'   '),users);
+ assert.deepEqual(filterPeopleList(users,'нет такого'),[]);
+ assert.deepEqual(filterPeopleList(users,'anonymous'),[unnamed]);
+ assert.equal(users.length,4);
+ assert.deepEqual(filterPeopleList([anna,...Array.from({length:30},(_,i)=>({user:{login:'user'+i}})),sofia],'София'),[sofia]);
+});

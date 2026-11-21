@@ -312,3 +312,11 @@ export async function loadFollowing(client: Pick<ApiClient,'request'>, direction
  const page=await client.request(direction==='following'?'listFollowing':'listFollowers',{query,signal});
  return {items:page.items,next:page.next_cursor??null};
 }
+
+/** Local filtering of the viewer's paginated list; the UI walks remaining
+ * pages while a query is active, so a match beyond page one is not missed. */
+export function filterPeopleList<T extends {user:{login:string;name?:string|null}}>(items:readonly T[],text:string):T[]{
+ const normalize=(value:string)=>value.normalize('NFC').toLocaleLowerCase('ru').trim().replace(/^@/,'').replace(/\s+/gu,' ');
+ const query=normalize(text);
+ return items.filter(item=>[item.user.login,item.user.name??''].some(value=>normalize(value).includes(query)));
+}
