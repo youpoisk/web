@@ -802,8 +802,6 @@ export interface operations {
             /** @description Issue a short-lived browser authorization code */
             200: {
                 headers: {
-                    /** @description Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer. */
-                    "Set-Cookie"?: string;
                     /** @description Server-generated diagnostic ID; not an auth token. */
                     "X-Request-ID"?: string;
                     [name: string]: unknown;
@@ -859,8 +857,6 @@ export interface operations {
             /** @description Exchange a one-use code for access only */
             200: {
                 headers: {
-                    /** @description Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer. */
-                    "Set-Cookie"?: string;
                     /** @description Server-generated diagnostic ID; not an auth token. */
                     "X-Request-ID"?: string;
                     [name: string]: unknown;
@@ -916,8 +912,6 @@ export interface operations {
             /** @description Identify a live first-party cookie family without granting access */
             200: {
                 headers: {
-                    /** @description Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer. */
-                    "Set-Cookie"?: string;
                     /** @description Server-generated diagnostic ID; not an auth token. */
                     "X-Request-ID"?: string;
                     [name: string]: unknown;

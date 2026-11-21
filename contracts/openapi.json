@@ -1895,12 +1895,6 @@
                   "type": "string",
                   "minLength": 1
                 }
-              },
-              "Set-Cookie": {
-                "description": "Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer.",
-                "schema": {
-                  "type": "string"
-                }
               }
             },
             "content": {
@@ -2005,12 +1999,6 @@
                 "schema": {
                   "type": "string",
                   "minLength": 1
-                }
-              },
-              "Set-Cookie": {
-                "description": "Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer.",
-                "schema": {
-                  "type": "string"
                 }
               }
             },
@@ -2122,12 +2110,6 @@
                 "schema": {
                   "type": "string",
                   "minLength": 1
-                }
-              },
-              "Set-Cookie": {
-                "description": "Web only: __Host-yp_refresh; Secure; HttpOnly; Path=/; SameSite=None. Development uses yp_refresh_dev, non-Secure/Lax. Database enforces the original absolute deadline even if browser cookie remains longer.",
-                "schema": {
-                  "type": "string"
                 }
               }
             },
