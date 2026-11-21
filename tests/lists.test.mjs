@@ -218,3 +218,34 @@ test('searchCatalog preserves multiple tags and ANY mode on subsequent pages', a
   }};
   assert.deepEqual(await searchCatalog(client, {text: '', tags, match: 'any', sort: 'popular'}, 'cursor-two'), {items: [], next: null});
 });
+test('channel reads use internal UUID and distinct own-rating operation', async () => {
+ const {loadChannel,loadChannelRating} = await import('../src/shared/library/lists.ts');
+ const id=item().channel.id, controller=new AbortController(), calls=[];
+ const card={id,name:'Канал',youtube_channel_id:null,identity_verified:false,rating:{count:0,average:null}};
+ const client={async request(op,options){calls.push([op,options]);return op==='getChannelCard'?card:{state:{revision:3,rating:8}};}};
+ assert.deepEqual(await loadChannel(client,id,controller.signal),card);
+ assert.deepEqual(await loadChannelRating(client,id,controller.signal),{revision:3,rating:8});
+ assert.deepEqual(calls,[['getChannelCard',{path:{id},signal:controller.signal}],['getChannelRating',{path:{id},signal:controller.signal}]]);
+ assert.equal(toPublicCard(item()).channelUuid,id);
+ assert.equal(toCard(item()).channelUuid,id);
+ assert.equal(toPublicCard(item({channel:null})).channelUuid,'');
+});
+
+test('channel rating retries preserve receipt and original lease, independent of video state', async () => {
+ const {StateWriter} = await import('../src/shared/library/lists.ts');
+ const {ApiError} = await import('../src/shared/api/client.ts');
+ const calls=[];let n=0,fail=true;
+ const client={async request(op,options){calls.push([op,options]);if(op==='issueOfflineLease')return {lease:'shared'};
+  if(op==='putChannelRating'&&fail){fail=false;throw new ApiError('network');}
+  return {state:{revision:options.body.expected_revision+1,rating:options.body.rating??null}};
+ }};
+ const writer=new StateWriter(client,()=> 'key-'+ ++n);
+ await assert.rejects(writer.channelRating('same-id',0,7),e=>e.kind==='network');
+ await writer.patch('same-id',0,{rating:4});
+ assert.deepEqual(await writer.channelRating('same-id',0,7),{revision:1,rating:7});
+ const writes=calls.filter(([op])=>op==='putChannelRating');
+ assert.deepEqual(writes[0][1],writes[1][1]);
+ assert.notEqual(calls.find(([op])=>op==='patchVideoState')[1].header['Idempotency-Key'],writes[0][1].header['Idempotency-Key']);
+ assert.deepEqual(await writer.channelRating('same-id',1,null),{revision:2,rating:null});
+ assert.equal(calls.filter(([op])=>op==='issueOfflineLease').length,1);
+});

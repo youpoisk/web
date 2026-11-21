@@ -11,7 +11,7 @@ test('every pinned operation has runtime request/response validators', () => {
   const spec = JSON.parse(readFileSync(new URL('../contracts/openapi.json', import.meta.url)));
   const operations = Object.entries(spec.paths).flatMap(([path, methods]) =>
     Object.entries(methods).map(([method, operation]) => ({ path, method, operation })));
-  assert.equal(operations.length, 28);
+  assert.equal(operations.length, 29);
   assert.equal(Object.keys(validators.contract).length, operations.length);
   for (const { path, method, operation } of operations) {
     const actual = validators.contract[operation.operationId];
@@ -99,4 +99,15 @@ test('video review DTOs preserve deletion revision and forbid moderation/credent
   assert.equal(validators.getVideoReview_response_200({ ...deleted, refresh_token: 'forbidden' }), false);
   assert.equal(validators.schema_VideoReview({ revision: 6, text: '😀'.repeat(1000) }), true);
   assert.equal(validators.schema_VideoReview({ revision: 6, text: '😀'.repeat(1001) }), false);
+});
+
+test('channel card requires verified UC identity and never exposes own state or voter IDs', () => {
+ const card={id:uid,name:'Канал',youtube_channel_id:null,identity_verified:false,rating:{count:0,average:null}};
+ assert.equal(validators.schema_ChannelCard(card),true);
+ assert.equal(validators.schema_ChannelCard({...card,identity_verified:true}),false);
+ const uc='UC'+'a'.repeat(22),url='https://www.youtube.com/channel/'+uc;
+ assert.equal(validators.schema_ChannelCard({...card,youtube_channel_id:uc,identity_verified:true,url}),true);
+ assert.equal(validators.schema_ChannelCard({...card,url}),false);
+ assert.equal(validators.schema_ChannelCard({...card,my_state:{revision:1,rating:8}}),false);
+ assert.equal(validators.schema_ChannelCard({...card,voters:[uid]}),false);
 });

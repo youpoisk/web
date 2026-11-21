@@ -3,7 +3,7 @@
   "info": {
     "title": "YouPoisk current runtime API",
     "version": "0.1.0",
-    "description": "Partial implemented MVP contract:23business operations plus2health operations, not the full planned product. Standard JSON bodies8KiB, exact origins, access in memory, credentials/secrets never in URLs/logs/YouTube DOM. Database schema remains Go Code First; this external IDL is checked against actual Go route registrations and DTO responses. Int64 clients must reject unsafe numeric values rather than silently round. Mail and browser-broker protocols are not advertised as implemented."
+    "description": "Partial implemented MVP contract: 29 runtime operations including health endpoints. JSON bodies 8KiB; exact origins; access tokens in memory. Database schema remains Go Code First. API routes and DTOs are verified against this contract. Remaining product capabilities are tracked in todo.md."
   },
   "servers": [
     {
@@ -2877,6 +2877,106 @@
           }
         }
       }
+    },
+    "/v1/channels/{id}": {
+      "get": {
+        "operationId": "getChannelCard",
+        "summary": "Public channel identity and anonymous rating",
+        "description": "Internal canonical UUID only. Provisional identity is explicit; no alias/name resolution or merge redirect. Only active accounts contribute to rating. No individual scores, profile data or video membership is disclosed. Optional bearer, when supplied, must be valid; cookies alone do not authenticate.",
+        "tags": [
+          "Catalog"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          },
+          {}
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read a catalog card by internal UUID",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelCard"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4222,6 +4322,78 @@
           "change_seq"
         ],
         "additionalProperties": false
+      },
+      "ChannelCard": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "youtube_channel_id",
+          "name",
+          "identity_verified",
+          "rating"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "youtube_channel_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^UC[A-Za-z0-9_-]{22}$"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 150
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://www\\.youtube\\.com/channel/UC[A-Za-z0-9_-]{22}$"
+          },
+          "identity_verified": {
+            "type": "boolean"
+          },
+          "rating": {
+            "$ref": "#/components/schemas/Rating"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "identity_verified": {
+                  "const": true
+                }
+              },
+              "required": [
+                "identity_verified"
+              ]
+            },
+            "then": {
+              "required": [
+                "url"
+              ],
+              "properties": {
+                "youtube_channel_id": {
+                  "type": "string"
+                }
+              }
+            },
+            "else": {
+              "not": {
+                "required": [
+                  "url"
+                ]
+              }
+            }
+          }
+        ]
       }
     },
     "parameters": {

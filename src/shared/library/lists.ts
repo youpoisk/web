@@ -6,7 +6,7 @@ export type ListItem = components['schemas']['VideoListItem'];
 export type ListPage = { items: ListItem[]; next: string | null };
 /** Card shape used by the site's existing video grid. */
 export type ListCard = {
-  id: string; title: string; channel: string; handle: string; channelId: string; durationSeconds: number; duration: string;
+  id: string; title: string; channel: string; handle: string; channelId: string; channelUuid: string; durationSeconds: number; duration: string;
   hashtags: readonly string[]; source: string; channelSource: string; checkedAt: string; color: string; tag: string; rating: number;
   myRating: number | null; later: boolean; uuid: string; revision: number;
 };
@@ -59,6 +59,7 @@ export function toCard(item: ListItem): ListCard {
     channel: item.channel?.name ?? '',
     handle: '',
     channelId: item.channel?.youtube_channel_id ?? '',
+    channelUuid: item.channel?.id ?? '',
     durationSeconds: item.duration_seconds ?? 0,
     duration: duration(item.duration_seconds),
     hashtags: item.hashtags,
@@ -82,10 +83,19 @@ export function toCard(item: ListItem): ListCard {
  * that actually committed returns its original result instead of a false 409.
  * The key is dropped on a definite answer; a fresh command can renew an
  * expired lease once. A prior uncertain command returning 410 must reconcile. */
+export type ChannelState = components['schemas']['ChannelState'];
+export type ChannelCard = components['schemas']['ChannelCard'];
+export async function loadChannel(client: Pick<ApiClient, 'request'>, id: string, signal?: AbortSignal): Promise<ChannelCard> {
+  return client.request('getChannelCard', {path: {id}, signal});
+}
+export async function loadChannelRating(client: Pick<ApiClient, 'request'>, id: string, signal?: AbortSignal): Promise<ChannelState> {
+  return (await client.request('getChannelRating', {path: {id}, signal})).state;
+}
+
 export type VideoReview = components['schemas']['VideoReview'];
 type StateBody = { expected_revision: number; rating?: number | null; later?: boolean; added?: boolean };
 type ReviewBody = { expected_revision: number; text: string | null };
-type WriteCommand = { operation: 'patchVideoState'; body: StateBody } | { operation: 'putVideoReview'; body: ReviewBody };
+type WriteCommand = { operation: 'patchVideoState'; body: StateBody } | { operation: 'putVideoReview'; body: ReviewBody } | { operation: 'putChannelRating'; body: {expected_revision: number; rating: number | null} };
 
 export class StateWriter {
   readonly #client: Pick<ApiClient, 'request'>;
@@ -114,9 +124,13 @@ export class StateWriter {
   review(videoId: string, expected: number, text: string | null): Promise<VideoReview> {
     return this.#write(videoId, { operation: 'putVideoReview', body: { expected_revision: expected, text } });
   }
+  channelRating(channelId: string, expected: number, rating: number | null): Promise<ChannelState> {
+    return this.#write(channelId, {operation: 'putChannelRating', body: {expected_revision: expected, rating}});
+  }
+  #write(videoId: string, command: {operation: 'putChannelRating'; body: {expected_revision: number; rating: number | null}}): Promise<ChannelState>;
   #write(videoId: string, command: { operation: 'patchVideoState'; body: StateBody }): Promise<VideoState>;
   #write(videoId: string, command: { operation: 'putVideoReview'; body: ReviewBody }): Promise<VideoReview>;
-  async #write(videoId: string, command: WriteCommand): Promise<VideoState | VideoReview> {
+  async #write(videoId: string, command: WriteCommand): Promise<VideoState | VideoReview | ChannelState> {
     const context = this.#scope();
     if (context !== this.#context) { this.#context = context; this.#lease = null; this.#uncertain.clear(); }
     const slot = command.operation + ':' + videoId;
@@ -131,7 +145,9 @@ export class StateWriter {
       this.#uncertain.set(slot, { key, fingerprint, lease });
       try {
         const options = { path: { id: videoId }, header: { 'Idempotency-Key': key, 'X-Offline-Lease': lease } };
-        const result = command.operation === 'putVideoReview'
+        const result = command.operation === 'putChannelRating'
+          ? (await this.#client.request('putChannelRating', {...options, body: command.body})).state
+          : command.operation === 'putVideoReview'
           ? (await this.#client.request('putVideoReview', { ...options, body: command.body })).review
           : (await this.#client.request('patchVideoState', { ...options, body: command.body })).state;
         this.#check(context);
@@ -183,6 +199,7 @@ export function toPublicCard(item: VideoCard): PublicCard {
     channel: item.channel?.name ?? '',
     handle: '',
     channelId: item.channel?.youtube_channel_id ?? '',
+    channelUuid: item.channel?.id ?? '',
     durationSeconds: item.duration_seconds ?? 0,
     duration: duration(item.duration_seconds),
     hashtags: item.hashtags,
