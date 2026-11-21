@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
-import { MAX_MESSAGE_LENGTH, loadConversations, loadMessages, markConversationRead, mergeMessages, messageError, sendMessage, type Conversation, type Message } from '../shared/library/lists.ts';
+import { MAX_MESSAGE_LENGTH, loadConversations, loadMessages, markConversationRead, mergeMessages, messageError, messageGap, sendMessage, type Conversation, type Message } from '../shared/library/lists.ts';
 
 const initial = (name: string) => [...name][0];
 const when = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -36,50 +36,69 @@ export function ConversationsList({ client }: { client: Pick<ApiClient, 'request
       <span className="avatar small-avatar" aria-hidden="true">{initial(it.user.name || it.user.login)}</span>
       <span className="conversation-text"><strong>{it.user.name || it.user.login}</strong><span className="small muted"><bdi dir="auto">{preview(it.last_message)}</bdi></span></span>
       <span className="small muted">{when(it.last_message.created_at)}</span>
-      {it.unread_count > 0 && <span className="unread-badge" aria-label={`Непрочитанных: ${it.unread_count}`}>{it.unread_count}</span>}
+      {it.unread_count > 0 && <span className="unread-badge"><span className="sr-only">Непрочитанных: </span>{it.unread_count}</span>}
     </a>)}
     {next && <button className="secondary" disabled={loading} onClick={() => void load(next)}>Показать ещё</button>}
   </section>;
 }
 
+const MAX_GAP_PAGES = 20;
+
 export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'request'>; userId: string }) {
   const [items, setItems] = useState<Message[]>([]), [user, setUser] = useState<{ login: string; name: string | null } | null>(null);
   const [canSend, setCanSend] = useState(false), [otherRead, setOtherRead] = useState(0), [older, setOlder] = useState<number | null>(null);
   const [loading, setLoading] = useState(true), [error, setError] = useState(''), [text, setText] = useState(''), [sending, setSending] = useState(false), [notice, setNotice] = useState('');
-  const pending = useRef<{ key: string; text: string } | null>(null), generation = useRef(0), readUpTo = useRef(0), olderLoading = useRef(false);
+  const [olderLoading, setOlderLoading] = useState(false);
+  const pending = useRef<{ key: string; text: string } | null>(null), generation = useRef(0), serial = useRef(0), readUpTo = useRef(0);
+  const loaded = useRef<Message[]>([]), initialized = useRef(false), olderBusy = useRef(false);
+  // The ref mirrors the rendered list so async merges never use a stale copy.
+  const apply = (incoming: Message[]) => { loaded.current = mergeMessages(loaded.current, incoming); setItems(loaded.current); };
   async function refresh(signal?: AbortSignal) {
-    const stamp = generation.current;
+    const stamp = generation.current, read = ++serial.current;
+    const live = () => stamp === generation.current && read === serial.current;
     try {
       const page = await loadMessages(client, userId, null, signal);
-      if (stamp !== generation.current) return;
+      if (!live()) return;
+      // seq is consecutive: after missed polls, fill the hole before showing
+      // the page as complete or marking it read.
+      let collected = page.items, gap = messageGap(loaded.current, collected);
+      for (let i = 0; gap !== null && i < MAX_GAP_PAGES; i++) {
+        const more = await loadMessages(client, userId, gap, signal);
+        if (!live()) return;
+        collected = [...collected, ...more.items];
+        gap = more.items.length ? messageGap(loaded.current, collected) : null;
+      }
       setUser({ login: page.user.login, name: page.user.name }); setCanSend(page.can_send); setOtherRead(page.other_read_seq); setError('');
-      setItems(prev => mergeMessages(prev, page.items));
-      setOlder(prev => prev ?? page.next_before ?? null);
+      apply(collected);
+      if (!initialized.current) { initialized.current = true; setOlder(page.next_before ?? null); }
+      if (gap !== null) { setNotice('Часть новых сообщений не загрузилась. Обновите страницу.'); return; }
       const latest = page.items[0]?.seq ?? 0;
-      if (latest > Math.max(page.read_seq, readUpTo.current)) {
+      if (document.visibilityState === 'visible' && latest > Math.max(page.read_seq, readUpTo.current)) {
         readUpTo.current = latest;
         markConversationRead(client, userId, latest).catch(() => { readUpTo.current = 0; });
       }
     } catch (failure) {
-      if (stamp === generation.current && !signal?.aborted) setError(failure instanceof ApiError && failure.status === 404 ? 'Переписка недоступна: пользователь не найден или ограничил общение.' : 'Не удалось загрузить переписку.');
+      if (live() && !signal?.aborted) setError(failure instanceof ApiError && failure.status === 404 ? 'Переписка недоступна: пользователь не найден или ограничил общение.' : 'Не удалось загрузить переписку.');
     } finally { if (stamp === generation.current) setLoading(false); }
   }
   useEffect(() => {
-    generation.current++; readUpTo.current = 0; pending.current = null;
+    generation.current++; readUpTo.current = 0; pending.current = null; loaded.current = []; initialized.current = false;
     setItems([]); setUser(null); setOlder(null); setLoading(true); setError(''); setText(''); setNotice('');
     const ctl = new AbortController(); void refresh(ctl.signal);
     const timer = setInterval(() => { if (document.visibilityState === 'visible') void refresh(ctl.signal); }, POLL_MS);
-    return () => { generation.current++; ctl.abort(); clearInterval(timer); };
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh(ctl.signal); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { generation.current++; ctl.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
   }, [client, userId]);
   async function loadOlder() {
-    if (!older || olderLoading.current) return;
-    const stamp = generation.current; olderLoading.current = true;
+    if (!older || olderBusy.current) return;
+    const stamp = generation.current; olderBusy.current = true; setOlderLoading(true);
     try {
       const page = await loadMessages(client, userId, older);
       if (stamp !== generation.current) return;
-      setItems(prev => mergeMessages(prev, page.items)); setOlder(page.next_before ?? null);
+      apply(page.items); setOlder(page.next_before ?? null);
     } catch { if (stamp === generation.current) setNotice('Не удалось загрузить ранние сообщения.'); }
-    finally { olderLoading.current = false; }
+    finally { olderBusy.current = false; if (stamp === generation.current) setOlderLoading(false); }
   }
   async function send() {
     if (sending || !text.trim()) return;
@@ -90,7 +109,7 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
     try {
       const message = await sendMessage(client, userId, attempt.key, attempt.text);
       if (stamp !== generation.current) return;
-      pending.current = null; setText(''); setItems(prev => mergeMessages(prev, [message]));
+      pending.current = null; setText(current => current === attempt.text ? '' : current); apply([message]);
     } catch (failure) {
       if (stamp !== generation.current) return;
       if (failure instanceof ApiError && [403, 404, 409, 422].includes(failure.status)) pending.current = null;
@@ -100,14 +119,15 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
   }
   const lastMine = [...items].reverse().find(m => m.mine);
   const title = user ? user.name || user.login : 'Переписка';
-  return <section className="panel chat" aria-busy={loading}>
-    <div className="chat-head"><a href="#/messages">← Все переписки</a>{user && <a href={`#/user/${userId}`}><strong>{title}</strong> <span className="small muted">@{user.login}</span></a>}</div>
+  return <section className="panel chat" aria-busy={loading} aria-labelledby="chat-title">
+    <div className="chat-head"><a href="#/messages">← Все переписки</a><h2 id="chat-title">{user ? <a href={`#/user/${userId}`}>{title} <span className="small muted">@{user.login}</span></a> : title}</h2></div>
     {loading && <p role="status">Загружаем переписку…</p>}
     {error && <p role="alert">{error} <button className="text-button" onClick={() => { setLoading(true); void refresh(); }}>Повторить</button></p>}
-    {older && <button className="secondary" onClick={() => void loadOlder()}>Показать ранние сообщения</button>}
+    {older && <button className="secondary" disabled={olderLoading} onClick={() => void loadOlder()}>{olderLoading ? 'Загружаем…' : 'Показать ранние сообщения'}</button>}
     {!loading && !error && !items.length && <p className="notice">Сообщений пока нет.</p>}
-    <ol className="messages-list">
+    <ol className="messages-list" aria-label="Сообщения">
       {items.map(m => <li className={`message${m.mine ? ' mine' : ''}`} key={m.seq}>
+        <span className="sr-only">{m.mine ? 'Вы' : title}: </span>
         {m.body && <p><bdi dir="auto">{m.body}</bdi></p>}
         {m.video && <a href={`#/video/${m.video.youtube_video_id}`}>▶ <bdi dir="auto">{m.video.title ?? m.video.youtube_video_id}</bdi></a>}
         <span className="small muted">{when(m.created_at)}{m === lastMine && otherRead >= m.seq ? ' · прочитано' : ''}</span>

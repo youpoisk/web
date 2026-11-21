@@ -118,3 +118,5 @@ Password change review PASS (docs/reviews/password-change-review.md), no MEDIUM+
 
 YP-079 site (DEC-WEB-027): contract import f69da06 (54 operations); Messages.tsx ConversationsList/ChatThread, #/messages and #/messages/<uuid> routes, nav «Сообщения», profile «Написать сообщение»; lists.ts loadConversations/loadMessages/sendMessage/markConversationRead/mergeMessages/messageError (lines/functions100). Frontend gate (typecheck+build+test:api 97/97+extension) PASS. Live browser check not possible from the browser pane (it does not follow the site's redirect to the API sign-in page).
 
+cdfc38c messages UI independent review FAIL (M1 lost messages after missed polls, M2 author not announced); fixed: messageGap gap filling before mark-read, sr-only author per message, plus LOW L1/L2/L4/L5 and parts of L6/L7. Frontend gate PASS, lists.ts lines/functions100.
+

@@ -378,6 +378,15 @@ export function mergeMessages(prev: Message[], next: Message[]): Message[] {
   for (const m of [...prev, ...next]) bySeq.set(m.seq, m);
   return [...bySeq.values()].sort((a, b) => a.seq - b.seq);
 }
+/** seq is consecutive per conversation. Given the loaded messages (any order)
+ * and a newest-first page, returns the before-cursor that fetches the missing
+ * range between them, or null when the page connects to what is loaded. */
+export function messageGap(loaded: Message[], page: Message[]): number | null {
+  if (!loaded.length || !page.length) return null;
+  const newestLoaded = Math.max(...loaded.map(m => m.seq));
+  const oldestPage = Math.min(...page.map(m => m.seq));
+  return oldestPage > newestLoaded + 1 ? oldestPage : null;
+}
 /** User-facing text for a failed send; the default keeps the same key for a retry. */
 export function messageError(error: unknown): string {
   const status = error instanceof ApiError && error.kind === 'http' ? error.status : 0;
