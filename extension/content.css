@@ -27,3 +27,10 @@ html[dark] #yp-panel{--yp-text:#f1f1f1;--yp-bg:#212121;--yp-chip:#353535;--yp-se
 #yp-panel>.yp-rate-trigger{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 16px;flex-shrink:0;font-family:Roboto,Arial,sans-serif;font-size:14px;font-weight:500;line-height:20px;letter-spacing:normal}
 #yp-panel .yp-rate-icon{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
 #yp-panel .yp-rate-label{font:inherit;letter-spacing:inherit;line-height:inherit}
+/* Review editor (rating, watch-later and review are the only actions). */
+#yp-panel .yp-review-popover textarea{display:block;width:100%;box-sizing:border-box;margin:8px 0 4px;padding:10px;border-radius:8px;border:1px solid var(--yp-chip);background:var(--yp-bg);color:var(--yp-text);font:400 14px/1.4 Roboto,Arial,sans-serif;resize:vertical;min-height:110px}
+#yp-panel .yp-review-popover textarea:focus-visible{outline:2px solid #1da1f2;outline-offset:1px}
+#yp-panel .yp-counter{display:block;text-align:right;color:var(--yp-secondary)}
+#yp-panel .yp-actions{display:flex;gap:8px;margin:10px 0}
+#yp-panel .yp-actions button{flex:1;padding:9px 10px;border-radius:18px;border:0;font:inherit;cursor:pointer;background:var(--yp-chip);color:var(--yp-text)}
+#yp-panel .yp-actions .yp-primary{background:#1da1f2;color:#fff}

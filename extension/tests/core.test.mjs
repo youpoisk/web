@@ -14,9 +14,21 @@ test('metadata derives URLs instead of trusting client links',()=>{
  const result=core.metadata({...video,url:'javascript:alert(1)',preview:'https://evil.test/tracker',channelUrl:'https://evil.test/@name'});
  assert.equal(result.url,'https://www.youtube.com/watch?v=aqz-KE-bpKQ');assert.equal(result.preview,'https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg');assert.equal(result.channelUrl,'');assert.equal(result.title,'Test');
 });
-test('rating/list updates preserve each other and channel ratings are independent',()=>{
- const original=core.empty();let state=core.apply(original,update({rating:10}));state=core.apply(state,update({later:true}));state=core.apply(state,update({channelRating:7}));state=core.apply(state,update({rating:null}));
- assert.equal(state.videos[video.id].rating,null);assert.equal(state.videos[video.id].later,true);assert.equal(state.videos[video.id].added,true);assert.equal(state.channels[video.channelUrl].rating,7);assert.equal(Object.keys(original.videos).length,0);
+test('rating, watch-later and review preserve each other; nothing is kept without them',()=>{
+ const original=core.empty();let state=core.apply(original,update({rating:10}));state=core.apply(state,update({later:true}));state=core.apply(state,update({review:'  Отличное\r\nвидео  '}));state=core.apply(state,update({rating:null}));
+ const saved=state.videos[video.id];
+ assert.equal(saved.rating,null);assert.equal(saved.later,true);assert.equal(saved.review,'Отличное\nвидео');assert.ok(saved.reviewedAt);assert.equal('added' in saved,false);assert.equal(Object.keys(original.videos).length,0);
+ state=core.apply(state,update({later:false}));assert.equal(state.videos[video.id].review,'Отличное\nвидео');
+ state=core.apply(state,update({review:null}));assert.equal(state.videos[video.id],undefined,'no library: an empty record is dropped');
+});
+test('only rating, watch-later and review can be changed; reviews are validated',()=>{
+ for(const patch of [{channelRating:7},{recommended:true},{added:true}])assert.throws(()=>core.apply(core.empty(),update(patch)),/Неизвестное поле/);
+ for(const text of ['','   ',42,'я'.repeat(1001)])assert.throws(()=>core.apply(core.empty(),update({review:text})));
+ assert.equal(core.apply(core.empty(),update({review:'я'.repeat(1000)})).videos[video.id].review.length,1000);
+ const legacy={...core.empty(),channels:{x:{rating:5}},videos:{[video.id]:{...core.metadata(video),rating:5,later:false,added:true,recommended:true,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-01T00:00:00Z'}}};
+ const migrated=core.apply(legacy,update({later:true}));
+ assert.equal(migrated.channels,undefined);assert.equal('recommended' in migrated.videos[video.id]||'added' in migrated.videos[video.id],false);assert.equal(migrated.videos[video.id].rating,5);
+ assert.deepEqual({...core.options({site:'http://127.0.0.1:5173',channel:false})},{enabled:true,site:'http://127.0.0.1:5173/'});
 });
 test('reject invalid ratings, state and unsafe settings',()=>{
  for(const n of [0,11,1.1,'9',NaN])assert.throws(()=>core.apply(core.empty(),update({rating:n})));
@@ -52,6 +64,3 @@ test('manifest declares all runtime files and restricts content scripts to YouTu
  assert.equal(manifest.externally_connectable,undefined);
 });
 
-test('local recommendation toggles independently of the rating and watchlist',()=>{
- let state=core.apply(core.empty(),update({rating:9,later:true}));state=core.apply(state,update({recommended:true}));assert.equal(state.videos[video.id].recommended,true);assert.equal(state.videos[video.id].rating,9);assert.equal(state.videos[video.id].later,true);state=core.apply(state,update({recommended:false}));assert.equal(state.videos[video.id].recommended,false);assert.throws(()=>core.apply(state,update({recommended:'yes'})));
-});
