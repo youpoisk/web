@@ -115,5 +115,7 @@ test('signOut reports server logout or hands off to the broker cookie logout', a
   const b = browser();
   assert.deepEqual(await signOut(port({ async logout() { return { result: 'broker', url: 'https://api.example/auth/logout?x' }; } }), b), { status: 'redirecting', user: null });
   assert.deepEqual(b.assigned, ['https://api.example/auth/logout?x']);
-  assert.equal((await signOut(port({ async logout() { throw kind('storage'); } }), browser())).status, 'error');
+  const failed = await signOut(port({ async logout() { throw kind('storage'); } }), browser());
+  assert.equal(failed.status, 'error');
+  assert.match(failed.message, /Не удалось выйти/);
 });

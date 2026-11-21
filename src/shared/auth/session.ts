@@ -172,9 +172,8 @@ export class BrowserSession {
     // Expired/absent bearer or network failure: the HttpOnly cookie family may
     // still be live. The first-party page revokes it by its own cookie. The
     // nonce only controls the "logged out" notice; losing it never blocks logout.
-    const bytes = new Uint8Array(32);
-    try { this.#crypto.getRandomValues(bytes); } catch { globalThis.crypto.getRandomValues(bytes); }
-    const state = btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+    let state = 'A'.repeat(43); // valid placeholder: the nonce only gates a notice
+    try { state = btoa(String.fromCharCode(...this.#crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); } catch { /* keep placeholder */ }
     try { this.#flowStorage.setItem(this.#logoutKey, state); } catch { /* notice lost, logout continues */ }
     return { result: 'broker', url: `${this.#api}/auth/logout?${new URLSearchParams({ redirect_uri: this.#callback, state })}` };
   }

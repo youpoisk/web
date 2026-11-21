@@ -112,7 +112,7 @@ export async function signOut(session: SessionPort, browser: Browser): Promise<A
       return { status: 'redirecting', user: null };
     }
     return { status: 'guest', user: null, message: 'Вы вышли из аккаунта.' };
-  } catch (error) {
-    return failure(error);
+  } catch {
+    return { status: 'error', user: null, message: 'Не удалось выйти. Обновите страницу и нажмите «Выйти» ещё раз.' };
   }
 }
