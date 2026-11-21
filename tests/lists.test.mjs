@@ -52,3 +52,41 @@ test('toCard keeps real data and never invents titles or durations', () => {
   assert.equal(toCard(item({ duration_seconds: 59 })).duration, '0:59');
   assert.equal(toCard(item({ channel: { ...item().channel, youtube_channel_id: null, url: undefined } })).channelId, '');
 });
+
+test('toCard exposes the internal id and own revision for writes', () => {
+  const card = toCard(item());
+  assert.equal(card.uuid, '00000000-0000-4000-8000-0000000000a1');
+  assert.equal(card.revision, 3);
+});
+
+test('StateWriter issues one lease, a fresh key per command, and renews an expired lease once', async () => {
+  const { StateWriter, conflicted } = await import('../src/shared/library/lists.ts');
+  const { ApiError } = await import('../src/shared/api/client.ts');
+  const calls = [];
+  let fail410 = 1;
+  let n = 0;
+  const client = {
+    async request(op, options) {
+      calls.push([op, options]);
+      if (op === 'issueOfflineLease') return { lease: 'lease-' + calls.filter((c) => c[0] === op).length, valid_for_seconds: 604800 };
+      if (fail410-- > 0) throw new ApiError('http', 410, 'reconcile_required');
+      return { kind: 'video_state', target_id: options.path.id, state: { revision: options.body.expected_revision + 1, rating: null, added: true, later: options.body.later }, change_seq: 5 };
+    }
+  };
+  const writer = new StateWriter(client, () => 'key-' + ++n);
+  const state = await writer.patch('vid', 3, { later: false });
+  assert.deepEqual(state, { revision: 4, rating: null, added: true, later: false });
+  const patches = calls.filter((c) => c[0] === 'patchVideoState').map((c) => c[1]);
+  assert.equal(patches.length, 2);
+  assert.deepEqual(patches[0].header, { 'Idempotency-Key': 'key-1', 'X-Offline-Lease': 'lease-1' });
+  assert.deepEqual(patches[1].header, { 'Idempotency-Key': 'key-2', 'X-Offline-Lease': 'lease-2' });
+  assert.deepEqual(patches[1].body, { expected_revision: 3, later: false });
+  await writer.patch('vid', 4, { rating: 9 });
+  assert.equal(calls.filter((c) => c[0] === 'issueOfflineLease').length, 2, 'lease reused');
+  const always410 = { async request(op) { if (op === 'issueOfflineLease') return { lease: 'l', valid_for_seconds: 604800 }; throw new ApiError('http', 410); } };
+  await assert.rejects(new StateWriter(always410, () => 'k').patch('vid', 1, { later: true }), (e) => e.status === 410);
+  const conflict = { async request(op) { if (op === 'issueOfflineLease') return { lease: 'l', valid_for_seconds: 604800 }; throw new ApiError('http', 409, 'conflict'); } };
+  await assert.rejects(new StateWriter(conflict, () => 'k').patch('vid', 1, { later: true }), (e) => conflicted(e));
+  assert.equal(conflicted(new Error('x')), false);
+  assert.equal(conflicted(new ApiError('network')), false);
+});
