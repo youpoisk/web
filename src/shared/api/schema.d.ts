@@ -244,6 +244,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my library
+         * @description Videos with added=true, newest own change first (updated_at desc, id desc). Live Bearer required; only the viewer's own rows. Keyset cursor pagination: pass next_cursor as after; limit 1..100 (default 30); unknown/repeated/malformed query keys 422. Shares the bounded card-read capacity (429 busy, Retry-After 1). Cards carry real rating count/average and my_state.
+         */
+        get: operations["listLibrary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/offline-lease": {
         parameters: {
             query?: never;
@@ -278,6 +298,26 @@ export interface paths {
          * @description 422 incorrect_current_password or invalid_new_password preserves active session. Success atomically changes salted hash and revokes all families including caller; new login required. No client password persistence/offline retry; reconcile uncertain response through a new login. Shared KDF/admission with login; no email recovery.
          */
         post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/ratings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my rated videos
+         * @description Own video ratings, newest change first (updated_at desc, id desc). Live Bearer required; only the viewer's own rows. Keyset cursor pagination: pass next_cursor as after; limit 1..100 (default 30); unknown/repeated/malformed query keys 422. Shares the bounded card-read capacity (429 busy, Retry-After 1). Cards carry real rating count/average and my_state.
+         */
+        get: operations["listRatings"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -366,6 +406,26 @@ export interface paths {
          * @description Only supplied fields change. rating1..10 or later=true forces added=true; an independent added=false preserves existing rating/later. Null clears rating, null booleans rejected. Expected revision always checked for a new execution, exact receipt replay first.
          */
         patch: operations["patchVideoState"];
+        trace?: never;
+    };
+    "/v1/me/watchlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my watch-later videos
+         * @description «Посмотрю позже», newest addition first (added_at desc, id desc). Live Bearer required; only the viewer's own rows. Keyset cursor pagination: pass next_cursor as after; limit 1..100 (default 30); unknown/repeated/malformed query keys 422. Shares the bounded card-read capacity (429 busy, Retry-After 1). Cards carry real rating count/average and my_state.
+         */
+        get: operations["listWatchlist"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/videos/{id}": {
@@ -642,6 +702,35 @@ export interface components {
             /** Format: uri */
             url: string;
             youtube_video_id: string;
+        };
+        VideoListItem: {
+            /** @enum {string} */
+            availability: "unknown" | "available" | "unavailable";
+            channel: components["schemas"]["CardChannel"] | null;
+            duration_seconds: number | null;
+            hashtags: string[];
+            /** @enum {string} */
+            hashtags_observation_status: "unknown" | "partial" | "complete";
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date-time
+             * @description Keyset timestamp of this list (library: last own change; watchlist: addition time; ratings: last rating change).
+             */
+            listed_at: string;
+            /** @description Always present: the viewer's own state for this video. */
+            my_state: components["schemas"]["VideoState"];
+            /** Format: uri */
+            preview_url: string;
+            rating: components["schemas"]["Rating"];
+            title: string | null;
+            /** Format: uri */
+            url: string;
+            youtube_video_id: string;
+        };
+        VideoPage: {
+            items: components["schemas"]["VideoListItem"][];
+            next_cursor?: string;
         };
         VideoPatch: {
             added?: boolean;
@@ -1368,6 +1457,59 @@ export interface operations {
             };
         };
     };
+    listLibrary: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor, no duplicate keys. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List my library */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     issueOfflineLease: {
         parameters: {
             query?: never;
@@ -1437,6 +1579,59 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listRatings: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor, no duplicate keys. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List my rated videos */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoPage"];
+                };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
             403: {
@@ -1703,6 +1898,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoStateResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listWatchlist: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor, no duplicate keys. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List my watch-later videos */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoPage"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

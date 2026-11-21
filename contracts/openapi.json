@@ -3,7 +3,7 @@
   "info": {
     "title": "YouPoisk current runtime API",
     "version": "0.1.0",
-    "description": "Partial implemented MVP contract:20business operations plus2health operations, not the full planned product. Standard JSON bodies8KiB, exact origins, access in memory, credentials/secrets never in URLs/logs/YouTube DOM. Database schema remains Go Code First; this external IDL is checked against actual Go route registrations and DTO responses. Int64 clients must reject unsafe numeric values rather than silently round. Mail and browser-broker protocols are not advertised as implemented."
+    "description": "Partial implemented MVP contract:23business operations plus2health operations, not the full planned product. Standard JSON bodies8KiB, exact origins, access in memory, credentials/secrets never in URLs/logs/YouTube DOM. Database schema remains Go Code First; this external IDL is checked against actual Go route registrations and DTO responses. Int64 clients must reject unsafe numeric values rather than silently round. Mail and browser-broker protocols are not advertised as implemented."
   },
   "servers": [
     {
@@ -2175,6 +2175,336 @@
           }
         }
       }
+    },
+    "/v1/me/library": {
+      "get": {
+        "operationId": "listLibrary",
+        "summary": "List my library",
+        "description": "Videos with added=true, newest own change first (updated_at desc, id desc). Live Bearer required; only the viewer's own rows. Keyset cursor pagination: pass next_cursor as after; limit 1..100 (default 30); unknown/repeated/malformed query keys 422. Shares the bounded card-read capacity (429 busy, Retry-After 1). Cards carry real rating count/average and my_state.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Opaque previous next_cursor, no duplicate keys."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": "Bounded page size; unknown/repeated/malformed query keys rejected."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List my library",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoPage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/watchlist": {
+      "get": {
+        "operationId": "listWatchlist",
+        "summary": "List my watch-later videos",
+        "description": "«Посмотрю позже», newest addition first (added_at desc, id desc). Live Bearer required; only the viewer's own rows. Keyset cursor pagination: pass next_cursor as after; limit 1..100 (default 30); unknown/repeated/malformed query keys 422. Shares the bounded card-read capacity (429 busy, Retry-After 1). Cards carry real rating count/average and my_state.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Opaque previous next_cursor, no duplicate keys."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": "Bounded page size; unknown/repeated/malformed query keys rejected."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List my watch-later videos",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoPage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/ratings": {
+      "get": {
+        "operationId": "listRatings",
+        "summary": "List my rated videos",
+        "description": "Own video ratings, newest change first (updated_at desc, id desc). Live Bearer required; only the viewer's own rows. Keyset cursor pagination: pass next_cursor as after; limit 1..100 (default 30); unknown/repeated/malformed query keys 422. Shares the bounded card-read capacity (429 busy, Retry-After 1). Cards carry real rating count/average and my_state.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Opaque previous next_cursor, no duplicate keys."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": "Bounded page size; unknown/repeated/malformed query keys rejected."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List my rated videos",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoPage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3288,6 +3618,133 @@
         },
         "required": [
           "session_id"
+        ],
+        "additionalProperties": false
+      },
+      "VideoListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "youtube_video_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{11}$",
+            "minLength": 11,
+            "maxLength": 11
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 250
+          },
+          "duration_seconds": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "available",
+              "unavailable"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$"
+          },
+          "preview_url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$"
+          },
+          "hashtags": {
+            "type": "array",
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[^#]"
+            }
+          },
+          "hashtags_observation_status": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "partial",
+              "complete"
+            ]
+          },
+          "channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardChannel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rating": {
+            "$ref": "#/components/schemas/Rating"
+          },
+          "my_state": {
+            "$ref": "#/components/schemas/VideoState",
+            "description": "Always present: the viewer's own state for this video."
+          },
+          "listed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Keyset timestamp of this list (library: last own change; watchlist: addition time; ratings: last rating change)."
+          }
+        },
+        "required": [
+          "id",
+          "youtube_video_id",
+          "title",
+          "duration_seconds",
+          "availability",
+          "url",
+          "preview_url",
+          "hashtags",
+          "hashtags_observation_status",
+          "channel",
+          "rating",
+          "my_state",
+          "listed_at"
+        ],
+        "additionalProperties": false
+      },
+      "VideoPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/VideoListItem"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "items"
         ],
         "additionalProperties": false
       }
