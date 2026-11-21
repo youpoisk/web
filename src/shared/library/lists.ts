@@ -206,6 +206,18 @@ export async function loadUserRecommendations(client: Pick<ApiClient, 'request'>
   return { items: page.items, next: page.next_cursor ?? null };
 }
 
+export type PrivacySettings = components['schemas']['PrivacySettings'];
+export type Audience = PrivacySettings['ratings'];
+export type PrivacyField = 'ratings' | 'watchlist' | 'recommendations' | 'library' | 'reviews' | 'social';
+/** The viewer's own privacy policies. */
+export async function loadPrivacy(client: Pick<ApiClient, 'request'>, signal?: AbortSignal): Promise<PrivacySettings> {
+  return (await client.request('getPrivacy', { signal })).settings;
+}
+/** Changes one policy at the known revision (409 when another device changed it). */
+export async function changePrivacy(client: Pick<ApiClient, 'request'>, revision: number, field: PrivacyField, value: Audience): Promise<PrivacySettings> {
+  return (await client.request('patchPrivacy', { body: { expected_revision: revision, [field]: value } })).settings;
+}
+
 /** True when a write failed because the server state moved on (reload needed). */
 export function conflicted(error: unknown): boolean {
   return error instanceof ApiError && error.kind === 'http' && error.status === 409;

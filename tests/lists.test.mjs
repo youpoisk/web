@@ -280,3 +280,13 @@ test('loadUserProfile and loadUserRecommendations read another user', async () =
   assert.deepEqual(await loadUserRecommendations(client, 'u1', 'n1'), { items: [], next: null });
   assert.deepEqual(calls, [['getUserProfile', { id: 'u1' }, undefined], ['listUserRecommendations', { id: 'u1' }, { limit: 30 }], ['listUserRecommendations', { id: 'u1' }, { limit: 30, after: 'n1' }]]);
 });
+
+test('loadPrivacy and changePrivacy send one policy at the known revision', async () => {
+  const { loadPrivacy, changePrivacy } = await import('../src/shared/library/lists.ts');
+  const calls = [];
+  const settings = { revision: 1, ratings: 'public', watchlist: 'public', recommendations: 'public', library: 'public', reviews: 'public', social: 'public' };
+  const client = { async request(op, options) { calls.push([op, options.body]); return op === 'getPrivacy' ? { settings, change_seq: null } : { settings: { ...settings, revision: 2, reviews: 'friends' }, change_seq: 5 }; } };
+  assert.deepEqual(await loadPrivacy(client), settings);
+  assert.equal((await changePrivacy(client, 1, 'reviews', 'friends')).reviews, 'friends');
+  assert.deepEqual(calls, [['getPrivacy', undefined], ['patchPrivacy', { expected_revision: 1, reviews: 'friends' }]]);
+});
