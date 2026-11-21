@@ -372,3 +372,20 @@ test('blocks page preserves redacted identities, cursor and signal; writes are b
  await assert.rejects(setBlocked({request:async()=>{throw failure}},id,true),e=>e===failure);
  await assert.rejects(loadBlocks({request:async()=>{throw failure}},null),e=>e===failure);
 });
+
+test('feed video grouping merges authors across cursor pages without title joins or lost contributions', async()=>{
+ const {groupFeedByVideo}=await import('../src/shared/library/lists.ts');
+ const a=item({my_state:undefined}),b=item({id:'00000000-0000-4000-8000-0000000000b2',my_state:undefined});
+ const one={user:{id:'author1',login:'one',name:null},video:a,rating:9,review:'First review',changed_at:'2026-11-22T10:00:00Z'};
+ const two={user:{id:'author2',login:'two',name:'Two'},video:b,rating:null,review:'Other video, same title',changed_at:'2026-11-22T09:00:00Z'};
+ const older={user:two.user,video:a,rating:7,review:null,changed_at:'2026-11-21T10:00:00Z'};
+ const source=Object.freeze([Object.freeze(one),Object.freeze(two),Object.freeze(older)]);
+ assert.deepEqual(groupFeedByVideo([]),[]);
+ const first=groupFeedByVideo(source.slice(0,2));assert.equal(first.length,2);
+ const groups=groupFeedByVideo([...source,{...one,rating:2,review:'Older duplicate',changed_at:'2026-11-20T00:00:00Z'}]);
+ assert.deepEqual(groups.map(g=>g.video.id),[a.id,b.id]);
+ assert.equal(groups[0].changedAt,one.changed_at);
+ assert.deepEqual(groups[0].items,[one,older]);assert.deepEqual(groups[1].items,[two]);
+ assert.equal(groups[0].video,a);assert.equal(groups[0].items[0].rating,9);
+ assert.equal(source.length,3);assert.notEqual(groups[0].items,source);
+});

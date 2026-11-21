@@ -331,3 +331,17 @@ export async function loadBlocks(client: Pick<ApiClient,'request'>, after: strin
 export async function setBlocked(client: Pick<ApiClient,'request'>, id: string, enabled: boolean): Promise<void> {
  await client.request(enabled?'blockUser':'unblockUser',{path:{id}});
 }
+
+export type FeedVideoGroup = {video:FeedItem['video'];items:FeedItem[];changedAt:string};
+/** Input is the server's newest-first visible stream. Keep the first (newest)
+ * entry per author/video and the first metadata for a video; never merge by title.
+ * Appending older pages enriches existing groups without changing their order. */
+export function groupFeedByVideo(items:readonly FeedItem[]):FeedVideoGroup[]{
+ const groups=new Map<string,FeedVideoGroup>();
+ for(const item of items){
+  let group=groups.get(item.video.id);
+  if(!group){group={video:item.video,items:[],changedAt:item.changed_at};groups.set(item.video.id,group);}
+  if(!group.items.some(existing=>existing.user.id===item.user.id))group.items.push(item);
+ }
+ return [...groups.values()];
+}

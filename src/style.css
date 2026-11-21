@@ -53,3 +53,7 @@
 .tag-filter-settings{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 20px}.filters button:disabled{opacity:.45;cursor:not-allowed}
 .friend-ratings .person-line{margin:12px 0}.friend-score{color:#1da1f2;font-size:14px}
 .recommendation{display:grid;grid-template-columns:200px minmax(0,1fr);gap:18px;align-items:start}.recommendation-poster img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px;display:block}.recommendation .own-review-text{white-space:pre-wrap;margin:8px 0 0;font-size:13px}@media(max-width:560px){.recommendation{grid-template-columns:1fr}}
+
+/* Each grouped video keeps author/review boundaries clear. */
+.feed-contribution + .feed-contribution{border-top:1px solid var(--border,#e2e8ee);margin-top:20px;padding-top:20px}
+.feed-contribution .own-review-text{unicode-bidi:plaintext}
