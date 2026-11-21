@@ -59,3 +59,21 @@ Fix: optional. Remove the key only when the state matches, or accept it as is (i
 ## Test adequacy
 
 Good coverage of the happy path, mismatch, both 422 codes, 401→refresh→success, 401 twice, restore null, lost response vs. failure before sending, busy/unavailable/protocol, retrying a failed restore, the lock count, and every frontend nonce/forgery/duplicate/damaged/cancel branch. Gaps: no test for resubmitting after uncertain (LOW-1), for 5xx after sending (LOW-2), for main.tsx's `yp.boot.notice` round trip (no UI test harness), or for the Go handler in this environment (not runnable here).
+
+## Follow-up — fixes 3d404b6 (backend) and 804b297 (frontend), 2026-11-22
+
+### Gate: PASS
+
+The fixes introduce no MEDIUM or HIGH issues. LOW-1, LOW-2 and LOW-4 are resolved. LOW-3 and LOW-5 stay open by decision (recorded in todo.md).
+
+### Verification
+- Backend `node --test internal/transport/httpapi/broker/broker.test.js`: 35/35 pass.
+- Frontend `test:api` command line: 96/96 pass, exit 0. session.ts 100% lines / 99.29% branches / 100% funcs; runtime.ts 100/100/100. The 100% line/function thresholds still hold.
+
+### Resolution of earlier findings
+- **LOW-1: resolved.** `broker.js` `passwordDone()` sets `handler = null` and hides `password-form` on an uncertain outcome. The test confirms the form is hidden and a later submit sends nothing. The cancel button stays visible and is re-enabled by `busy(false)` in `finally`, and it returns `uncertain`.
+- **LOW-2: resolved.** After the request is sent, any failure except `busy` (429) is uncertain: lost response, any 5xx including 502/504, unexpected 2xx/4xx. `sent` is still reset to false around the 401 restore, so a failure during that restore (before the second POST) is not reported as uncertain. The test matrix covers 429 (form kept), 503, 502 and 200 (uncertain, form closed).
+- **LOW-4: resolved.** `passwordURL` now throws `FlowError('crypto')` when `getRandomValues` fails. `runtime.changePassword` catches it and shows «Не удалось открыть смену пароля…» without navigating. Only logout keeps the fixed placeholder, where the nonce gates only a notice. Tested.
+
+### New observation (LOW, no action required)
+- **F-1 — a definite pre-commit rejection is now reported as uncertain.** `broker.js` catch block (`sent && kindOf(problem) !== 'busy'`). A structured 4xx (400 `invalid_json`, 403, 409 snapshot conflict, 413/415), or a 503 admission refusal sent before the handler commits, proves the password was not changed. It is still shown as uncertain: the form closes and the site ends the local sign-in. Scenario: admission returns 503 under load → the user is told to sign in again and «если смена прошла, подойдёт новый пароль» → the old password works. This fails safe (an extra sign-in, no wrong state) and follows the conservative choice in the fix. Optional refinement: keep the form for 4xx responses that carry a structured `code` that is known not to commit.
