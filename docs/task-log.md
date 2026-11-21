@@ -22,3 +22,5 @@ e6a40db independent guest/demo-logout gate PASS. Public catalog available by def
 adab228 shared7channel demo catalog independent followup PASS; legacy post fallback corrected. Build PASS, API/flow27/27, extension9/9. Metadata sources docs/fixtures/demo-catalog.json. Real backend seed/catalog integration remains open. Review docs/reviews/shared-demo-catalog.md.
 
 5980f17 extension shared catalog independent gate PASS. Generated static catalog and local demo share website fixtures, actual YouTube context unchanged. Build/drift/extension9tests/syntax PASS. Report docs/reviews/extension-demo-catalog.md.
+
+2026-11-21 recommendation scope: WEB-REC001…003 and backendYP089…094 planned. Independent review backend0560c5e/frontend21e3bda PASS; switch preserves personalfeed, profilefavoritetags filtersharedpool, periodicworker andtestgates specified. Noimplementationclaimed.
