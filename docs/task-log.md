@@ -105,3 +105,5 @@ WEB-006 session management: active own device list with50-row keysets, current s
 Review P2/current user feed-privacy bug: settings siblings had identical owner-only React keys. Namespaced privacy/blocks/sessions keys and added keyed route boundary so private route panels unmount on navigation. Browser repeated-navigation regression follows. No change to account privacy policies.
 
 P2 browser regression PASS: Security tab privacy headings0/sessions1; three repeated feed→Privacy→settings cycles each feed privacy headings0 and settings privacy headings1. No duplicate panels. Build PASS after unique panel keys and keyed route boundary.
+
+a821654+293c4f7 independent follow-up PASS; P2 duplicatekeys closed.93CSPtests/typecheck independentlyPASS. Reports docs/reviews/sessions-ui-initial.md and sessions-ui-followup.md (original FAIL retained). User feedprivacy duplication fixed via unique keys+keyed routeboundary, CUA3roundtripsPASS. Sessions UI accepted; next feed grouping.
