@@ -165,15 +165,17 @@ export class BrowserSession {
         revoked = response.status === 204;
       } catch { /* fall back to the cookie-based broker logout */ }
     }
-    this.forgetLocal();
+    // Local forget failures must not keep a live server session: forgetLocal
+    // already blocks this coordinator before it throws.
+    try { this.forgetLocal(); } catch { /* still revoke server-side below */ }
     if (revoked) return { result: 'revoked' };
     // Expired/absent bearer or network failure: the HttpOnly cookie family may
-    // still be live. The first-party page revokes it by its own cookie.
-    let state: string;
-    try {
-      state = btoa(String.fromCharCode(...this.#crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
-      this.#flowStorage.setItem(this.#logoutKey, state);
-    } catch { throw new FlowError('storage'); }
+    // still be live. The first-party page revokes it by its own cookie. The
+    // nonce only controls the "logged out" notice; losing it never blocks logout.
+    const bytes = new Uint8Array(32);
+    try { this.#crypto.getRandomValues(bytes); } catch { globalThis.crypto.getRandomValues(bytes); }
+    const state = btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+    try { this.#flowStorage.setItem(this.#logoutKey, state); } catch { /* notice lost, logout continues */ }
     return { result: 'broker', url: `${this.#api}/auth/logout?${new URLSearchParams({ redirect_uri: this.#callback, state })}` };
   }
   /** Local privacy boundary only. Does not revoke an API session/cookie. */

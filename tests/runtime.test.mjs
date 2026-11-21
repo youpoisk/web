@@ -44,6 +44,7 @@ test('startup failures have distinct messages', () => {
   assert.match(startupFailure(new AuthConfigError()).message, /настроен/);
   assert.match(startupFailure(kind('protocol')).message, /сброшены/);
   assert.match(startupFailure(kind('storage')).message, /хранение/);
+  assert.match(startupFailure(new Error('SecurityError')).message, /хранение/);
 });
 
 test('boot completes a callback into an authenticated view', async () => {
