@@ -93,12 +93,32 @@ test('authorize returns the broker URL with intent; refusals cancel the flow and
  const expired=fixture();await expired.session.completeCallback(await start(expired.session),()=>{});const late=expired.make();const old=new URL(await late.authorize('restore','#/'));expired.env.now+=16*60*1000;
  assert.equal((await late.completeCallback(callback+'?'+new URLSearchParams({error:'login_required',state:old.searchParams.get('state')}),()=>{})).outcome,'login_required');assert.equal(late.businessScope().state,'recovering');
 });
-test('logout revokes with the bearer then forgets locally even when the server is unreachable',async()=>{
+test('logout revokes with the bearer, otherwise hands off to the broker cookie logout with a per-tab nonce',async()=>{
  const f=fixture();await f.session.completeCallback(await start(f.session),()=>{});const seen=[];
  f.env.fetch=async(input,init)=>{seen.push([String(input),init.method,init.headers.Authorization,init.credentials]);return new Response(null,{status:204})};
- assert.equal(await f.session.logout(),'revoked');assert.deepEqual(seen,[[apiOrigin+'/v1/auth/logout','POST','Bearer '+credentials.access_token,'omit']]);assert.deepEqual(f.session.businessScope(),{state:'guest'});
- const g=fixture();await g.session.completeCallback(await start(g.session),()=>{});g.env.fetch=async()=>{throw Error('offline')};assert.equal(await g.session.logout(),'local');assert.deepEqual(g.session.businessScope(),{state:'guest'});
- const h=fixture();await h.session.completeCallback(await start(h.session),()=>{});h.env.fetch=async()=>new Response(null,{status:401});assert.equal(await h.session.logout(),'local');
- const guest=fixture();assert.equal(await guest.session.logout(),'local');
- const dflt=fixture();const original=globalThis.fetch;const urls=[];globalThis.fetch=async input=>{urls.push(String(input));return String(input).endsWith('/v1/auth/logout')?new Response(null,{status:204}):json(credentials)};try{const s=new BrowserSession({...dflt.config,fetch:undefined});await s.completeCallback(await start(s),()=>{});assert.equal(s.businessScope().state,'authenticated');assert.equal(await s.logout(),'revoked');assert.equal(urls.at(-1),apiOrigin+'/v1/auth/logout');}finally{globalThis.fetch=original}
+ assert.deepEqual(await f.session.logout(),{result:'revoked'});assert.deepEqual(seen,[[apiOrigin+'/v1/auth/logout','POST','Bearer '+credentials.access_token,'omit']]);assert.deepEqual(f.session.businessScope(),{state:'guest'});
+ for(const fault of [async()=>{throw Error('offline')},async()=>new Response(null,{status:401})]){
+  const g=fixture();await g.session.completeCallback(await start(g.session),()=>{});g.env.fetch=fault;
+  const out=await g.session.logout();assert.equal(out.result,'broker');const url=new URL(out.url);
+  assert.equal(url.origin+url.pathname,apiOrigin+'/auth/logout');assert.equal(url.searchParams.get('redirect_uri'),callback);assert.match(url.searchParams.get('state'),/^[A-Za-z0-9_-]{43}$/);assert.deepEqual([...url.searchParams.keys()].sort(),['redirect_uri','state']);
+  assert.deepEqual(g.session.businessScope(),{state:'guest'});
+  const cleaned=[];assert.deepEqual(await g.session.completeCallback(callback+'?'+new URLSearchParams({logout:'done',state:url.searchParams.get('state')}),v=>cleaned.push(v)),{returnHash:'#/',outcome:'logged_out'});assert.deepEqual(cleaned,[callback]);
+  assert.equal(await g.session.completeCallback(callback+'?'+new URLSearchParams({logout:'done',state:url.searchParams.get('state')}),()=>{}),null,'nonce is single-use');
+ }
+ const guest=fixture();assert.equal((await guest.session.logout()).result,'broker');
+ const forged=fixture();const scrubbed=[];assert.equal(await forged.session.completeCallback(callback+'?logout=done&state='+'A'.repeat(43),v=>scrubbed.push(v)),null);assert.deepEqual(scrubbed,[callback]);
+ await assert.rejects(forged.session.completeCallback('not a url',()=>{}),fail('protocol'));
+ const blocked=fixture();await blocked.session.completeCallback(await start(blocked.session),()=>{});blocked.env.fetch=async()=>new Response(null,{status:401});blocked.config.crypto.getRandomValues=()=>{throw Error('no crypto')};await assert.rejects(blocked.session.logout(),fail('storage'));
+ const dflt=fixture();const original=globalThis.fetch;const urls=[];globalThis.fetch=async input=>{urls.push(String(input));return String(input).endsWith('/v1/auth/logout')?new Response(null,{status:204}):json(credentials)};try{const s=new BrowserSession({...dflt.config,fetch:undefined});await s.completeCallback(await start(s),()=>{});assert.equal(s.businessScope().state,'authenticated');assert.deepEqual(await s.logout(),{result:'revoked'});assert.equal(urls.at(-1),apiOrigin+'/v1/auth/logout');}finally{globalThis.fetch=original}
+});
+test('per-tab flow storage: another tab cannot see or cancel this tab sign-in; another account commits with a fresh generation',async()=>{
+ const f=fixture();const tabA=new Map(),tabB=new Map();const mk=m=>({getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v),removeItem:k=>m.delete(k)});
+ const a=new BrowserSession({...f.config,flowStorage:mk(tabA)}),b=new BrowserSession({...f.config,flowStorage:mk(tabB)});
+ const url=callback+'?'+new URLSearchParams({code,state:(await a.start('login','#/feed')).get('state')});
+ assert.equal(b.pendingSummary(),null);assert.equal([...f.data.keys()].some(k=>k.includes('pending')),false);
+ assert.deepEqual(await a.completeCallback(url,()=>{}),{returnHash:'#/feed'});
+ const remembered=a.businessScope();const other='00000000-0000-4000-8000-000000000009';
+ f.env.fetch=async()=>json({...credentials,user:{...credentials.user,id:other}});
+ const c=new BrowserSession({...f.config,flowStorage:mk(new Map())});const restore=callback+'?'+new URLSearchParams({code,state:(await c.start('restore','#/')).get('state')});
+ await c.completeCallback(restore,()=>{});const now=c.businessScope();assert.equal(now.owner,other);assert.notEqual(now.epoch,remembered.epoch);
 });

@@ -58,7 +58,7 @@ test('cancel, expiry and account changes during network or body read discard lat
  let release;const f=await fixture(()=>new Promise((_,reject)=>{release=reject}));const pending=f.run();f.env.scope={owner:null,epoch:other};release(Error('network secret'));await assert.rejects(pending,failure('stale_session'));
  let stream;const g=await fixture(async()=>new Response(new ReadableStream({start(controller){stream=controller}}),{headers:{'Content-Type':'application/json'}}));const late=g.run();await new Promise(r=>setImmediate(r));g.env.scope={owner:other,epoch};stream.enqueue(new TextEncoder().encode(JSON.stringify(credentials)));stream.close();await assert.rejects(late,failure('stale_session'));
  const h=await fixture();h.env.scope={owner,epoch};h.flow.cancel(h.flow.pendingSummary().state);const params=await h.flow.begin('restore','#/');const wrong=new CodeExchange({flow:h.flow,fetch:async()=>json({...credentials,user:{...credentials.user,id:other}})});
- await assert.rejects(wrong.exchangeCallback(callback+'?'+new URLSearchParams({code,state:params.get('state')}),()=>{}),failure('stale_session'));
+ assert.equal((await wrong.exchangeCallback(callback+'?'+new URLSearchParams({code,state:params.get('state')}),()=>{})).credentials.user.id,other); // another account is legitimate
  const correct=new CodeExchange({flow:h.flow,fetch:async()=>json(credentials)});assert.equal((await correct.exchangeCallback(callback+'?'+new URLSearchParams({code,state:params.get('state')}),()=>{})).credentials.user.id,owner);
 });
 test('abort, timeout and network are distinct and uncertain attempts keep proof for explicit restart',async()=>{

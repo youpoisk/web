@@ -95,7 +95,7 @@ export class CodeExchange {
       if (!exchangeBrowserCode_response_200(parsed)) throw new ApiError('protocol');
       const credentials = parsed as components['schemas']['WebCredentials'];
       if (!/^[A-Za-z0-9_.-]{1,8192}$/.test(credentials.access_token)) throw new ApiError('protocol');
-      if (pending.owner !== null && credentials.user.id !== pending.owner) throw new ApiError('stale_session');
+      // A different account is legitimate: the first-party cookie decides who signed in.
       return { credentials, scope: { owner: pending.owner, epoch: pending.epoch }, state: pending.state, returnHash: pending.returnHash };
     } catch (error) {
       this.#current(pending);

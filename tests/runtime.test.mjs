@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authConfig, bootAuth, signIn, signOut } from '../src/shared/auth/runtime.ts';
+import { authConfig, bootAuth, signIn, signOut, scrubCallback, startupFailure, AuthConfigError } from '../src/shared/auth/runtime.ts';
 
 const user = { id: '00000000-0000-4000-8000-000000000001', login: 'anton', name: 'Anton', email: 'a@example.invalid' };
 function port(over = {}) {
@@ -13,7 +13,7 @@ function port(over = {}) {
     cancel(state) { calls.push(['cancel', state]); this.pending = null; },
     async authorize(intent, hash) { calls.push(['authorize', intent, hash]); return `https://api.example/auth/authorize?intent=${intent}`; },
     async completeCallback(href) { calls.push(['complete', href]); return this.done; },
-    async logout() { calls.push(['logout']); return 'revoked'; },
+    async logout() { calls.push(['logout']); return { result: 'revoked' }; },
     ...over
   };
   return s;
@@ -26,7 +26,24 @@ const kind = (k) => Object.assign(new Error(k), { kind: k });
 
 test('authConfig uses explicit env or the current page as callback', () => {
   assert.deepEqual(authConfig({}, { origin: 'http://127.0.0.1:5173', pathname: '/' }), { apiOrigin: 'http://127.0.0.1:18080', callback: 'http://127.0.0.1:5173/' });
-  assert.deepEqual(authConfig({ VITE_API_ORIGIN: 'https://api.x', VITE_AUTH_CALLBACK: 'https://x.github.io/yp/' }, { origin: 'o', pathname: '/p' }), { apiOrigin: 'https://api.x', callback: 'https://x.github.io/yp/' });
+  assert.deepEqual(authConfig({ VITE_API_ORIGIN: 'https://api.x', VITE_AUTH_CALLBACK: 'https://x.github.io/yp/', PROD: true }, { origin: 'o', pathname: '/p' }), { apiOrigin: 'https://api.x', callback: 'https://x.github.io/yp/' });
+  assert.throws(() => authConfig({ PROD: true, VITE_API_ORIGIN: 'https://api.x' }, { origin: 'o', pathname: '/p' }), AuthConfigError);
+  assert.throws(() => authConfig({ PROD: true }, { origin: 'o', pathname: '/p' }), (e) => e.kind === 'configuration');
+});
+
+test('scrubCallback removes only callback parameters and keeps the route', () => {
+  const seen = [];
+  scrubCallback({ href: 'https://web.example/?code=x&state=y#/feed', replace: (v) => seen.push(v) });
+  scrubCallback({ href: 'https://web.example/?logout=done', replace: (v) => seen.push(v) });
+  scrubCallback({ href: 'https://web.example/#/feed', replace: (v) => seen.push(v) });
+  scrubCallback({ href: 'not a url', replace: (v) => seen.push(v) });
+  assert.deepEqual(seen, ['https://web.example/#/feed', 'https://web.example/']);
+});
+
+test('startup failures have distinct messages', () => {
+  assert.match(startupFailure(new AuthConfigError()).message, /настроен/);
+  assert.match(startupFailure(kind('protocol')).message, /сброшены/);
+  assert.match(startupFailure(kind('storage')).message, /хранение/);
 });
 
 test('boot completes a callback into an authenticated view', async () => {
@@ -35,6 +52,8 @@ test('boot completes a callback into an authenticated view', async () => {
 });
 
 test('boot after access_denied keeps the prior state with a notice', async () => {
+  const out = port({ done: { returnHash: '#/', outcome: 'logged_out' } });
+  assert.equal((await bootAuth(out, browser())).message, 'Вы вышли из аккаунта.');
   const s = port({ done: { returnHash: '#/', outcome: 'access_denied' } });
   assert.deepEqual(await bootAuth(s, browser()), { status: 'guest', user: null, message: 'Вход отменён.' });
   const t = port({ done: { returnHash: '#/', outcome: 'login_required' } });
@@ -62,7 +81,12 @@ test('boot of a plain guest does nothing', async () => {
 test('boot failures map to user-facing errors without redirects', async () => {
   for (const [k, word] of [['storage', 'хранение'], ['authentication_unavailable', 'хранение'], ['network', 'связаться'], ['timeout', 'связаться'], ['protocol', 'завершить']]) {
     const s = port({ async completeCallback() { throw kind(k); } });
-    const view = await bootAuth(s, browser());
+    const b = browser();
+    b.href = 'https://web.example/?code=c&state=s';
+    const cleaned = [];
+    b.replace = (v) => cleaned.push(v);
+    const view = await bootAuth(s, b);
+    assert.deepEqual(cleaned, ['https://web.example/']);
     assert.equal(view.status, 'error');
     assert.match(view.message, new RegExp(word));
   }
@@ -85,8 +109,10 @@ test('signIn cancels an abandoned flow and navigates to the broker', async () =>
   assert.equal((await signIn(u, browser(), 'login')).status, 'error');
 });
 
-test('signOut reports server or local-only logout and maps failures', async () => {
-  assert.match((await signOut(port())).message, /вышли из аккаунта/);
-  assert.match((await signOut(port({ async logout() { return 'local'; } }))).message, /на этом устройстве/);
-  assert.equal((await signOut(port({ async logout() { throw kind('storage'); } }))).status, 'error');
+test('signOut reports server logout or hands off to the broker cookie logout', async () => {
+  assert.match((await signOut(port(), browser())).message, /вышли из аккаунта/);
+  const b = browser();
+  assert.deepEqual(await signOut(port({ async logout() { return { result: 'broker', url: 'https://api.example/auth/logout?x' }; } }), b), { status: 'redirecting', user: null });
+  assert.deepEqual(b.assigned, ['https://api.example/auth/logout?x']);
+  assert.equal((await signOut(port({ async logout() { throw kind('storage'); } }), browser())).status, 'error');
 });

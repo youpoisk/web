@@ -10,8 +10,8 @@ export type SessionPort = {
   pendingSummary(): { state: string; status: 'pending' | 'expired' | 'stale' } | null;
   cancel(state: string): unknown;
   authorize(intent: 'restore' | Intent, returnHash: string): Promise<string>;
-  completeCallback(rawURL: string, replaceURL: (clean: string) => void): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' } | null>;
-  logout(): Promise<'revoked' | 'local'>;
+  completeCallback(rawURL: string, replaceURL: (clean: string) => void): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' | 'logged_out' } | null>;
+  logout(): Promise<{ result: 'revoked' } | { result: 'broker'; url: string }>;
 };
 export type AuthView =
   | { status: 'loading' | 'guest' | 'redirecting'; user: null; message?: string }
@@ -21,11 +21,31 @@ export type Browser = { href: string; hash: string; replace: (clean: string) => 
 
 const route = (hash: string) => (hash.startsWith('#/') ? hash : '#/');
 
-export function authConfig(env: Record<string, string | undefined>, location: { origin: string; pathname: string }) {
-  return {
-    apiOrigin: env.VITE_API_ORIGIN || 'http://127.0.0.1:18080',
-    callback: env.VITE_AUTH_CALLBACK || location.origin + location.pathname
-  };
+export class AuthConfigError extends Error {
+  readonly kind = 'configuration';
+  constructor() { super('Authorization configuration missing'); this.name = 'AuthConfigError'; }
+}
+
+/** Local defaults exist only for development; production must be explicit. */
+export function authConfig(env: Record<string, string | boolean | undefined>, location: { origin: string; pathname: string }) {
+  const api = typeof env.VITE_API_ORIGIN === 'string' ? env.VITE_API_ORIGIN : '';
+  const callback = typeof env.VITE_AUTH_CALLBACK === 'string' ? env.VITE_AUTH_CALLBACK : '';
+  if (env.PROD === true && (!api || !callback)) throw new AuthConfigError();
+  return { apiOrigin: api || 'http://127.0.0.1:18080', callback: callback || location.origin + location.pathname };
+}
+
+/** Removes callback/broker parameters left in the address bar after a failure. */
+export function scrubCallback(browser: Pick<Browser, 'href' | 'replace'>): void {
+  let url: URL;
+  try { url = new URL(browser.href); } catch { return; }
+  if (['code', 'state', 'error', 'logout'].some((key) => url.searchParams.has(key))) browser.replace(url.origin + url.pathname + url.hash);
+}
+
+export function startupFailure(error: unknown): AuthView {
+  const kind = error && typeof error === 'object' && 'kind' in error ? String((error as { kind: unknown }).kind) : '';
+  if (kind === 'configuration') return { status: 'error', user: null, message: 'Вход временно недоступен: сайт неверно настроен.' };
+  if (kind === 'protocol') return { status: 'error', user: null, message: 'Данные входа на этом устройстве повреждены и были сброшены. Войдите снова.' };
+  return failure(error);
 }
 
 function settled(session: SessionPort, message?: string): AuthView {
@@ -39,8 +59,8 @@ function failure(error: unknown): AuthView {
   const message = kind === 'storage' || kind === 'authentication_unavailable'
     ? 'Браузер не разрешает сохранить состояние входа. Разрешите хранение данных для сайта и обновите страницу.'
     : kind === 'network' || kind === 'timeout'
-      ? 'Не удалось связаться с сервером входа. Обновите страницу, чтобы повторить.'
-      : 'Не удалось завершить вход. Обновите страницу и попробуйте ещё раз.';
+      ? 'Не удалось связаться с сервером входа. Нажмите «Войти», чтобы повторить.'
+      : 'Не удалось завершить вход. Нажмите «Войти», чтобы попробовать ещё раз.';
   return { status: 'error', user: null, message };
 }
 
@@ -52,6 +72,7 @@ export async function bootAuth(session: SessionPort, browser: Browser): Promise<
     const done = await session.completeCallback(browser.href, browser.replace);
     if (done) {
       if (done.outcome === 'access_denied') return settled(session, 'Вход отменён.');
+      if (done.outcome === 'logged_out') return settled(session, 'Вы вышли из аккаунта.');
       return settled(session);
     }
     const pending = session.pendingSummary();
@@ -63,6 +84,7 @@ export async function bootAuth(session: SessionPort, browser: Browser): Promise<
     }
     return settled(session);
   } catch (error) {
+    scrubCallback(browser);
     return failure(error);
   }
 }
@@ -78,10 +100,16 @@ export async function signIn(session: SessionPort, browser: Browser, intent: Int
   }
 }
 
-export async function signOut(session: SessionPort): Promise<AuthView> {
+export async function signOut(session: SessionPort, browser: Browser): Promise<AuthView> {
   try {
-    const result = await session.logout();
-    return { status: 'guest', user: null, message: result === 'revoked' ? 'Вы вышли из аккаунта.' : 'Вы вышли на этом устройстве. Сервер был недоступен, сессия завершится автоматически.' };
+    const outcome = await session.logout();
+    if (outcome.result === 'broker') {
+      // The bearer could not revoke (expired or offline): the first-party page
+      // revokes the cookie family by its own cookie, then returns here.
+      browser.assign(outcome.url);
+      return { status: 'redirecting', user: null };
+    }
+    return { status: 'guest', user: null, message: 'Вы вышли из аккаунта.' };
   } catch (error) {
     return failure(error);
   }

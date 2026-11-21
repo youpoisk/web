@@ -20,16 +20,21 @@ export class BrowserSession {
   readonly #flow: PendingFlow;
   readonly #exchange: CodeExchange;
   readonly #api: string;
+  readonly #callback: string;
+  readonly #flowStorage: Storage;
   readonly #fetch: typeof fetch;
   readonly #timeout: number;
   #scope: Scope = { owner: null, epoch: '' };
   #credentials: components['schemas']['WebCredentials'] | null = null;
   #blocked = false;
   #reference: string | null = null;
-  constructor(config: { storage: Storage; crypto: Crypto; clock: () => number; apiOrigin: string; callback: string; clearPrivate: () => void; fetch?: typeof fetch; timeoutMs?: number }) {
+  constructor(config: { storage: Storage; flowStorage?: Storage; crypto: Crypto; clock: () => number; apiOrigin: string; callback: string; clearPrivate: () => void; fetch?: typeof fetch; timeoutMs?: number }) {
     this.#storage = config.storage; this.#crypto = config.crypto; this.#clearPrivate = config.clearPrivate;
     this.#api = config.apiOrigin; this.#fetch = config.fetch ?? ((input, init) => globalThis.fetch(input, init)); this.#timeout = config.timeoutMs ?? 10000;
-    this.#flow = new PendingFlow({ ...config, scope: () => this.#identity() });
+    // PKCE state is per tab (sessionStorage in the browser) so tabs never cancel
+    // each other's sign-in; only the non-secret scope reference is shared.
+    this.#callback = config.callback; this.#flowStorage = config.flowStorage ?? config.storage;
+    this.#flow = new PendingFlow({ ...config, storage: this.#flowStorage, scope: () => this.#identity() });
     this.#exchange = new CodeExchange({ flow: this.#flow, fetch: config.fetch, timeoutMs: config.timeoutMs });
     this.#key = `yp.auth.scope.v1:${config.apiOrigin}:${encodeURIComponent(config.callback)}`;
     let raw: string | null;
@@ -97,7 +102,21 @@ export class BrowserSession {
   async authorize(intent: 'restore' | 'login' | 'register', returnHash: string): Promise<string> {
     return authorizationURL(this.#api, await this.start(intent, returnHash));
   }
-  async completeCallback(rawURL: string, replaceURL: (clean: string) => void, signal?: AbortSignal): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' } | null> {
+  get #logoutKey(): string { return `yp.auth.logout.v1:${this.#api}:${encodeURIComponent(this.#callback)}`; }
+  /** Return from the broker logout page. Scrubs first; the message is shown only
+   * for this tab's own logout nonce. A forged return cannot sign anyone in. */
+  #captureLogout(rawURL: string, replaceURL: (clean: string) => void): boolean | null {
+    let url: URL;
+    try { url = new URL(rawURL); } catch { return null; }
+    if (!url.searchParams.has('logout')) return null;
+    replaceURL(url.origin + url.pathname);
+    let expected: string | null = null;
+    try { expected = this.#flowStorage.getItem(this.#logoutKey); this.#flowStorage.removeItem(this.#logoutKey); } catch { expected = null; }
+    return expected !== null && url.searchParams.get('logout') === 'done' && url.searchParams.getAll('state').length === 1 && url.searchParams.get('state') === expected;
+  }
+  async completeCallback(rawURL: string, replaceURL: (clean: string) => void, signal?: AbortSignal): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' | 'logged_out' } | null> {
+    const logout = this.#captureLogout(rawURL, replaceURL);
+    if (logout !== null) return logout ? { returnHash: '#/', outcome: 'logged_out' } : null;
     this.#identity();
     const denied = this.#flow.captureDenied(rawURL, replaceURL);
     if (denied) {
@@ -117,7 +136,8 @@ export class BrowserSession {
     const result = await this.#exchange.exchangeCallback(rawURL, replaceURL, signal);
     if (!result) return null;
     this.#current(result);
-    const restore = this.#flow.pendingSummary()!.intent === 'restore' && result.scope.owner !== null;
+    // Keep the generation only when a restore returned the remembered account.
+    const restore = this.#flow.pendingSummary()!.intent === 'restore' && result.scope.owner !== null && result.credentials.user.id === result.scope.owner;
     const next = { owner: result.credentials.user.id, epoch: restore ? result.scope.epoch : this.#epoch() };
     this.#credentials = null;
     this.#clear();
@@ -136,17 +156,25 @@ export class BrowserSession {
   /** Revokes the current API session with its bearer, then clears local state.
    * Network/401/503 outcomes still forget locally; a surviving cookie family
    * is either already revoked or replaced by the next login. */
-  async logout(): Promise<'revoked' | 'local'> {
+  async logout(): Promise<{ result: 'revoked' } | { result: 'broker'; url: string }> {
     const token = this.#credentials?.access_token ?? null;
-    let result: 'revoked' | 'local' = 'local';
+    let revoked = false;
     if (token) {
       try {
         const response = await this.#fetch(`${this.#api}/v1/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(this.#timeout) });
-        if (response.status === 204) result = 'revoked';
-      } catch { /* forget locally regardless */ }
+        revoked = response.status === 204;
+      } catch { /* fall back to the cookie-based broker logout */ }
     }
     this.forgetLocal();
-    return result;
+    if (revoked) return { result: 'revoked' };
+    // Expired/absent bearer or network failure: the HttpOnly cookie family may
+    // still be live. The first-party page revokes it by its own cookie.
+    let state: string;
+    try {
+      state = btoa(String.fromCharCode(...this.#crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+      this.#flowStorage.setItem(this.#logoutKey, state);
+    } catch { throw new FlowError('storage'); }
+    return { result: 'broker', url: `${this.#api}/auth/logout?${new URLSearchParams({ redirect_uri: this.#callback, state })}` };
   }
   /** Local privacy boundary only. Does not revoke an API session/cookie. */
   forgetLocal(): void {
