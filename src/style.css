@@ -40,3 +40,4 @@
 .header-brand .wordmark-image{display:block;width:149px;height:auto;flex-shrink:0}
 @media(max-width:800px){.header-brand .wordmark-image{width:128px}}
 @media(max-width:560px){.header-brand .wordmark-image{width:93px}}
+/* Company signature applies only to the footer; existing YouPoisk marks stay unchanged. */footer .brand .footer-separator{color:#000;white-space:pre}footer .brand .footer-company{color:#f7cac9;white-space:pre}
