@@ -69,3 +69,5 @@ Own video reviews connected to website remote card: load/save/delete via API, pe
 
 - Рецензии сайта: независимое ревью 1a22013 PASS, отчёт docs/reviews/site-video-reviews.md.
 - Главная: удалён левый extension-promo; независимый множественный выбор до 10 тегов, any/all, сброс «Все видео», повторяемые tag в API и одинаковая фильтрация резервной подборки. Смена фильтра сбрасывает карточки и курсор.
+
+23bb8dc: независимое ревью PASS, MEDIUM/HIGH замечаний нет. Независимо 76 CSP-тестов/typecheck/9 тестов расширения PASS. Авторская сборка PASS (сохраняется предупреждение размера bundle); реальный API ANY по gta6+моряк вернул 2 видео, ALL — 0. Отчёт docs/reviews/catalog-multitags.md.
