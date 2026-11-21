@@ -299,7 +299,7 @@ export interface paths {
         put?: never;
         /**
          * Send a friend request
-         * @description Creates a pending request to an active user (404 otherwise; self 422; already friends 409 conflict). Repeating returns the same pending request with status exists; if the target already asked the viewer, returns that incoming request with status incoming without accepting it (accept is explicit). Live Bearer; online operation without Idempotency-Key: a retry returns the existing request.
+         * @description Creates a pending request to an active user (404 otherwise; self 422; already friends 409 conflict). Repeating returns the same pending request with status exists; if the target already asked the viewer, returns that incoming request with status incoming without accepting it (accept is explicit). Live Bearer; online operation without Idempotency-Key: a retry returns the existing request. Rate limited: 20 friend writes (send, accept, decline/cancel, unfriend) per account per minute and 3 sends to the same user per minute (429 rate_limited with Retry-After); at most 50 unanswered outgoing requests (429 too_many_pending_requests).
          */
         post: operations["sendFriendRequest"];
         delete?: never;
@@ -320,7 +320,7 @@ export interface paths {
         post?: never;
         /**
          * Decline or cancel a friend request
-         * @description The recipient declines or the sender cancels a pending request; 404 when it no longer exists (a retry after success also returns 404).
+         * @description The recipient declines or the sender cancels a pending request; 404 when it no longer exists (a retry after success also returns 404). Rate limited: 20 friend writes (send, accept, decline/cancel, unfriend) per account per minute (429 rate_limited with Retry-After).
          */
         delete: operations["deleteFriendRequest"];
         options?: never;
@@ -339,7 +339,7 @@ export interface paths {
         put?: never;
         /**
          * Accept a friend request
-         * @description Recipient only (404 for anyone else or a missing request). Creates the canonical friendship, removes pending requests in both directions and invalidates the social sync scope of both accounts in one transaction that locks both accounts in a fixed order.
+         * @description Recipient only (404 for anyone else or a missing request). Creates the canonical friendship, removes pending requests in both directions and invalidates the social sync scope of both accounts in one transaction that locks both accounts in a fixed order. Rate limited: 20 friend writes (send, accept, decline/cancel, unfriend) per account per minute (429 rate_limited with Retry-After).
          */
         post: operations["acceptFriendRequest"];
         delete?: never;
@@ -380,7 +380,7 @@ export interface paths {
         post?: never;
         /**
          * Remove a friend
-         * @description Removes the friendship for both users (404 if not friends), clears pending requests between them and invalidates both social sync scopes.
+         * @description Removes the friendship for both users (404 if not friends), clears pending requests between them and invalidates both social sync scopes. Rate limited: 20 friend writes (send, accept, decline/cancel, unfriend) per account per minute (429 rate_limited with Retry-After).
          */
         delete: operations["deleteFriend"];
         options?: never;
