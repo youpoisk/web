@@ -1,0 +1,11 @@
+# Independent review — frontend b3e4e9d
+
+Verdict: PASS. No actionable MEDIUM/HIGH findings.
+
+Reviewed BlocksPanel and BlockControl, profile invalidation/navigation, authenticated settings composition, API helpers and imported 50-operation contract. Own block list handles unavailable users with null login/name without constructing a foreign profile link. Pagination preserves cursors and deduplicates by user ID; failed-page retry uses its saved cursor. Immediate reading/busy refs serialize normal read/write UI actions, generations/serials discard obsolete results, and viewer keys isolate settings state. Confirmed unblock removes only the chosen local entry and explains that previous relations and reverse blocks are not restored/removed.
+
+Profile block requires explicit inline confirmation. Only confirmed success triggers parent generation invalidation, clears profile/items/cursor and navigates to settings, preventing old in-flight profile content from repopulating the screen. Uncertain writes retain explicit failure text rather than claiming success. The authenticated settings block panel is available in All/Security even though blocked profiles become inaccessible; self-profile block control is omitted. Native buttons/status labels/disabled states are present.
+
+Independent checks: pnpm api:check PASS (50-operation generated types/standalone validators); pnpm api:check-source C:/repos/youpoisk-backend PASS against pinned caa9255; pnpm typecheck:api PASS; pnpm test:api PASS 91/91 under disallow-code-generation-from-strings, gated handwritten modules 100% lines/functions (lists.ts branches 99.33%); pnpm test:extension PASS 9/9. Added schema tests cover complete redaction, invalid dates/empty login and forbidden private/extra fields. Helpers preserve signal/cursor and bodyless block/unblock requests.
+
+Limits: React behavior/production build were inspected or author-reported, not independently browser-run. Author reports dedicated QA block/settings/404/unblock browser round trip; existing friends preserved. Reviewer performed no QA-data mutations and no repository edits/commits, and did not touch untracked plans. Coverage totals apply to handwritten core modules, not automated React lifecycle tests. Full YP-083 reports/admin/audit and direct messages remain future work.
