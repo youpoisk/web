@@ -299,3 +299,16 @@ export function toPublicCard(item: VideoCard): PublicCard {
     publicCard: true
   };
 }
+
+export type Relationship = components['schemas']['Relationship'];
+export async function loadRelationship(client: Pick<ApiClient,'request'>, id: string, signal?: AbortSignal): Promise<Relationship> {
+ return client.request('getRelationship',{path:{id},signal});
+}
+export async function setFollowing(client: Pick<ApiClient,'request'>, id: string, enabled: boolean): Promise<void> {
+ await client.request(enabled?'followUser':'unfollowUser',{path:{id}});
+}
+export async function loadFollowing(client: Pick<ApiClient,'request'>, direction: 'following'|'followers', after: string|null, signal?: AbortSignal): Promise<{items:Friend[];next:string|null}> {
+ const query:{limit:number;after?:string}={limit:30};if(after)query.after=after;
+ const page=await client.request(direction==='following'?'listFollowing':'listFollowers',{query,signal});
+ return {items:page.items,next:page.next_cursor??null};
+}

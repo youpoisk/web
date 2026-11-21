@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
 import { loadFeed, type FeedItem } from '../shared/library/lists.ts';
 
-/** «Рекомендации»: all visible ratings and reviews of the viewer's friends, newest first. */
+/** «Рекомендации»: all visible ratings and reviews of friends and followed authors, newest first. */
 export function FeedList({ client }: { client: Pick<ApiClient, 'request'> }) {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [next, setNext] = useState<string | null>(null);
@@ -39,9 +39,9 @@ export function FeedList({ client }: { client: Pick<ApiClient, 'request'> }) {
     try { await load(next); } finally { more.current = false; }
   }
   return <section aria-busy={loading}>
-    {loading && items.length === 0 && <p className="muted" role="status">Загружаем рекомендации друзей…</p>}
+    {loading && items.length === 0 && <p className="muted" role="status">Загружаем рекомендации…</p>}
     {error && <p className="notice" role="status">Не удалось загрузить рекомендации. <button className="text-button" onClick={() => void load(failedAfter)}>Повторить</button></p>}
-    {!loading && !error && items.length === 0 && <p className="notice">Друзья пока ничего не оценили и не написали рецензий.</p>}
+    {!loading && !error && items.length === 0 && <p className="notice">У друзей и авторов, на которых вы подписаны, пока нет доступных оценок и рецензий.</p>}
     {items.map(it => <article className="panel feed-post recommendation" key={it.user.id + ':' + it.video.id}>
       <a className="recommendation-poster" href={`#/video/${it.video.youtube_video_id}`}><img src={it.video.preview_url} alt="" loading="lazy" referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = 'none'; }}/></a>
       <div>

@@ -62,7 +62,7 @@ export function VideoReviewPanel({ client, writer, videoId }: {
   }
   return <section className="panel" id="review" aria-busy={loading || saving}>
     <h2>Рецензии</h2>
-    <p className="muted">Ваша рецензия хранится в аккаунте. Другие рецензии станут доступны после подключения правил видимости.</p>
+    <p className="muted">Ваша рецензия хранится в аккаунте. Рецензии других пользователей доступны в их профилях и рекомендациях с учётом приватности.</p>
     {loading && <p role="status">Загружаем рецензию…</p>}
     {review?.text != null && <div className="review"><strong>Ваша сохранённая рецензия</strong><p className="own-review-text">{review.text}</p></div>}
     <textarea aria-label="Текст рецензии" value={draft} disabled={loading || saving || loadError || !review} onChange={e => setDraft(e.target.value)} placeholder="Поделитесь впечатлениями о видео"/>

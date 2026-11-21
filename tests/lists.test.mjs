@@ -329,3 +329,15 @@ test('friendLimitMessage maps friend write rate limits', async () => {
   assert.equal(friendLimitMessage(new ApiError('http', 409, 'conflict')), null);
   assert.equal(friendLimitMessage(new Error('x')), null);
 });
+
+test('subscriptions map independent reads and idempotent writes without JSON bodies', async () => {
+ const {loadRelationship,setFollowing,loadFollowing}=await import('../src/shared/library/lists.ts');
+ const calls=[],id=item().channel.id,ctl=new AbortController();
+ const relation={user_id:id,following:true,followed_by:false,friends:true,following_count:null,followers_count:null};
+ const client={async request(op,options){calls.push([op,options]);if(op==='getRelationship')return relation;if(op.startsWith('list'))return {items:[],...(op==='listFollowing'?{next_cursor:'cursor'}:{})};}};
+ assert.deepEqual(await loadRelationship(client,id,ctl.signal),relation);
+ await setFollowing(client,id,true);await setFollowing(client,id,false);
+ assert.deepEqual(await loadFollowing(client,'following',null,ctl.signal),{items:[],next:'cursor'});
+ assert.deepEqual(await loadFollowing(client,'followers','cursor'),{items:[],next:null});
+ assert.deepEqual(calls,[['getRelationship',{path:{id},signal:ctl.signal}],['followUser',{path:{id}}],['unfollowUser',{path:{id}}],['listFollowing',{query:{limit:30},signal:ctl.signal}],['listFollowers',{query:{limit:30,after:'cursor'},signal:undefined}]]);
+});

@@ -1,9 +1,11 @@
+import {FollowControls} from './Subscriptions.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { loadUserProfile, loadUserRecommendations, type Recommendation, type UserProfile } from '../shared/library/lists.ts';
 
 /** Another user's profile with his visible ratings and reviews. Parent keys it by viewer and user. */
 export function UserProfilePage({ client, userId }: { client: Pick<ApiClient, 'request'>; userId: string }) {
+  const [revision,setRevision]=useState(0);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [items, setItems] = useState<Recommendation[]>([]);
   const [next, setNext] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function UserProfilePage({ client, userId }: { client: Pick<ApiClient, 'r
     const ctl = new AbortController();
     void loadPage(null, ctl.signal);
     return () => { generation.current++; ctl.abort(); };
-  }, [client, userId]);
+  }, [client, userId, revision]);
 
   async function loadMore() {
     if (more.current || !next) return;
@@ -52,6 +54,7 @@ export function UserProfilePage({ client, userId }: { client: Pick<ApiClient, 'r
       <h1>{profile ? name : 'Профиль'}</h1>
       {profile && <p className="muted">@{profile.user.login}{profile.relation === 'friend' ? ' · у вас в друзьях' : profile.relation === 'self' ? ' · это вы' : ''}</p>}
     </div></div>
+    {profile && <FollowControls client={client} userId={userId} canFollow={profile.relation!=='self'} onChanged={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setRevision(v=>v+1)}}/>}
     {profile && (!profile.ratings_visible || !profile.reviews_visible) && <p className="notice">
       {!profile.ratings_visible && !profile.reviews_visible ? 'Пользователь скрыл оценки и рецензии от вас.' : !profile.ratings_visible ? 'Пользователь скрыл от вас свои оценки; видны только рецензии.' : 'Пользователь скрыл от вас свои рецензии; видны только оценки.'}
     </p>}

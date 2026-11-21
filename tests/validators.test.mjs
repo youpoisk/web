@@ -11,7 +11,7 @@ test('every pinned operation has runtime request/response validators', () => {
   const spec = JSON.parse(readFileSync(new URL('../contracts/openapi.json', import.meta.url)));
   const operations = Object.entries(spec.paths).flatMap(([path, methods]) =>
     Object.entries(methods).map(([method, operation]) => ({ path, method, operation })));
-  assert.equal(operations.length, 42);
+  assert.equal(operations.length, 47);
   assert.equal(Object.keys(validators.contract).length, operations.length);
   for (const { path, method, operation } of operations) {
     const actual = validators.contract[operation.operationId];
@@ -110,4 +110,14 @@ test('channel card requires verified UC identity and never exposes own state or 
  assert.equal(validators.schema_ChannelCard({...card,url}),false);
  assert.equal(validators.schema_ChannelCard({...card,my_state:{revision:1,rating:8}}),false);
  assert.equal(validators.schema_ChannelCard({...card,voters:[uid]}),false);
+});
+
+test('relationship keeps independent directions and hides both counts together', () => {
+ const rel={user_id:uid,following:true,followed_by:false,friends:true,following_count:null,followers_count:null};
+ assert.equal(validators.schema_Relationship(rel),true);
+ assert.equal(validators.schema_Relationship({...rel,following_count:0,followers_count:3}),true);
+ assert.equal(validators.schema_Relationship({...rel,followers_count:1}),false);
+ assert.equal(validators.schema_Relationship({...rel,following_count:1}),false);
+ assert.equal(validators.schema_Relationship({...rel,following_count:-1,followers_count:2}),false);
+ assert.equal(validators.schema_Relationship({...rel,email:'private@example.invalid'}),false);
 });
