@@ -320,3 +320,12 @@ test('people search and friend request helpers call the right operations', async
     ['deleteFriendRequest', { id: 'r1' }, undefined, undefined],
     ['deleteFriend', { id: 'u1' }, undefined, undefined]]);
 });
+
+test('friendLimitMessage maps friend write rate limits', async () => {
+  const { friendLimitMessage } = await import('../src/shared/library/lists.ts');
+  const { ApiError } = await import('../src/shared/api/client.ts');
+  assert.match(friendLimitMessage(new ApiError('http', 429, 'too_many_pending_requests')), /ждут ответа/);
+  assert.match(friendLimitMessage(new ApiError('http', 429, 'rate_limited', '', 60)), /через минуту/);
+  assert.equal(friendLimitMessage(new ApiError('http', 409, 'conflict')), null);
+  assert.equal(friendLimitMessage(new Error('x')), null);
+});

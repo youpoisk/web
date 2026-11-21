@@ -253,6 +253,13 @@ export async function removeFriend(client: Pick<ApiClient, 'request'>, userId: s
   await client.request('deleteFriend', { path: { id: userId } });
 }
 
+/** User-facing text for a rate-limited friend write (429), or null for other errors. */
+export function friendLimitMessage(error: unknown): string | null {
+  if (!(error instanceof ApiError) || error.status !== 429) return null;
+  if (error.code === 'too_many_pending_requests') return 'Слишком много заявок ждут ответа. Отмените часть отправленных заявок и попробуйте снова.';
+  return 'Слишком много действий подряд. Попробуйте через минуту.';
+}
+
 /** True when a write failed because the server state moved on (reload needed). */
 export function conflicted(error: unknown): boolean {
   return error instanceof ApiError && error.kind === 'http' && error.status === 409;

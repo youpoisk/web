@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
 import { ApiError } from '../shared/api/client.ts';
-import { loadFriends, removeFriend, type Friend } from '../shared/library/lists.ts';
+import { friendLimitMessage, loadFriends, removeFriend, type Friend } from '../shared/library/lists.ts';
 
 const confirmRemove = (it: Friend) => typeof window === 'undefined' || window.confirm(`Удалить ${it.user.name || it.user.login} из друзей?`);
 
@@ -24,7 +24,7 @@ export function FriendsList({ client }: { client: Pick<ApiClient, 'request'> }) 
       setMessage(`${it.user.name || it.user.login} больше не в друзьях.`);
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) { setItems(prev => prev.filter(x => x.user.id !== it.user.id)); setMessage('Вы уже не друзья.'); }
-      else setMessage('Не удалось удалить из друзей.');
+      else setMessage(friendLimitMessage(e) ?? 'Не удалось удалить из друзей.');
     } finally {
       setBusy(null);
     }

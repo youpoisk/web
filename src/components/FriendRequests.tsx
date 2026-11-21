@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
-import { acceptFriendRequest, deleteFriendRequest, loadFriendRequests, searchPeople, sendFriendRequest, type FriendRequest, type Person } from '../shared/library/lists.ts';
+import { acceptFriendRequest, deleteFriendRequest, friendLimitMessage, loadFriendRequests, searchPeople, sendFriendRequest, type FriendRequest, type Person } from '../shared/library/lists.ts';
 
 const initial = (name: string) => [...name][0];
 
@@ -43,7 +43,7 @@ export function FriendRequestsList({ client, direction }: { client: Pick<ApiClie
       setMessage(accept ? `Теперь вы друзья с ${item.user.name || item.user.login}.` : direction === 'incoming' ? 'Заявка отклонена.' : 'Заявка отменена.');
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) { setItems(prev => prev.filter(x => x.id !== item.id)); setMessage('Этой заявки уже нет.'); }
-      else setMessage('Не удалось выполнить действие. Попробуйте ещё раз.');
+      else setMessage(friendLimitMessage(e) ?? 'Не удалось выполнить действие. Попробуйте ещё раз.');
     } finally {
       setBusy(null);
     }
@@ -99,7 +99,7 @@ export function PeopleSearch({ client }: { client: Pick<ApiClient, 'request'> })
       setItems(prev => prev && prev.map(x => x.user.id === person.user.id ? { ...x, relation } : x));
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) setItems(prev => prev && prev.map(x => x.user.id === person.user.id ? { ...x, relation: 'friend' } : x));
-      else setError('Не удалось отправить заявку.');
+      else setError(friendLimitMessage(e) ?? 'Не удалось отправить заявку.');
     } finally {
       setBusy(null);
     }
