@@ -18,3 +18,5 @@ Flow review correction: minimal pendingSummary/status enables explicit exactnonc
 4d3d8fb independent PKCE flow followup PASS; ordinaryreload recovery finding fixed via minimal summary/exactcancel, no other findings. Independent27CSPtests flow100lines/branches/functions and combined100lines/functions PASS. Reports docs/reviews/pending-pkce-flow*.md. Next native API-page client and actual web session coordinator; this foundation is not connected auth UI.
 
 e6a40db independent guest/demo-logout gate PASS. Public catalog available by default; private UI gated; explicit in-memory demo preview and logout. Review corrections preserve publication visibility, clear editors on every hash transition, retain notification destination tab. Build PASS; browser guest/profile/logout flow PASS. Real server auth remains open. Footer e711f5b reviewed PASS. Report docs/reviews/guest-browsing.md.
+
+adab228 shared7channel demo catalog independent followup PASS; legacy post fallback corrected. Build PASS, API/flow27/27, extension9/9. Metadata sources docs/fixtures/demo-catalog.json. Real backend seed/catalog integration remains open. Review docs/reviews/shared-demo-catalog.md.
