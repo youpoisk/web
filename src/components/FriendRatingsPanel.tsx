@@ -8,6 +8,7 @@ export function FriendRatingsPanel({ client, videoId }: { client: Pick<ApiClient
   const [next, setNext] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [failedAfter, setFailedAfter] = useState<string | null>(null);
   const generation = useRef(0), more = useRef(false);
 
   async function load(after: string | null, signal?: AbortSignal) {
@@ -19,7 +20,7 @@ export function FriendRatingsPanel({ client, videoId }: { client: Pick<ApiClient
       setItems(prev => after ? [...prev, ...page.items.filter(x => !prev.some(y => y.user.id === x.user.id))] : page.items);
       setNext(page.next);
     } catch {
-      if (stamp === generation.current && !signal?.aborted) setError(true);
+      if (stamp === generation.current && !signal?.aborted) { setError(true); setFailedAfter(after); }
     } finally {
       if (stamp === generation.current) setLoading(false);
     }
@@ -39,10 +40,10 @@ export function FriendRatingsPanel({ client, videoId }: { client: Pick<ApiClient
   return <div className="panel friend-ratings" aria-busy={loading}>
     <h3>Оценки друзей</h3>
     {loading && items.length === 0 && <p className="small muted" role="status">Загружаем оценки друзей…</p>}
-    {error && <p className="small muted" role="status">Не удалось загрузить оценки друзей. <button className="text-button" onClick={() => void load(null)}>Повторить</button></p>}
+    {error && <p className="small muted" role="status">Не удалось загрузить оценки друзей. <button className="text-button" onClick={() => void load(failedAfter)}>Повторить</button></p>}
     {!loading && !error && items.length === 0 && <p className="small muted">Никто из друзей не оценил это видео</p>}
     {items.map(it => <div className="person-line" key={it.user.id}>
-      <span className="avatar small-avatar" aria-hidden="true">{(it.user.name || it.user.login)[0]}</span>
+      <span className="avatar small-avatar" aria-hidden="true">{[...(it.user.name || it.user.login)][0]}</span>
       <div><strong>{it.user.name || it.user.login}</strong><p className="small muted">@{it.user.login} · {new Date(it.rated_at).toLocaleDateString('ru-RU')}</p></div>
       <b className="friend-score">{it.rating}/10</b>
     </div>)}
