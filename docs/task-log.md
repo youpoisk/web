@@ -114,3 +114,5 @@ User feed request: По авторам/По видео toggle, one videoUUID pos
 
 Password change UI (DEC-WEB-026): Settings → Безопасность «Сменить пароль» opens backend /auth/password (8e9375f); BrowserSession.passwordURL/#capturePassword nonce-bound single-use outcomes, scope demotion on changed/uncertain/session, cancel keeps #/settings; runtime changePassword + boot notices; scrubCallback strips password. test:api 96/96, session/runtime/lists lines/functions100, frontend gate (typecheck+build+tests) PASS. Browser-pane click-through not possible: the pane does not follow the site's top-level redirect to the API sign-in page.
 
+Password change review PASS (docs/reviews/password-change-review.md), no MEDIUM+; LOW fix: passwordURL refuses without crypto randomness (no fixed nonce gating a local sign-out). test:api 96/96, frontend gate PASS.
+

@@ -151,6 +151,6 @@ test('password page: nonce-bound outcomes end the local sign-in; cancelled or fo
  bad.data.set(key,JSON.stringify({state:'S'.repeat(43),returnHash:5}));const bh=[];
  assert.equal(await bad.session.completeCallback(callback+'?password=cancelled&state='+'S'.repeat(43),v=>bh.push(v)),null);assert.deepEqual(bh,[callback],'non-hash return ignored');
  const ws=await signed();ws.env.writes=true;assert.throws(()=>ws.session.passwordURL('#/settings'),fail('storage'));
- const cr=await signed();cr.config.crypto.getRandomValues=()=>{throw Error('no crypto')};assert.equal(new URL(cr.session.passwordURL('#/settings')).searchParams.get('state'),'A'.repeat(43));
+ const cr=await signed();cr.config.crypto.getRandomValues=()=>{throw Error('no crypto')};assert.throws(()=>cr.session.passwordURL('#/settings'),fail('crypto'),'no fixed nonce for a sign-out-gating return');
 });
 

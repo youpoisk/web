@@ -115,16 +115,16 @@ export class BrowserSession {
     return expected !== null && url.searchParams.get('logout') === 'done' && url.searchParams.getAll('state').length === 1 && url.searchParams.get('state') === expected;
   }
   #nonce(): string {
-    let state = 'A'.repeat(43); // valid placeholder: the nonce only gates a notice
-    try { state = btoa(String.fromCharCode(...this.#crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', ''); } catch { /* keep placeholder */ }
-    return state;
+    return btoa(String.fromCharCode(...this.#crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
   }
   get #passwordKey(): string { return `yp.auth.password.v1:${this.#api}:${encodeURIComponent(this.#callback)}`; }
   /** URL of the API-origin password page (YP-047). The site never sees the
    * passwords; the page returns only a nonce-bound outcome. */
   passwordURL(returnHash: string): string {
     this.#identity();
-    const state = this.#nonce();
+    // Here the nonce gates a local sign-out, so there is no fixed fallback.
+    let state: string;
+    try { state = this.#nonce(); } catch { throw new FlowError('crypto'); }
     try { this.#flowStorage.setItem(this.#passwordKey, JSON.stringify({ state, returnHash })); } catch { throw new FlowError('storage'); }
     return `${this.#api}/auth/password?${new URLSearchParams({ redirect_uri: this.#callback, state })}`;
   }
@@ -212,7 +212,8 @@ export class BrowserSession {
     // Expired/absent bearer or network failure: the HttpOnly cookie family may
     // still be live. The first-party page revokes it by its own cookie. The
     // nonce only controls the "logged out" notice; losing it never blocks logout.
-    const state = this.#nonce();
+    let state = 'A'.repeat(43); // valid placeholder: the logout nonce only gates a notice
+    try { state = this.#nonce(); } catch { /* keep placeholder */ }
     try { this.#flowStorage.setItem(this.#logoutKey, state); } catch { /* notice lost, logout continues */ }
     return { result: 'broker', url: `${this.#api}/auth/logout?${new URLSearchParams({ redirect_uri: this.#callback, state })}` };
   }
