@@ -358,3 +358,17 @@ test('current-list people filter matches name/login with Unicode normalization a
  assert.equal(users.length,4);
  assert.deepEqual(filterPeopleList([anna,...Array.from({length:30},(_,i)=>({user:{login:'user'+i}})),sofia],'София'),[sofia]);
 });
+
+test('blocks page preserves redacted identities, cursor and signal; writes are bodyless', async () => {
+ const {loadBlocks,setBlocked}=await import('../src/shared/library/lists.ts');
+ const id=item().channel.id,ctl=new AbortController(),calls=[];
+ const block={user:{id,login:null,name:null},since:'2026-11-21T00:00:00Z'};
+ const client={async request(op,options){calls.push([op,options]);return op==='listBlocks'?{items:[block],...(options.query.after?{}:{next_cursor:'cursor'})}:undefined;}};
+ assert.deepEqual(await loadBlocks(client,null,ctl.signal),{items:[block],next:'cursor'});
+ assert.deepEqual(await loadBlocks(client,'cursor'),{items:[block],next:null});
+ await setBlocked(client,id,true);await setBlocked(client,id,false);
+ assert.deepEqual(calls,[['listBlocks',{query:{limit:30},signal:ctl.signal}],['listBlocks',{query:{limit:30,after:'cursor'},signal:undefined}],['blockUser',{path:{id}}],['unblockUser',{path:{id}}]]);
+ const failure=new Error('uncertain');
+ await assert.rejects(setBlocked({request:async()=>{throw failure}},id,true),e=>e===failure);
+ await assert.rejects(loadBlocks({request:async()=>{throw failure}},null),e=>e===failure);
+});

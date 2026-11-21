@@ -11,7 +11,7 @@ test('every pinned operation has runtime request/response validators', () => {
   const spec = JSON.parse(readFileSync(new URL('../contracts/openapi.json', import.meta.url)));
   const operations = Object.entries(spec.paths).flatMap(([path, methods]) =>
     Object.entries(methods).map(([method, operation]) => ({ path, method, operation })));
-  assert.equal(operations.length, 47);
+  assert.equal(operations.length, 50);
   assert.equal(Object.keys(validators.contract).length, operations.length);
   for (const { path, method, operation } of operations) {
     const actual = validators.contract[operation.operationId];
@@ -120,4 +120,15 @@ test('relationship keeps independent directions and hides both counts together',
  assert.equal(validators.schema_Relationship({...rel,following_count:1}),false);
  assert.equal(validators.schema_Relationship({...rel,following_count:-1,followers_count:2}),false);
  assert.equal(validators.schema_Relationship({...rel,email:'private@example.invalid'}),false);
+});
+
+test('block list rejects partial redaction, private data, malformed and extra fields', () => {
+ const entry={user:{id:uid,login:'qa_probe',name:'QA Probe'},since:'2026-11-21T00:00:00Z'};
+ assert.equal(validators.listBlocks_response_200({items:[entry]}),true);
+ assert.equal(validators.listBlocks_response_200({items:[{...entry,user:{id:uid,login:null,name:null}}],next_cursor:'cursor'}),true);
+ assert.equal(validators.schema_Block({...entry,user:{id:uid,login:null,name:'Hidden'}}),false);
+ assert.equal(validators.schema_Block({...entry,user:{...entry.user,email:'private@example.invalid'}}),false);
+ assert.equal(validators.schema_Block({...entry,user:{...entry.user,login:''}}),false);
+ assert.equal(validators.schema_Block({...entry,since:'not-a-date'}),false);
+ assert.equal(validators.listBlocks_response_200({items:[entry],total:1}),false);
 });

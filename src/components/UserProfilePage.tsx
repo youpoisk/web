@@ -1,3 +1,4 @@
+import {BlockControl} from './Blocks.tsx';
 import {FollowControls} from './Subscriptions.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
@@ -55,6 +56,7 @@ export function UserProfilePage({ client, userId }: { client: Pick<ApiClient, 'r
       {profile && <p className="muted">@{profile.user.login}{profile.relation === 'friend' ? ' · у вас в друзьях' : profile.relation === 'self' ? ' · это вы' : ''}</p>}
     </div></div>
     {profile && <FollowControls client={client} userId={userId} canFollow={profile.relation!=='self'} onChanged={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setRevision(v=>v+1)}}/>}
+    {profile && profile.relation !== 'self' && <BlockControl client={client} userId={userId} onBlocked={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setError('');location.hash='#/settings'}}/>}
     {profile && (!profile.ratings_visible || !profile.reviews_visible) && <p className="notice">
       {!profile.ratings_visible && !profile.reviews_visible ? 'Пользователь скрыл оценки и рецензии от вас.' : !profile.ratings_visible ? 'Пользователь скрыл от вас свои оценки; видны только рецензии.' : 'Пользователь скрыл от вас свои рецензии; видны только оценки.'}
     </p>}

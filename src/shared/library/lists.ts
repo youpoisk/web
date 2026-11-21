@@ -320,3 +320,14 @@ export function filterPeopleList<T extends {user:{login:string;name?:string|null
  const query=normalize(text);
  return items.filter(item=>[item.user.login,item.user.name??''].some(value=>normalize(value).includes(query)));
 }
+
+export type Block = components['schemas']['Block'];
+/** Only the viewer's own directed block list, including redacted unavailable users. */
+export async function loadBlocks(client: Pick<ApiClient,'request'>, after: string|null, signal?: AbortSignal): Promise<{items:Block[];next:string|null}> {
+ const query:{limit:number;after?:string}={limit:30};if(after)query.after=after;
+ const page=await client.request('listBlocks',{query,signal});
+ return {items:page.items,next:page.next_cursor??null};
+}
+export async function setBlocked(client: Pick<ApiClient,'request'>, id: string, enabled: boolean): Promise<void> {
+ await client.request(enabled?'blockUser':'unblockUser',{path:{id}});
+}
