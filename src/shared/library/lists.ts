@@ -227,6 +227,32 @@ export async function loadFeed(client: Pick<ApiClient, 'request'>, after: string
   return { items: page.items, next: page.next_cursor ?? null };
 }
 
+export type Person = components['schemas']['Person'];
+export type FriendRequest = components['schemas']['FriendRequest'];
+/** People search by login or name (never email); relation tells which action fits. */
+export async function searchPeople(client: Pick<ApiClient, 'request'>, text: string, signal?: AbortSignal): Promise<Person[]> {
+  return (await client.request('searchPeople', { query: { q: text.trim().slice(0, 50), limit: 20 }, signal })).items;
+}
+/** One page of pending friend requests in one direction. */
+export async function loadFriendRequests(client: Pick<ApiClient, 'request'>, direction: 'incoming' | 'outgoing', after: string | null, signal?: AbortSignal): Promise<{ items: FriendRequest[]; next: string | null }> {
+  const query: { direction: 'incoming' | 'outgoing'; limit: number; after?: string } = { direction, limit: 30 };
+  if (after) query.after = after;
+  const page = await client.request('listFriendRequests', { query, signal });
+  return { items: page.items, next: page.next_cursor ?? null };
+}
+export async function sendFriendRequest(client: Pick<ApiClient, 'request'>, userId: string) {
+  return client.request('sendFriendRequest', { body: { user_id: userId } });
+}
+export async function acceptFriendRequest(client: Pick<ApiClient, 'request'>, id: string): Promise<Friend> {
+  return client.request('acceptFriendRequest', { path: { id } });
+}
+export async function deleteFriendRequest(client: Pick<ApiClient, 'request'>, id: string): Promise<void> {
+  await client.request('deleteFriendRequest', { path: { id } });
+}
+export async function removeFriend(client: Pick<ApiClient, 'request'>, userId: string): Promise<void> {
+  await client.request('deleteFriend', { path: { id: userId } });
+}
+
 /** True when a write failed because the server state moved on (reload needed). */
 export function conflicted(error: unknown): boolean {
   return error instanceof ApiError && error.kind === 'http' && error.status === 409;

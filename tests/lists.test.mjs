@@ -299,3 +299,24 @@ test('loadFeed pages friends recommendations', async () => {
   assert.deepEqual(await loadFeed(client, 'n1'), { items: [], next: null });
   assert.deepEqual(calls, [['listFeed', { limit: 30 }], ['listFeed', { limit: 30, after: 'n1' }]]);
 });
+
+test('people search and friend request helpers call the right operations', async () => {
+  const m = await import('../src/shared/library/lists.ts');
+  const calls = [];
+  const client = { async request(op, options) { calls.push([op, options.path, options.query, options.body]); if (op === 'searchPeople') return { items: [{ relation: 'none' }] }; if (op === 'listFriendRequests') return calls.length === 2 ? { items: [{ id: 'r1' }], next_cursor: 'n1' } : { items: [] }; if (op === 'sendFriendRequest') return { status: 'created' }; if (op === 'acceptFriendRequest') return { since: 'x' }; return null; } };
+  assert.deepEqual(await m.searchPeople(client, '  ан' + 'x'.repeat(80)), [{ relation: 'none' }]);
+  assert.deepEqual(await m.loadFriendRequests(client, 'incoming', null), { items: [{ id: 'r1' }], next: 'n1' });
+  assert.deepEqual(await m.loadFriendRequests(client, 'outgoing', 'n1'), { items: [], next: null });
+  assert.deepEqual(await m.sendFriendRequest(client, 'u1'), { status: 'created' });
+  assert.deepEqual(await m.acceptFriendRequest(client, 'r1'), { since: 'x' });
+  assert.equal(await m.deleteFriendRequest(client, 'r1'), undefined);
+  assert.equal(await m.removeFriend(client, 'u1'), undefined);
+  assert.equal(calls[0][2].q.length, 50);
+  assert.deepEqual(calls.slice(1).map(c => [c[0], c[1], c[2], c[3]]), [
+    ['listFriendRequests', undefined, { direction: 'incoming', limit: 30 }, undefined],
+    ['listFriendRequests', undefined, { direction: 'outgoing', limit: 30, after: 'n1' }, undefined],
+    ['sendFriendRequest', undefined, undefined, { user_id: 'u1' }],
+    ['acceptFriendRequest', { id: 'r1' }, undefined, undefined],
+    ['deleteFriendRequest', { id: 'r1' }, undefined, undefined],
+    ['deleteFriend', { id: 'u1' }, undefined, undefined]]);
+});
