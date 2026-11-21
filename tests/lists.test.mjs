@@ -90,3 +90,14 @@ test('StateWriter issues one lease, a fresh key per command, and renews an expir
   assert.equal(conflicted(new Error('x')), false);
   assert.equal(conflicted(new ApiError('network')), false);
 });
+
+test('loadCard reads by YouTube id and maps 404 to null', async () => {
+  const { loadCard } = await import('../src/shared/library/lists.ts');
+  const { ApiError } = await import('../src/shared/api/client.ts');
+  const seen = [];
+  const ok = { async request(op, options) { seen.push([op, options.path]); return item(); } };
+  assert.equal((await loadCard(ok, 'AbCdEf_12-3')).youtube_video_id, 'AbCdEf_12-3');
+  assert.deepEqual(seen, [['getVideoCardByYoutube', { youtube_id: 'AbCdEf_12-3' }]]);
+  assert.equal(await loadCard({ async request() { throw new ApiError('http', 404, 'not_found'); } }, 'AbCdEf_12-3'), null);
+  await assert.rejects(loadCard({ async request() { throw new ApiError('http', 503); } }, 'AbCdEf_12-3'), (e) => e.status === 503);
+});

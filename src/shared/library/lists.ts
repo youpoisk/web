@@ -92,3 +92,14 @@ export class StateWriter {
 export function conflicted(error: unknown): boolean {
   return error instanceof ApiError && error.kind === 'http' && error.status === 409;
 }
+
+export type VideoCard = components['schemas']['VideoCard'];
+/** Server card by YouTube id; my_state is present only for a live viewer. */
+export async function loadCard(client: Pick<ApiClient, 'request'>, youtubeId: string, signal?: AbortSignal): Promise<VideoCard | null> {
+  try {
+    return await client.request('getVideoCardByYoutube', { path: { youtube_id: youtubeId }, signal });
+  } catch (error) {
+    if (error instanceof ApiError && error.kind === 'http' && error.status === 404) return null;
+    throw error;
+  }
+}
