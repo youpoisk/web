@@ -10,6 +10,7 @@ export function FriendRequestsList({ client, direction }: { client: Pick<ApiClie
   const [next, setNext] = useState<string | null>(null);
   const [loading, setLoading] = useState(true), [error, setError] = useState(false);
   const [busy, setBusy] = useState<string | null>(null), [message, setMessage] = useState('');
+  const [failedAfter, setFailedAfter] = useState<string | null>(null);
   const generation = useRef(0);
 
   async function load(after: string | null, signal?: AbortSignal) {
@@ -21,7 +22,7 @@ export function FriendRequestsList({ client, direction }: { client: Pick<ApiClie
       setItems(prev => after ? [...prev, ...page.items.filter(x => !prev.some(y => y.id === x.id))] : page.items);
       setNext(page.next);
     } catch {
-      if (stamp === generation.current && !signal?.aborted) setError(true);
+      if (stamp === generation.current && !signal?.aborted) { setError(true); setFailedAfter(after); }
     } finally {
       if (stamp === generation.current) setLoading(false);
     }
@@ -49,7 +50,7 @@ export function FriendRequestsList({ client, direction }: { client: Pick<ApiClie
   }
   return <section aria-busy={loading}>
     {loading && items.length === 0 && <p className="muted" role="status">Загружаем заявки…</p>}
-    {error && <p className="notice" role="status">Не удалось загрузить заявки. <button className="text-button" onClick={() => void load(null)}>Повторить</button></p>}
+    {error && <p className="notice" role="status">Не удалось загрузить заявки. <button className="text-button" onClick={() => void load(failedAfter)}>Повторить</button></p>}
     {!loading && !error && items.length === 0 && <p className="notice">{direction === 'incoming' ? 'Новых заявок в друзья нет.' : 'Вы не отправляли заявок, которые ещё ждут ответа.'}</p>}
     {message && <p role="status" className="small">{message}</p>}
     <div className="people-grid">{items.map((it, i) => <div className="panel person-card" key={it.id}>

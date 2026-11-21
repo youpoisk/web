@@ -231,7 +231,7 @@ export type Person = components['schemas']['Person'];
 export type FriendRequest = components['schemas']['FriendRequest'];
 /** People search by login or name (never email); relation tells which action fits. */
 export async function searchPeople(client: Pick<ApiClient, 'request'>, text: string, signal?: AbortSignal): Promise<Person[]> {
-  return (await client.request('searchPeople', { query: { q: text.trim().slice(0, 50), limit: 20 }, signal })).items;
+  return (await client.request('searchPeople', { query: { q: [...text.trim()].slice(0, 50).join(''), limit: 20 }, signal })).items;
 }
 /** One page of pending friend requests in one direction. */
 export async function loadFriendRequests(client: Pick<ApiClient, 'request'>, direction: 'incoming' | 'outgoing', after: string | null, signal?: AbortSignal): Promise<{ items: FriendRequest[]; next: string | null }> {
