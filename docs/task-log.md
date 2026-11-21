@@ -34,3 +34,5 @@ BrowserSession coordinator foundation implemented: per-tab noncredential referen
 BrowserSession review correction0050536/24d7a1d PASS: directstale forget checksreference before anydurablewrite, preservesnewaccountB. Independent42CSPtests/session100all/combined100linesfunctions98.40branches. Original/followup reports docs/reviews/browser-session*.md. Next native API page and runtime integration remain open.
 
 Browser cookie header contract sync: imported accepted backend0e0570b, removed3wrong Set-Cookie response declarations frommirror/types; validatorsbyte-identical, operations22unchanged. Source/drift/typecheck/build and42CSPtests PASS withallhandwritten100lines/functions98.40branches. NoUIorbackendruntimechange. Reviewpending.
+
+4ed8afa browser grant cookie contract sync independent review PASS; source/drift/typecheck independentlypassed, author42CSPtests/buildPASS. Report docs/reviews/browser-cookie-contract-sync.md. Current nextdependency: native API-origin page and durable Web Locks refresh/cookie broker, then actualUI/extensionadapter and browser proof.
