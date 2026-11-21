@@ -264,6 +264,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/friends": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my friends
+         * @description The viewer's accepted mutual friends with active accounts, newest friendship first (since desc, user id desc). Live Bearer required; own list, so no privacy filter. Keyset cursor after, limit 1..100 (default 30); unknown/repeated/malformed query keys 422. Friend requests, people search and blocks arrive with YP-057/083.
+         */
+        get: operations["listFriends"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/library": {
         parameters: {
             query?: never;
@@ -685,6 +705,15 @@ export interface components {
             /** @constant */
             client_type: "extension";
             refresh_token: string;
+        };
+        Friend: {
+            /** Format: date-time */
+            since: string;
+            user: components["schemas"]["FriendUser"];
+        };
+        FriendPage: {
+            items: components["schemas"]["Friend"][];
+            next_cursor?: string;
         };
         FriendRating: {
             /** Format: date-time */
@@ -1620,6 +1649,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChannelStateResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listFriends: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor, no duplicate keys. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List my friends */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FriendPage"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
