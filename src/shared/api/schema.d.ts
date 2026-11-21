@@ -344,6 +344,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/privacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read my privacy settings
+         * @description The viewer's six audience policies with their revision. public — every signed-in viewer; friends and friends_and_followers — accepted friends (follower audience counts once subscriptions exist, YP-058); private — only the owner. Ratings and reviews policies apply to «Оценки друзей», user profiles and recommendations at once; public aggregates always include every rating.
+         */
+        get: operations["getPrivacy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change my privacy settings
+         * @description Changes only the supplied policies when expected_revision is current (409 otherwise); at least one policy is required (422). An unchanged request returns change_seq null; a change is recorded in the sync log (object privacy) and applies to every following read.
+         */
+        patch: operations["patchPrivacy"];
+        trace?: never;
+    };
     "/v1/me/ratings": {
         parameters: {
             query?: never;
@@ -855,6 +879,52 @@ export interface components {
             /** @enum {string} */
             relation: "self" | "friend" | "none";
             user: components["schemas"]["FriendUser"];
+        };
+        PrivacyPatch: {
+            /**
+             * Format: int64
+             * @description JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence.
+             */
+            expected_revision: number;
+            /** @enum {string} */
+            library?: "public" | "friends" | "friends_and_followers" | "private";
+            /** @enum {string} */
+            ratings?: "public" | "friends" | "friends_and_followers" | "private";
+            /** @enum {string} */
+            recommendations?: "public" | "friends" | "friends_and_followers" | "private";
+            /** @enum {string} */
+            reviews?: "public" | "friends" | "friends_and_followers" | "private";
+            /** @enum {string} */
+            social?: "public" | "friends" | "friends_and_followers" | "private";
+            /** @enum {string} */
+            watchlist?: "public" | "friends" | "friends_and_followers" | "private";
+        };
+        PrivacyResult: {
+            /**
+             * Format: int64
+             * @description JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence. Write acknowledgment only, never a pull cursor. Explicit null for no-op/read.
+             */
+            change_seq: number | null;
+            settings: components["schemas"]["PrivacySettings"];
+        };
+        PrivacySettings: {
+            /** @enum {string} */
+            library: "public" | "friends" | "friends_and_followers" | "private";
+            /** @enum {string} */
+            ratings: "public" | "friends" | "friends_and_followers" | "private";
+            /** @enum {string} */
+            recommendations: "public" | "friends" | "friends_and_followers" | "private";
+            /** @enum {string} */
+            reviews: "public" | "friends" | "friends_and_followers" | "private";
+            /**
+             * Format: int64
+             * @description JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence.
+             */
+            revision: number;
+            /** @enum {string} */
+            social: "public" | "friends" | "friends_and_followers" | "private";
+            /** @enum {string} */
+            watchlist: "public" | "friends" | "friends_and_followers" | "private";
         };
         Rating: {
             /** @description Real sum/count, exact positive half-up to2decimal places. Count0 givesnull, never a synthetic score. */
@@ -1940,6 +2010,106 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getPrivacy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read my privacy settings */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    patchPrivacy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyPatch"];
+            };
+        };
+        responses: {
+            /** @description Change my privacy settings */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyResult"];
+                };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
             403: {

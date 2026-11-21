@@ -2777,6 +2777,192 @@
         }
       }
     },
+    "/v1/me/privacy": {
+      "get": {
+        "operationId": "getPrivacy",
+        "summary": "Read my privacy settings",
+        "description": "The viewer's six audience policies with their revision. public — every signed-in viewer; friends and friends_and_followers — accepted friends (follower audience counts once subscriptions exist, YP-058); private — only the owner. Ratings and reviews policies apply to «Оценки друзей», user profiles and recommendations at once; public aggregates always include every rating.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Read my privacy settings",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchPrivacy",
+        "summary": "Change my privacy settings",
+        "description": "Changes only the supplied policies when expected_revision is current (409 otherwise); at least one policy is required (422). An unchanged request returns change_seq null; a change is recorded in the sync log (object privacy) and applies to every following read.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Change my privacy settings",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyPatch"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/users": {
       "get": {
         "operationId": "searchPeople",
@@ -5182,6 +5368,173 @@
         },
         "required": [
           "items"
+        ],
+        "additionalProperties": false
+      },
+      "PrivacySettings": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence."
+          },
+          "ratings": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          },
+          "watchlist": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          },
+          "recommendations": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          },
+          "library": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          },
+          "reviews": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          },
+          "social": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          }
+        },
+        "required": [
+          "revision",
+          "ratings",
+          "watchlist",
+          "recommendations",
+          "library",
+          "reviews",
+          "social"
+        ],
+        "additionalProperties": false
+      },
+      "PrivacyPatch": {
+        "type": "object",
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "description": "JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence."
+          },
+          "ratings": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          },
+          "watchlist": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          },
+          "recommendations": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          },
+          "library": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          },
+          "reviews": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          },
+          "social": {
+            "type": "string",
+            "enum": [
+              "public",
+              "friends",
+              "friends_and_followers",
+              "private"
+            ]
+          }
+        },
+        "required": [
+          "expected_revision"
+        ],
+        "minProperties": 2,
+        "additionalProperties": false
+      },
+      "PrivacyResult": {
+        "type": "object",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/PrivacySettings"
+          },
+          "change_seq": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 1,
+            "description": "JSON int64. JavaScript clients must reject unsafe integers rather than round a revision or sequence. Write acknowledgment only, never a pull cursor. Explicit null for no-op/read."
+          }
+        },
+        "required": [
+          "settings",
+          "change_seq"
         ],
         "additionalProperties": false
       }
