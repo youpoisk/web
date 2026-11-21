@@ -34,3 +34,4 @@ html[dark] #yp-panel{--yp-text:#f1f1f1;--yp-bg:#212121;--yp-chip:#353535;--yp-se
 #yp-panel .yp-actions{display:flex;gap:8px;margin:10px 0}
 #yp-panel .yp-actions button{flex:1;padding:9px 10px;border-radius:18px;border:0;font:inherit;cursor:pointer;background:var(--yp-chip);color:var(--yp-text)}
 #yp-panel .yp-actions .yp-primary{background:#1da1f2;color:#fff}
+#yp-panel .yp-counter.yp-over{color:#d93025}

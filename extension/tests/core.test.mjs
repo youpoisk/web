@@ -25,6 +25,9 @@ test('only rating, watch-later and review can be changed; reviews are validated'
  for(const patch of [{channelRating:7},{recommended:true},{added:true}])assert.throws(()=>core.apply(core.empty(),update(patch)),/Неизвестное поле/);
  for(const text of ['','   ',42,'я'.repeat(1001)])assert.throws(()=>core.apply(core.empty(),update({review:text})));
  assert.equal(core.apply(core.empty(),update({review:'я'.repeat(1000)})).videos[video.id].review.length,1000);
+ assert.equal([...core.apply(core.empty(),update({review:'  '+'😀'.repeat(1000)+'  '})).videos[video.id].review].length,1000,'limit counts code points after trim');
+ assert.throws(()=>core.apply(core.empty(),update({review:'😀'.repeat(1001)})));
+ assert.equal(core.apply(core.empty(),update({review:'a\rb'})).videos[video.id].review,'a\nb');
  const legacy={...core.empty(),channels:{x:{rating:5}},videos:{[video.id]:{...core.metadata(video),rating:5,later:false,added:true,recommended:true,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-01T00:00:00Z'}}};
  const migrated=core.apply(legacy,update({later:true}));
  assert.equal(migrated.channels,undefined);assert.equal('recommended' in migrated.videos[video.id]||'added' in migrated.videos[video.id],false);assert.equal(migrated.videos[video.id].rating,5);
