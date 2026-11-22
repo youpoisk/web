@@ -14,10 +14,10 @@ export function ReportButton({ client, kind, targetId, label = 'Пожалова
     if (sending) return;
     setSending(true); setNotice('');
     try {
-      const result = await createReport(client, kind, targetId, reason, details);
+      await createReport(client, kind, targetId, reason, details);
       if (!mounted.current) return;
       setDone(true); setOpen(false);
-      setNotice(result.created ? 'Жалоба отправлена. Спасибо — модераторы её рассмотрят.' : result.status === 'open' ? 'Вы уже жаловались на это. Жалоба на рассмотрении.' : 'Вы уже жаловались на это, жалоба рассмотрена.');
+      setNotice('');
     } catch (failure) { if (mounted.current) setNotice(reportError(failure)); }
     finally { if (mounted.current) setSending(false); }
   }
@@ -72,7 +72,7 @@ export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'requ
       await resolveReport(client, target.report.id, target.action);
       if (stamp !== generation.current) return;
       setItems(prev => prev.filter(x => x.id !== target.report.id)); setConfirm(c => c?.report.id === target.report.id ? null : c);
-      setNotice(`Готово: ${ACTION_LABEL[target.action].toLowerCase()}.`);
+      setNotice('');
     } catch (failure) {
       if (stamp !== generation.current) return;
       setNotice(moderationError(failure));

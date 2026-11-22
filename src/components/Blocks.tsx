@@ -39,7 +39,7 @@ export function BlocksPanel({ client }: { client: Client }) {
       await setBlocked(client, id, false);
       if (stamp !== generation.current) return;
       setItems(prev => prev.filter(x => x.user.id !== id));
-      setMessage('Блокировка снята. Дружба, подписки и заявки автоматически не восстанавливаются.');
+      setMessage('');
     } catch (failure) { if (stamp === generation.current) setMessage(failureMessage(failure)); }
     finally { if (stamp === generation.current) { busy.current = false; setSaving(false); } }
   }

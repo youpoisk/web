@@ -24,9 +24,9 @@ export function FriendsList({ client, searchable = false }: { client: Pick<ApiCl
     try {
       await removeFriend(client, it.user.id);
       setItems(prev => prev.filter(x => x.user.id !== it.user.id));
-      setMessage(`${it.user.name || it.user.login} больше не в друзьях.`);
+      setMessage('');
     } catch (e) {
-      if (e instanceof ApiError && e.status === 404) { setItems(prev => prev.filter(x => x.user.id !== it.user.id)); setMessage('Вы уже не друзья.'); }
+      if (e instanceof ApiError && e.status === 404) { setItems(prev => prev.filter(x => x.user.id !== it.user.id)); setMessage(''); }
       else setMessage(friendLimitMessage(e) ?? 'Не удалось удалить из друзей.');
     } finally {
       setBusy(null);

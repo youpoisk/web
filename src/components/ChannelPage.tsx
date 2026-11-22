@@ -52,12 +52,12 @@ export function ChannelPage({ publicClient, client, writer, channelId }: {
       const state = await writer.channelRating(channelId, own.revision, value);
       if (stamp !== generation.current) return;
       setOwn(state);
-      setMessage(value === null ? 'Оценка канала удалена.' : 'Оценка канала сохранена в аккаунте.');
+      setMessage('');
       try {
         const fresh = await loadChannel(publicClient, channelId);
         if (stamp === generation.current) setCard(fresh);
       } catch {
-        if (stamp === generation.current) setMessage('Оценка сохранена. Не удалось обновить общий рейтинг — обновите данные.');
+        if (stamp === generation.current) setMessage('Не удалось обновить общий рейтинг — обновите данные.');
       }
     } catch (failure) {
       if (stamp !== generation.current) return;

@@ -47,7 +47,7 @@ export function VideoReviewPanel({ client, writer, videoId }: {
       const value = await writer.review(videoId, review.revision, text);
       if (stamp !== generation.current) return;
       setReview(value); setDraft(value.text ?? '');
-      setMessage(value.text === null ? 'Рецензия удалена из аккаунта.' : 'Рецензия сохранена в аккаунте.');
+      setMessage('');
     } catch (error) {
       if (stamp !== generation.current) return;
       if (conflicted(error) || (error instanceof ApiError && error.kind === 'http' && error.status === 410)) {

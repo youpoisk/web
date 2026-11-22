@@ -43,7 +43,7 @@ export function SecuritySessions({ client, onLogout }: { client: Pick<ApiClient,
       setConfirm(null);
       if (target === 'others') { setItems(prev => prev.filter(x => x.current)); setNext(null); await load(null); }
       else setItems(prev => prev.filter(x => x.id !== target.id));
-      if (stamp === generation.current) setMessage(target === 'others' ? 'Остальные сессии завершены. Текущая сессия сохранена.' : 'Выбранная сессия завершена.');
+      if (stamp === generation.current) setMessage('');
     } catch (failure) {
       if (stamp === generation.current) setMessage(failure instanceof ApiError && failure.status === 429 ? 'Слишком много действий подряд. Попробуйте позже.' : 'Не удалось подтвердить завершение сессии. Обновите список или повторите попытку.');
     } finally { if (stamp === generation.current) { busy.current = false; setSaving(false); } }

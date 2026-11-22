@@ -176,3 +176,6 @@ Outgoing cancellation: removed success notice per request; item removal, empty l
 
 Profile friendship controls: add/remove, accept/decline incoming, cancel outgoing. Pending request ID resolved across all API pages; no write on load. Reload profile/privacy after mutations; abort/generation guards and synchronous write lock. Self profile excluded.
 Profile action layout: friendship wrapper uses same flex row as subscription/message; metadata placed first, shared button sizing, moderation actions separate at mobile widths. Friendship source review found no MEDIUM+; LOW component scenarios remain useful.
+
+Removed success-action notices across website: read notifications, requests/friendship, subscriptions, blocks, profile name/privacy/sessions, ratings/reviews, reports/moderation and local fallback actions. Errors, conflicts, loading hints, confirmations and actual social notifications remain.
+Validation:105 CSP/API tests PASS; production build PASS; final copy-only edit removes success prefix from retained rating refresh error. Profile layout source review no MEDIUM+.

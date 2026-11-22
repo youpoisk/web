@@ -69,7 +69,7 @@ export function NotificationsList({ client, open }: { client: Pick<ApiClient, 'r
       await markAllNotificationsRead(client, newest.occurred_at);
       if (stamp !== generation.current) return;
       setItems(prev => prev.map(x => Date.parse(x.occurred_at) <= Date.parse(newest.occurred_at) ? { ...x, read: true } : x));
-      setNotice('Уведомления отмечены прочитанными.');
+      setNotice('');
       changed();
     } catch { if (stamp === generation.current) setNotice('Не удалось отметить уведомления. Повторите позже.'); }
     finally { saving.current = false; }

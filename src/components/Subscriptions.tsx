@@ -32,7 +32,7 @@ export function SubscriptionsList({ client, direction }: { client: Pick<ApiClien
     try {
       await setFollowing(client, id, false);
       if (stamp !== generation.current) return;
-      serial.current++; setItems(prev => prev.filter(x => x.user.id !== id)); setMessage('Подписка отменена. Дружба с пользователем не меняется.');
+      serial.current++; setItems(prev => prev.filter(x => x.user.id !== id)); setMessage('');
     } catch (failure) {
       if (stamp === generation.current) setMessage(failure instanceof ApiError && failure.status === 429 ? 'Слишком много изменений подписок. Подождите минуту.' : 'Не удалось подтвердить отписку. Повторите попытку.');
     } finally { if (stamp === generation.current) { busy.current = false; setSaving(false); } }

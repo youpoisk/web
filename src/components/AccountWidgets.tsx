@@ -37,7 +37,7 @@ export function NameEditor({client,user,onSaved}:{client:Pick<ApiClient,'request
     try{
       const value=await changeMyName(client,normalized);
       if(stamp!==generation.current)return;
-      setName(value.name);onSaved(value);setNotice('Имя сохранено.');
+      setName(value.name);onSaved(value);setNotice('');
     }catch(failure){if(stamp===generation.current)setNotice(failure instanceof ApiError&&failure.status===422?'Имя должно содержать от 1 до 100 символов без управляющих знаков.':'Не удалось подтвердить сохранение имени. Повторите попытку.');}
     finally{if(stamp===generation.current){busy.current=false;setSaving(false);}}
   }

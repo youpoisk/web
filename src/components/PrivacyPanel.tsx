@@ -39,7 +39,7 @@ export function PrivacyPanel({ client }: { client: Pick<ApiClient, 'request'> })
     busy.current = true; setSaving(true); setMessage('');
     try {
       const next = await changePrivacy(client, settings.revision, field, value);
-      if (stamp === generation.current) { setSettings(next); setMessage('Настройка сохранена.'); }
+      if (stamp === generation.current) { setSettings(next); setMessage(''); }
     } catch (error) {
       if (stamp !== generation.current) return;
       if (conflicted(error)) { await reload(); if (stamp === generation.current) setMessage(m => m.startsWith('Не удалось') ? m : 'Настройки изменились на другом устройстве. Показаны актуальные — выберите снова.'); }
