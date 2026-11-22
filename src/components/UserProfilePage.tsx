@@ -57,9 +57,14 @@ export function UserProfilePage({ client, userId, embedded=false, filter='all' }
   const name = profile ? profile.user.name || profile.user.login : '';
   return <section aria-busy={loading}>
     {!embedded&&<><div className="page-head"><div>
-      <div className="eyebrow">ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ</div>
-      <h1>{profile ? name : 'Профиль'}</h1>
-      {profile && <p className="muted">@{profile.user.login}{profile.relation === 'friend' ? ' · у вас в друзьях' : profile.relation === 'self' ? ' · это вы' : ''}</p>}
+      <div className="profile-identity">
+        {profile && <span className="avatar profile-avatar" aria-hidden="true">{[...(name || profile.user.login)][0]}</span>}
+        <div className="profile-identity-text">
+          <div className="eyebrow">ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ</div>
+          <h1>{profile ? name : 'Профиль'}</h1>
+          {profile && <p className="muted profile-login">@{profile.user.login}{profile.relation === 'friend' ? ' · у вас в друзьях' : profile.relation === 'self' ? ' · это вы' : ''}</p>}
+        </div>
+      </div>
     </div></div>
     <ProfileStats counts={profile}/>
     {profile && <div className="panel profile-actions" role="group" aria-label="Действия с профилем">

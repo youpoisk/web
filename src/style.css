@@ -72,3 +72,4 @@
 
 .profile-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.profile-stats>div{min-width:0}.profile-stats b{overflow-wrap:anywhere}.profile-stats .stat-hidden{font-size:15px;color:#8899a6}@media(max-width:600px){.profile-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .rating-badge{font-size:13px}.friend-score{font-size:16px}.score-row button{font-size:13px}.big-score{font-size:48px}.rating-value{color:#0a6cb0;font-weight:800;font-size:calc(1em + 2px)}.friend-score .rating-value{font-size:inherit}.friend-score{color:#0a6cb0}
+.profile-identity{display:flex;align-items:center;gap:20px;min-width:0}.profile-identity-text{min-width:0}.profile-identity h1{margin-bottom:4px;overflow-wrap:anywhere}.profile-avatar{width:84px;height:84px;font-size:34px;font-weight:700;text-transform:uppercase}.profile-login{font-size:14px;margin:0}@media(max-width:560px){.profile-avatar{width:60px;height:60px;font-size:24px}.profile-identity{gap:14px}}
