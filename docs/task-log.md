@@ -184,3 +184,5 @@ Success-notice follow-up: successful logout/password change/account deletion cal
 Final independent source reviews PASS (no MEDIUM+) for friendship, layout and silent success notices; see docs/reviews/profile-friendship-silent-actions.md. Validation105/105 API tests, build PASS.
 
 Video page: Share with friend next to Watch later; real friend picker with cursor pages, video_id message carrier, stable per-recipient idempotency key retained on uncertain errors, opens resulting conversation. Review Save button persists edits; manual Refresh removed, retry only on initial load error.
+
+Deferred deletion: all explicit Delete controls for reviews, video/channel ratings, friendship, watchlist removal and account deletion entry use5second undo with spinner. No write before deadline; cancel/unmount/disabled cancels. After deadline spinner changes to request-in-progress. Account still requires password on API page. Ambiguity: cancelling friend request, unfollow, unblock and ending session are separate actions, not Delete buttons; retained existing behavior.

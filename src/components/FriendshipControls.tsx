@@ -1,3 +1,4 @@
+import{DeleteButton}from'./DeleteButton.tsx';
 import React,{useEffect,useRef,useState}from'react';
 import type{ApiClient}from'../shared/api/client.ts';
 import{ApiError}from'../shared/api/client.ts';
@@ -39,7 +40,7 @@ export function FriendshipControls({client,userId,friend,onChanged}:{client:Pick
  return <div className="profile-friendship" aria-busy={loading||saving}>
   {error?<p role="status">{error} <button className="text-button" disabled={saving} onClick={()=>setRevision(v=>v+1)}>Повторить</button></p>:loading?<span className="muted">Проверяем дружбу…</span>:<>
    {pending?.direction==='incoming'&&<button className="primary" disabled={saving} onClick={()=>void act(true)}>Принять заявку</button>}
-   <button className="secondary" disabled={saving} onClick={()=>void act()}>{friend?'Удалить из друзей':pending?.direction==='incoming'?'Отклонить заявку':pending?'Отменить заявку':'Добавить в друзья'}</button>
+   {friend?<DeleteButton disabled={saving} onDelete={()=>act()}>Удалить из друзей</DeleteButton>:<button className="secondary" disabled={saving} onClick={()=>void act()}>{pending?.direction==='incoming'?'Отклонить заявку':pending?'Отменить заявку':'Добавить в друзья'}</button>}
   </>}
  </div>;
 }

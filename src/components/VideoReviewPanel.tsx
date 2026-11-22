@@ -1,3 +1,4 @@
+import{DeleteButton}from'./DeleteButton.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { conflicted, loadReview, type StateWriter, type VideoReview } from '../shared/library/lists.ts';
@@ -20,7 +21,7 @@ export function VideoReviewPanel({ client, writer, videoId }: {
     try {
       const value = await loadReview(client, videoId, signal);
       if (stamp !== generation.current || serial !== readSerial.current) return false;
-      setReview(value);
+      setReview(value); setMessage('');
       if (!keepDraft) setDraft(value.text ?? '');
       return true;
     } catch {
@@ -46,7 +47,7 @@ export function VideoReviewPanel({ client, writer, videoId }: {
     try {
       const value = await writer.review(videoId, review.revision, text);
       if (stamp !== generation.current) return;
-      setReview(value); setDraft(value.text ?? '');
+      setReview(value); setMessage(''); setDraft(value.text ?? '');
       setMessage('');
     } catch (error) {
       if (stamp !== generation.current) return;
@@ -69,7 +70,7 @@ export function VideoReviewPanel({ client, writer, videoId }: {
     <p className="small muted">{length} / 1000 символов</p>
     <div className="actions">
       <button className="primary" disabled={loading || saving || loadError || !review || length < 1 || length > 1000 || normalized === review.text} onClick={() => void write(normalized)}>{saving ? 'Сохраняем…' : 'Сохранить рецензию'}</button>
-      {review?.text != null && <button className="secondary" disabled={loading || saving || loadError} onClick={() => void write(null)}>Удалить рецензию</button>}
+      {review?.text != null && <DeleteButton disabled={loading || saving || loadError} onDelete={() => write(null)}>Удалить рецензию</DeleteButton>}
       {loadError && <button className="text-button" disabled={loading || saving} onClick={() => void reload(review !== null)}>Повторить загрузку</button>}
     </div>
     {message && <p role="status">{message}</p>}

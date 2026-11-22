@@ -65,3 +65,5 @@
 .profile-friendship{display:contents}.profile-actions>.profile-meta{order:-1}.profile-actions .primary,.profile-actions .secondary{min-height:36px;padding:9px 15px;font-size:11px;margin-top:0;width:auto;white-space:nowrap}.profile-friendship>[role=status]{flex-basis:100%;margin:0}.profile-actions-end{gap:8px}@media(max-width:600px){.profile-actions{gap:8px}.profile-actions-end{width:100%;padding-top:10px;border-top:1px solid var(--line);margin-top:2px}.profile-actions .primary,.profile-actions .secondary{min-height:38px}}
 
 .share-video{position:relative}.share-picker{position:absolute;z-index:20;top:calc(100% + 8px);left:0;width:min(320px,80vw);max-height:360px;overflow:auto;box-shadow:0 12px 30px #0002}.share-person{display:flex;width:100%;margin-top:8px}.share-picker h3{margin:0}
+
+.delete-spinner{animation:delete-spin 1s linear infinite;flex-shrink:0}@keyframes delete-spin{to{transform:rotate(360deg)}}button:has(.delete-spinner){display:inline-flex;align-items:center;gap:6px;width:auto;min-width:max-content}.score-row:has(.delete-spinner){flex-wrap:wrap}

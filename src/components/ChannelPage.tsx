@@ -1,3 +1,4 @@
+import{DeleteButton}from'./DeleteButton.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { conflicted, loadChannel, loadChannelRating, type ChannelCard, type ChannelState, type StateWriter } from '../shared/library/lists.ts';
@@ -84,7 +85,7 @@ export function ChannelPage({ publicClient, client, writer, channelId }: {
         : client && writer ? <div className="panel">
           <h2>Ваша оценка канала</h2>
           <div className="score-row">{Array.from({ length: 10 }, (_, i) => <button key={i} aria-pressed={own?.rating === i + 1} className={own?.rating === i + 1 ? 'chosen' : ''} disabled={loading || saving || !own} onClick={() => void rate(i + 1)}>{i + 1}</button>)}</div>
-          {own?.rating != null && <button className="text-button" disabled={loading || saving} onClick={() => void rate(null)}>Удалить оценку канала</button>}
+          {own?.rating != null && <DeleteButton className="text-button" disabled={loading || saving} onDelete={() => rate(null)}>Удалить оценку канала</DeleteButton>}
         </div> : <p><a href="#/login">Войдите</a>, чтобы оценить канал.</p>}
     </>}
     <div className="actions"><button className="secondary" disabled={loading || saving} onClick={() => { if (busy.current || loading) return; setMessage(''); void refresh(); }}>Обновить данные</button><a href="#/">К видео</a></div>

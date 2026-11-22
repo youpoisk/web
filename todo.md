@@ -138,3 +138,5 @@ DEC-WEB-018 — Вопрос: как подключить рецензии бе�
 ## Счётчик исходящих заявок
 Вкладка «Отправленные» показывает все ожидающие ответа исходящие заявки через outgoing_friend_requests, включая записи за пределами первой страницы. Неактивные и заблокированные получатели исключены. После отмены заявки счётчики обновляются.
 Спорные вопросы: показывать ли 0 у «Отправленные»? Выбрано показывать, как у «Заявки»; в левом меню нули остаются скрыты. Независимое ревью ожидается.
+
+Deferred deletion: all explicit Delete controls for reviews, video/channel ratings, friendship, watchlist removal and account deletion entry use5second undo with spinner. No write before deadline; cancel/unmount/disabled cancels. After deadline spinner changes to request-in-progress. Account still requires password on API page. Ambiguity: cancelling friend request, unfollow, unblock and ending session are separate actions, not Delete buttons; retained existing behavior.

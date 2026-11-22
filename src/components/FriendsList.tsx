@@ -1,10 +1,11 @@
+import{DeleteButton}from'./DeleteButton.tsx';
 import {PeopleListSearch} from './PeopleListSearch.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
 import { ApiError } from '../shared/api/client.ts';
 import { filterPeopleList, friendLimitMessage, loadFriends, removeFriend, type Friend } from '../shared/library/lists.ts';
 
-const confirmRemove = (it: Friend) => typeof window === 'undefined' || window.confirm(`Удалить ${it.user.name || it.user.login} из друзей?`);
+
 
 /** «Мои друзья» from the API with removal. Parent keys it by viewer. */
 export function FriendsList({ client, searchable = false }: { client: Pick<ApiClient, 'request'>; searchable?: boolean }) {
@@ -19,7 +20,7 @@ export function FriendsList({ client, searchable = false }: { client: Pick<ApiCl
   const generation = useRef(0), more = useRef(false);
 
   async function remove(it: Friend) {
-    if (busy || loading || !confirmRemove(it)) return;
+    if (busy || loading) return;
     setBusy(it.user.id); setMessage('');
     try {
       await removeFriend(client, it.user.id);
@@ -77,7 +78,7 @@ export function FriendsList({ client, searchable = false }: { client: Pick<ApiCl
       <h2>{it.user.name || it.user.login}</h2>
       <p className="muted">@{it.user.login} · друзья с {new Date(it.since).toLocaleDateString('ru-RU')}</p>
       <a href={`#/user/${it.user.id}`}>Открыть профиль</a>
-      <div className="actions"><button className="text-button" disabled={busy !== null || loading} onClick={() => void remove(it)}>Удалить из друзей</button></div>
+      <div className="actions"><DeleteButton className="text-button" disabled={busy !== null || loading} onDelete={() => remove(it)}>Удалить из друзей</DeleteButton></div>
     </div>)}</div>
     {!searchTerm && next && <div className="actions"><button className="secondary" disabled={loading} onClick={() => void loadMore()}>Показать ещё</button></div>}
   </section>;
