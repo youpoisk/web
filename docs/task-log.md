@@ -193,3 +193,6 @@ Profile stats and tabs: server counts across all pages for library videos, video
 Profile UI validation:109 API/CSP tests PASS, core lines/functions100; generated66-operation contract/type checks and production build PASS.
 Review LOW fixed: statistics label explicitly says video and channel ratings; Ratings tab heading says video ratings, matching implemented endpoint scope. Channel-review/list integration remains a separate planned task.
 Final profile stats/tabs source review PASS; scope-label LOW fixed/re-reviewed.109tests/finalbuildPASS. See docs/reviews/profile-statistics-tabs.md.
+
+Frontend real-data cleanup: removed demo imports, API-error demo fallback, local business state/editors/social fallbacks, hard-coded homepage hero/rankings/hashtags and embedded extension preview. Public catalog/hero/rail/tags now server-derived. Personal lists gated by auth; missing APIs show unavailable state. Extension source/legacy storage preserved for separate integration; site production build no longer ships extension demos. No data migration or automatic import. Validation/review pending.
+Cleanup validation:109 API/CSP tests PASS, core lines/functions100; production build PASS. Site output excludes extension demo directory; no frontend runtime demo imports or useLocal business state. Existing bundle warning retained.
