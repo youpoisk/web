@@ -159,3 +159,34 @@ test('default transport calls the global fetch unbound, as browsers require', as
   try { assert.deepEqual(await new ApiClient({ baseUrl: 'https://api.example.invalid', session: () => signed }).request('getMe', {}), user); }
   finally { globalThis.fetch = original; }
 });
+
+test('avatar upload validates binary input and transmits expected revision', async () => {
+ const png = new Blob(['image'], {type:'image/png'});
+ const state = {revision:1,etag:'ab'.repeat(32)};
+ const c=client(async(url,options)=>{assert.equal(url,'https://api.example.invalid/v1/me/avatar');assert.equal(options.headers.get('If-Match'),'"0"'); assert.equal(options.body,png);return json(state);});
+ assert.deepEqual(await c.uploadAvatar(png,0),state);
+ for(const [blob,rev] of [[new Blob([],{type:'image/png'}),0],[new Blob(['x'],{type:'image/gif'}),0],[new Blob([new Uint8Array(2097153)],{type:'image/png'}),0],[png,-1],[png,1.5],[png,Number.MAX_SAFE_INTEGER]]) await assert.rejects(c.uploadAvatar(blob,rev),fail('invalid_input'));
+ for(const scope of [guest,{...signed,accessToken:'bad\ntoken'}]) await assert.rejects(client(async()=>json(state),()=>scope).uploadAvatar(png,0),fail('authentication_unavailable'));
+ for(const response of [new Response(null),new Response('bad',{headers:{'Content-Type':'text/plain'}}),json({wrong:true}),new Response('not json',{headers:{'Content-Type':'application/json'}}),new Response(new Uint8Array(262145)),error(409)]) {
+  await assert.rejects(client(async()=>response).uploadAvatar(png,0),fail(response.status===409?'http':'protocol'));
+ }
+ let scope=signed;
+ await assert.rejects(client(async()=>{scope={...signed,epoch:'changed'};return json(state);},()=>scope).uploadAvatar(png,0),fail('stale_session'));
+ scope=signed;
+ await assert.rejects(client(async()=>{scope=guest;throw Error('changed');},()=>scope).uploadAvatar(png,0),fail('stale_session'));
+ const pending=async(_,options)=>new Promise((_,reject)=>options.signal.addEventListener('abort',()=>reject(Error('cancelled')),{once:true}));
+ const aborted=new AbortController();aborted.abort();
+ await assert.rejects(client(pending).uploadAvatar(png,0,aborted.signal),fail('aborted'));
+ await assert.rejects(client(pending,undefined,2).uploadAvatar(png,0),fail('timeout'));
+ await assert.rejects(client(async()=>{throw Error('network');}).uploadAvatar(png,0),fail('network'));
+ const cancelled=new AbortController();
+ await assert.rejects(client(async()=>{cancelled.abort();return json(state);}).uploadAvatar(png,0,cancelled.signal),fail('aborted'));
+});
+test('avatar links stay on the trusted image endpoint and hide absent images', async()=>{
+ const path=`/v1/users/${id}/avatar?token=abc.def`;
+ assert.equal(await client(async()=>json({avatar_url:path,revision:1})).avatar(id),'https://api.example.invalid'+path);
+ assert.equal(await client(async()=>error(404)).avatar(id),null);
+ await assert.rejects(client(async()=>error(403)).avatar(id),fail('http'));
+ await assert.rejects(client(async()=>json({})).avatar('invalid'),fail('invalid_input'));
+ for(const avatar_url of ['https://evil.invalid'+path,`/v1/users/${id}/other?token=x`,path+'#x',path+'&extra=x',`/v1/users/${id}/avatar?token=`, `https://user:pass@api.example.invalid${path}`,path+'&token=z']) await assert.rejects(client(async()=>json({avatar_url,revision:1})).avatar(id),fail('protocol'));
+});

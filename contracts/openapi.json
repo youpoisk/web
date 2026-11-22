@@ -4023,6 +4023,313 @@
         }
       }
     },
+    "/v1/users/{id}/avatar": {
+      "get": {
+        "operationId": "getUserAvatar",
+        "summary": "User avatar image",
+        "description": "Current128x128 PNG, Bearer or narrowly signed URL issued through avatar-link. Signed links bind viewer/session/epoch,target/currentrevision for24h; live session and bilateral blocks rechecked on image requests; replacement/deletion invalidates old revision. Already cached bytes cannot be remotely erased. Signed URL replies use Cache-Control private,max-age86400; Bearer-only replies use no-store to prevent cross-account cache reuse. nosniff and hash ETag.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          },
+          {
+            "AvatarCapability": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avatar PNG",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "ETag": {
+                "description": "Quoted SHA-256 of the image.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not modified (If-None-Match matched the ETag)."
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/avatar": {
+      "put": {
+        "operationId": "putMyAvatar",
+        "summary": "Upload my avatar",
+        "description": "YP-100: body is a JPEG or PNG file up to 2 MiB (Content-Type image/jpeg or image/png; anything else 415 image_required, larger 413). Each side at most 4096 px, read from the header before decoding. The server crops the centred square, scales it to 128x128 and re-encodes PNG, dropping EXIF/metadata; the original is not kept and the previous avatar is replaced in the same commit. 422 invalid_image for undecodable/unsupported files. Shares the expensive-work admission. Required If-Match revision;10avatar changes/hour/account. Static WebP supported, animations rejected. Processed PNG cap128KiB.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\"(0|[1-9][0-9]{0,15})\"$"
+            },
+            "description": "Expected avatar revision; 0 before first upload. Stale revision409; absent428."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored avatar",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarState"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteMyAvatar",
+        "summary": "Remove my avatar",
+        "description": "YP-100: removes the current avatar (absent is not an error); clients show the initial again.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\"(0|[1-9][0-9]{0,15})\"$"
+            },
+            "description": "Expected avatar revision; 0 before first upload. Stale revision409; absent428."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current avatar metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarState"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getMyAvatarState",
+        "summary": "Own current avatar revision"
+      }
+    },
     "/v1/me/library": {
       "get": {
         "operationId": "listLibrary",
@@ -6985,6 +7292,69 @@
           }
         }
       }
+    },
+    "/v1/users/{id}/avatar-link": {
+      "get": {
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current avatar metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarLink"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getAvatarLink",
+        "summary": "Issue a viewer-bound signed current avatar URL",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -8775,6 +9145,26 @@
         ],
         "additionalProperties": false
       },
+      "AvatarState": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "etag": {
+            "type": "string",
+            "pattern": "^([0-9a-f]{64})?$"
+          }
+        },
+        "required": [
+          "revision",
+          "etag"
+        ],
+        "additionalProperties": false
+      },
       "PrivacySettings": {
         "type": "object",
         "properties": {
@@ -10107,6 +10497,26 @@
           }
         },
         "description": "Own live visible counts across all pages. Unread conversations counts dialogs with any unread incoming message, not messages. Pending incoming requests independent of notification read state; blocked/inactive counterparts excluded. Pending outgoing requests are counted across all pages with the same visibility rules. Profile counts: library_videos is own added library entries; ratings_count includes video and channel ratings; friends_count and following_count include active unblocked peers, across all pages."
+      },
+      "AvatarLink": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "avatar_url",
+          "revision"
+        ],
+        "properties": {
+          "avatar_url": {
+            "type": "string",
+            "maxLength": 2048,
+            "pattern": "^/v1/users/[0-9a-f-]+/avatar\\?token="
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
       }
     },
     "parameters": {
@@ -10152,6 +10562,12 @@
         "in": "cookie",
         "name": "__Host-yp_refresh",
         "description": "Production web only. Dev cookieyp_refresh_dev. Conditional alternative: trusted extension body refresh_token, never a website token store."
+      },
+      "AvatarCapability": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "token",
+        "description": "Narrow signed avatar capability, not a general login token"
       }
     }
   },

@@ -66,6 +66,27 @@ async function readBody(response: Response): Promise<string> {
   try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
   catch { throw new ApiError('protocol'); }
 }
+async function readBytes(response: Response, limit: number): Promise<Uint8Array> {
+  const reader = response.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    while (true) {
+      const item = await reader.read();
+      if (item.done) break;
+      length += item.value.byteLength;
+      if (length > limit) { await reader.cancel(); throw new ApiError('protocol'); }
+      chunks.push(item.value);
+    }
+  } finally { reader.releaseLock(); }
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  return bytes;
+}
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+type RawReply = { status: number; type: string; bytes: Uint8Array; requestId: string; retryAfter: number | null };
 function origin(raw: string): string {
   let url: URL;
   try { url = new URL(raw); } catch { throw new ApiError('configuration'); }
@@ -90,6 +111,68 @@ export class ApiClient {
     this.#fetch = config.fetch ?? ((input, init) => globalThis.fetch(input, init));
     this.#timeout = config.timeoutMs ?? 15000;
     if (!Number.isSafeInteger(this.#timeout) || this.#timeout < 1 || this.#timeout > 120000) throw new ApiError('configuration');
+  }
+  /** Avatar image I/O (YP-100): the only non-JSON bodies. A signed-in
+   * session is required; the Bearer token is sent like every private call. */
+  async #raw(method: 'GET' | 'PUT', path: string, init: { body?: Blob; contentType?: string; accept: string; cache: RequestCache; limit: number; revision: number; signal?: AbortSignal }): Promise<RawReply> {
+    const scope = this.#session();
+    if (scope.state !== 'authenticated' || !/^[A-Za-z0-9_.-]{1,8192}$/.test(scope.accessToken)) throw new ApiError('authentication_unavailable');
+    const captured = scopeKey(scope);
+    const headers = new Headers({ Accept: init.accept, Authorization: `Bearer ${scope.accessToken}` });
+    if (init.contentType) headers.set('Content-Type', init.contentType);
+    headers.set('If-Match', `"${init.revision}"`);
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, this.#timeout);
+    const signal = AbortSignal.any([controller.signal, init.signal ?? new AbortController().signal]);
+    try {
+      if (signal.aborted) throw new ApiError('aborted');
+      const response = await this.#fetch(this.#origin + path, { method, headers, body: init.body, signal, credentials: 'omit', redirect: 'error', cache: init.cache, referrerPolicy: 'no-referrer' });
+      const bytes = await readBytes(response, init.limit);
+      if (signal.aborted) throw new ApiError(timedOut ? 'timeout' : 'aborted');
+      if (captured !== scopeKey(this.#session())) throw new ApiError('stale_session');
+      const diagnostic = response.headers.get('X-Request-ID') ?? '';
+      const retry = response.headers.get('Retry-After') ?? '';
+      return { status: response.status, type: response.headers.get('Content-Type') ?? '', bytes, requestId: /^[A-Za-z0-9_-]{1,128}$/.test(diagnostic) ? diagnostic : '', retryAfter: /^\d{1,6}$/.test(retry) ? Number(retry) : null };
+    } catch (error) {
+      if (captured !== scopeKey(this.#session())) throw new ApiError('stale_session');
+      if (error instanceof ApiError) throw error;
+      throw new ApiError(signal.aborted ? (timedOut ? 'timeout' : 'aborted') : 'network');
+    } finally { clearTimeout(timer); }
+  }
+  /** Parses a JSON reply of an avatar call: the declared schema on success,
+   * the uniform Error otherwise. */
+  #json(reply: RawReply, schema: string): unknown {
+    if (!/^application\/json(?:\s*;|$)/i.test(reply.type)) throw new ApiError('protocol');
+    let parsed: unknown;
+    try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(reply.bytes)); safeWireValues(parsed); } catch { throw new ApiError('protocol'); }
+    const ok = reply.status >= 200 && reply.status < 300;
+    if (!validates(ok ? schema : 'schema_Error', parsed)) throw new ApiError('protocol');
+    if (!ok) {
+      const code = (parsed as { code?: string }).code ?? '';
+      throw new ApiError('http', reply.status, /^[a-z0-9_]{1,100}$/.test(code) ? code : '', reply.requestId, reply.retryAfter);
+    }
+    return parsed;
+  }
+  /** Uploads a JPEG/PNG avatar; the server stores a 128x128 PNG. */
+  async uploadAvatar(image: Blob, revision: number, signal?: AbortSignal): Promise<{ revision: number; etag: string }> {
+    if ((!['image/png', 'image/jpeg', 'image/webp'].includes(image.type)) || !Number.isSafeInteger(revision) || revision < 0 || revision >= Number.MAX_SAFE_INTEGER || image.size < 1 || image.size > 2097152) throw new ApiError('invalid_input');
+    const reply = await this.#raw('PUT', '/v1/me/avatar', { body: image, contentType: image.type, accept: 'application/json', cache: 'no-store', limit: 262144, revision, signal });
+    return this.#json(reply, 'schema_AvatarState') as { revision: number; etag: string };
+  }
+  /** Viewer/session-bound image URL. Never cache it across account scopes. */
+  async avatar(userId: string, signal?: AbortSignal): Promise<string | null> {
+    if (!UUID.test(userId)) throw new ApiError('invalid_input');
+    let result: ResponseBody<'getAvatarLink'>;
+    try { result = await this.request('getAvatarLink', { path: { id: userId }, signal }); }
+    catch (error) {
+      if (error instanceof ApiError && error.kind === 'http' && error.status === 404) return null;
+      throw error;
+    }
+    const url = new URL(result.avatar_url, this.#origin);
+    if (url.origin !== this.#origin || url.username || url.password || url.pathname !== `/v1/users/${userId}/avatar` || url.hash ||
+        [...url.searchParams.keys()].length !== 1 || !/^[A-Za-z0-9_.-]{1,8192}$/.test(url.searchParams.get('token') ?? '')) throw new ApiError('protocol');
+    return url.href;
   }
   async request<K extends Operation>(operation: K, options: RequestOptions<K>): Promise<ResponseBody<K>> {
     if (!Object.hasOwn(schemas.contract, operation)) throw new ApiError('invalid_input');
