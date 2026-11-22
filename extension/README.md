@@ -54,3 +54,11 @@ storage — оценки, «Посмотрю позже», рецензии и �
 
 
 Кнопка оценки синхронизирует ширину и высоту с ytSmartImationsContent / блоком лайка-дизлайка, а семейство, размер, насыщенность и высоту строки — с нативным текстом. Размер отслеживается ResizeObserver. Проверена перезагрузка установленной версии в Chrome.
+
+### Firefox development build
+
+Run `node scripts/build-firefox-extension.mjs`; each build is preserved under a new `.artifacts/firefox-extension/<uuid>` directory. The generated manifest uses a Firefox event background and extension-origin IndexedDB, with YouTube-only host access and no storage permission. Chrome keeps its service worker and TRUSTED_CONTEXTS storage.
+
+Load the printed directory with Mozilla `web-ext@10.8.0 run --source-dir <directory> --firefox <firefox.exe> --no-reload --no-input`. This starts a separate temporary Firefox profile and installs a temporary add-on; the normal browser profile is untouched. Closing that development browser removes the temporary installation. Do not use `--keep-profile-changes` with a daily browser profile. Do not change signature verification preferences.
+
+Verified on Firefox160.0.1: installation succeeded,20extension tests passed, Mozilla lint0errors/0warnings. Current runtime is local-only; auth/API/outbox integration follows EXT-004 onward. Current data declaration `none` must be revised before enabling backend transmission. A real cold-YouTube-tab interaction smoke and production API/environment build remain open under EXT-003; installation alone does not close all integration gates.
