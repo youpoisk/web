@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-const code=readFileSync(new URL('../core.js',import.meta.url),'utf8');
+const code=readFileSync(new URL('../config.js',import.meta.url),'utf8')+readFileSync(new URL('../core.js',import.meta.url),'utf8');
 const sandbox={URL,structuredClone};vm.runInNewContext(code,sandbox);const core=sandbox.YPCore;
 const video={id:'aqz-KE-bpKQ',title:' Test ',channel:'Channel',channelUrl:'https://www.youtube.com/@YouTube'};
 const update=patch=>({type:'UPDATE',video,patch});
@@ -31,13 +31,13 @@ test('only rating, watch-later and review can be changed; reviews are validated'
  const legacy={...core.empty(),channels:{x:{rating:5}},videos:{[video.id]:{...core.metadata(video),rating:5,later:false,added:true,recommended:true,createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-01T00:00:00Z'}}};
  const migrated=core.apply(legacy,update({later:true}));
  assert.equal(migrated.channels,undefined);assert.equal('recommended' in migrated.videos[video.id]||'added' in migrated.videos[video.id],false);assert.equal(migrated.videos[video.id].rating,5);
- assert.deepEqual({...core.options({site:'http://127.0.0.1:5173',channel:false})},{enabled:true,site:'http://127.0.0.1:5173/'});
+ assert.deepEqual({...core.options({enabled:true})},{enabled:true,site:'http://127.0.0.1:5173/'});
 });
 test('reject invalid ratings, state and unsafe settings',()=>{
  for(const n of [0,11,1.1,'9',NaN])assert.throws(()=>core.apply(core.empty(),update({rating:n})));
  assert.throws(()=>core.apply(core.empty(),update({later:'yes'})));assert.throws(()=>core.apply(core.empty(),update({token:'secret'})));
  for(const site of ['javascript:alert(1)','http://example.com','https://user:pass@example.com','https://example.com/#/login'])assert.throws(()=>core.options({site}));
- assert.equal(core.options({site:'http://127.0.0.1:5173'}).site,'http://127.0.0.1:5173/');
+ assert.equal(core.options({enabled:true}).site,'http://127.0.0.1:5173/');
 });
 function worker(){
  let listener,db={},fail=false,currentUrl='https://www.youtube.com/watch?v=aqz-KE-bpKQ';
@@ -72,7 +72,7 @@ test('firefox manifest uses an event page, no storage permission and the firefox
  assert.equal(manifest.manifest_version,3);
  assert.deepEqual(manifest.permissions,['activeTab'],'storage must not be granted to page/content contexts in Firefox');
  assert.equal(manifest.background.service_worker,undefined);
- assert.deepEqual(manifest.background.scripts,['core.js','storage-firefox.js','background-common.js','background.firefox.js']);
+ assert.deepEqual(manifest.background.scripts,['config.js','core.js','storage-firefox.js','background-common.js','background.firefox.js']);
  assert.equal(manifest.browser_specific_settings.gecko.id,'youpoisk-dev@local.invalid');
  assert.equal(manifest.content_scripts.length,1);assert.deepEqual(manifest.content_scripts[0].matches,['https://www.youtube.com/*']);
  const files=[...manifest.background.scripts,manifest.action.default_popup,manifest.options_page,...manifest.content_scripts[0].js,...manifest.content_scripts[0].css];for(const file of files)assert.ok(readFileSync(new URL('../'+file,import.meta.url)).length>0,file);
@@ -96,7 +96,7 @@ test('firefox background event page serves the same commands through the injecte
  const browser={runtime:{id:'test-extension',getURL:page=>'moz-extension://test-extension/'+page,onMessage:{addListener(fn){listener=fn}},async sendMessage(){}},tabs:{async get(){return{url:currentUrl}},async query(){return[]},async sendMessage(){}}};
  const context={browser,indexedDB:new IDBFactory(),URL,structuredClone,console};
  vm.createContext(context);
- for(const file of ['core.js','storage-firefox.js','background-common.js','background.firefox.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);
+ for(const file of ['config.js','core.js','storage-firefox.js','background-common.js','background.firefox.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);
  const send=(command,sender={id:'test-extension',url:'moz-extension://test-extension/popup.html'})=>new Promise(resolve=>listener(command,sender,resolve));
  const page={id:'test-extension',tab:{id:1},frameId:0,url:'https://www.youtube.com/watch?v='+video.id};
  assert.equal((await send({type:'YP_UPDATE_CURRENT_VIDEO',video,patch:{rating:9}},page)).ok,true);
@@ -129,7 +129,7 @@ test('runtime validates exact trusted documents, strict shapes and current top f
  for(const url of ['chrome-extension://test-extension/popup.html?x=1','https://www.youtube.com/popup.html','chrome-extension://other/popup.html','chrome-extension://test-extension/demo.html'])assert.equal((await w.send(get,{...sender,url})).ok,false);
  assert.equal((await w.send(get,{...sender,frameId:1})).ok,false);
  for(const cmd of [{type:'YP_GET_ACCOUNT_LIBRARY',extra:1},{type:'YP_UPDATE_CURRENT_VIDEO',video,patch:{rating:8,revision:9}},{type:'YP_UPDATE_CURRENT_VIDEO',video:{...video,account:'victim'},patch:{rating:8}},{type:'YP_UPDATE_CURRENT_VIDEO',video,patch:[]},{type:'YP_UPDATE_CURRENT_VIDEO',video,patch:{}},{type:'YP_OPTIONS',options:{enabled:true,site:'https://example.com/',token:'secret'}}])assert.equal((await w.send(cmd)).ok,false);
- const options={type:'YP_OPTIONS',options:{enabled:false,site:'http://127.0.0.1:5173/'}};assert.equal((await w.send(options)).ok,false);assert.equal((await w.send(options,{...sender,url:'chrome-extension://test-extension/options.html'})).ok,true);
+ const options={type:'YP_OPTIONS',options:{enabled:false}};assert.equal((await w.send(options)).ok,false);assert.equal((await w.send(options,{...sender,url:'chrome-extension://test-extension/options.html'})).ok,true);
  const page={id:'test-extension',tab:{id:1},frameId:0,url:'https://www.youtube.com/watch?v='+video.id};
  assert.equal((await w.send({type:'YP_GET_CURRENT_VIDEO_STATE',videoId:video.id},{...page,frameId:1})).ok,false);
  assert.equal((await w.send({type:'YP_GET_CURRENT_VIDEO_STATE',videoId:'jNQXAC9IVRw'},page)).ok,false);

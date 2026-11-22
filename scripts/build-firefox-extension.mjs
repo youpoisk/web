@@ -10,7 +10,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = resolve(root, 'extension');
 const out = resolve(root, '.artifacts/firefox-extension', randomUUID());
 const files = [
-  'core.js', 'bridge.js', 'content.js', 'content.css',
+  'config.js', 'core.js', 'bridge.js', 'content.js', 'content.css',
   'background-common.js', 'storage-firefox.js', 'background.firefox.js',
   'popup.html', 'popup.js', 'options.html', 'options.js',
   'extension.css', 'assets'
@@ -23,6 +23,11 @@ const referenced = [
   manifest.options_page,
   ...manifest.content_scripts.flatMap((entry) => [...entry.js, ...entry.css])
 ];
+const production=process.argv.includes('--production');
+const supplied=process.argv.find(arg=>arg.startsWith('--site-origin='))?.slice('--site-origin='.length);
+if(production&&!supplied)throw Error('Production site origin is not configured');
+if(supplied&&!production)throw Error('Site override is only allowed for a production build');
+
 await mkdir(out, {recursive: true});
 for (const file of files) await cp(resolve(source, file), resolve(out, file), {recursive: true});
 for (const file of referenced) {
@@ -30,4 +35,8 @@ for (const file of referenced) {
   catch { throw new Error(`Firefox build is missing ${file}`); }
 }
 await writeFile(resolve(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+
+
+if(production){const site=new URL(supplied);if(site.protocol!=='https:'||site.username||site.password||site.search||site.hash||site.pathname!=='/'||['localhost','127.0.0.1','[::1]'].includes(site.hostname))throw Error('Invalid production site origin');await writeFile(resolve(out,'config.js'),'globalThis.YPConfig=Object.freeze('+JSON.stringify({mode:'production',siteOrigin:site.origin+'/'})+');\n');}
+
 console.log(`Firefox extension built at ${out}`);

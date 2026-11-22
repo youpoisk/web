@@ -50,7 +50,7 @@
       if(rect.width<=0||rect.height<=0)return;
       const font=getComputedStyle(label);
       Object.assign(rate.style,{
-        width:rect.width+'px',height:rect.height+'px',minWidth:rect.width+'px',
+        height:rect.height+'px',
         borderRadius:(rect.height/2)+'px',boxSizing:'border-box',
         fontFamily:font.fontFamily,fontSize:font.fontSize,fontWeight:font.fontWeight,
         lineHeight:font.lineHeight,letterSpacing:font.letterSpacing,fontStyle:font.fontStyle,
@@ -71,7 +71,7 @@
     rate.onclick=()=>{
       if(popover.matches(':popover-open')){popover.hidePopover();return;}
       const rect=rate.getBoundingClientRect();
-      popover.style.left=Math.max(8,Math.min(rect.left,innerWidth-350))+'px';
+      popover.style.left=Math.max(8,Math.min(rect.left,innerWidth-500))+'px';
       popover.style.top=Math.max(8,Math.min(rect.bottom+8,innerHeight-260))+'px';
       popover.showPopover();
       const height=popover.getBoundingClientRect().height;popover.style.top=Math.max(8,Math.min(rect.bottom+8,innerHeight-height-8))+'px';
@@ -87,7 +87,7 @@
     editor.append(node('strong','YouPoisk'),node('p','Ваша рецензия на видео'),area,counter,actions,node('small','Оценка или рецензия попадут в «Рекомендации» ваших друзей и подписчиков после подключения аккаунта. Сейчас сохраняется на этом устройстве.'));
     const openEditor=focus=>{
       const rect=write.getBoundingClientRect();
-      editor.style.left=Math.max(8,Math.min(rect.left,innerWidth-350))+'px';
+      editor.style.left=Math.max(8,Math.min(rect.left,innerWidth-500))+'px';
       editor.showPopover();
       const height=editor.getBoundingClientRect().height;editor.style.top=Math.max(8,Math.min(rect.bottom+8,innerHeight-height-8))+'px';if(focus)area.focus();
     };

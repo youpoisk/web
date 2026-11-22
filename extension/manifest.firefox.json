@@ -8,6 +8,7 @@
   ],
   "background": {
     "scripts": [
+      "config.js",
       "core.js",
       "storage-firefox.js",
       "background-common.js",
@@ -31,6 +32,7 @@
         "https://www.youtube.com/*"
       ],
       "js": [
+        "config.js",
         "core.js",
         "bridge.js",
         "content.js"

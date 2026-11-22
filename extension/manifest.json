@@ -27,6 +27,7 @@
         "https://www.youtube.com/*"
       ],
       "js": [
+        "config.js",
         "core.js",
         "bridge.js",
         "content.js"

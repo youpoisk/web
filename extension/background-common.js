@@ -20,7 +20,7 @@ globalThis.YPWorker=(()=>{
     fields(command.patch,['rating','later','review','mark']);
     if(!Object.keys(command.patch).length)throw Error('Пустое изменение');
    }
-   if(command.type==='OPTIONS'){fields(command.options,['enabled','site'],['enabled','site']);if(typeof command.options.enabled!=='boolean'||typeof command.options.site!=='string')throw Error('Некорректные настройки');}
+   if(command.type==='OPTIONS'){fields(command.options,['enabled'],['enabled']);if(typeof command.options.enabled!=='boolean')throw Error('Некорректные настройки');}
   }
   async function authorize(command,sender){
    if(sender.id!==api.runtime.id)throw Error('Недопустимый отправитель');
@@ -35,7 +35,7 @@ globalThis.YPWorker=(()=>{
    return {trusted:false,id};
   }
   function project(state,access){
-   const options={enabled:state.options.enabled,site:state.options.site};
+   const options={enabled:state.options.enabled,site:globalThis.YPConfig.siteOrigin};
    const videos={};
    for(const id of access.trusted?Object.keys(state.videos):[access.id]){
     if(!Object.hasOwn(state.videos,id))continue;const v=state.videos[id];if(!v)continue;

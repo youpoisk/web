@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 function bridge(url){
- const sent=[],events={};const context={URL,structuredClone,location:{href:url},chrome:{runtime:{id:'test',getURL:p=>'chrome-extension://test/'+p,async sendMessage(message){sent.push(message);return {ok:true,data:{version:1}}},onMessage:{addListener(fn){events.runtime=fn},removeListener(){delete events.runtime}}},storage:{onChanged:{addListener(fn){events.storage=fn},removeListener(){delete events.storage}}}}};vm.createContext(context);for(const file of ['core.js','bridge.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);return {api:context.YP,sent,events};
+ const sent=[],events={};const context={URL,structuredClone,location:{href:url},chrome:{runtime:{id:'test',getURL:p=>'chrome-extension://test/'+p,async sendMessage(message){sent.push(message);return {ok:true,data:{version:1}}},onMessage:{addListener(fn){events.runtime=fn},removeListener(){delete events.runtime}}},storage:{onChanged:{addListener(fn){events.storage=fn},removeListener(){delete events.storage}}}}};vm.createContext(context);for(const file of ['config.js','core.js','bridge.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);return {api:context.YP,sent,events};
 }
 test('content bridge sends current-video commands and subscribes to signal-only broadcasts',async()=>{
  const b=bridge('https://www.youtube.com/watch?v=aqz-KE-bpKQ');await b.api.request('GET');assert.equal(b.sent[0].type,'YP_GET_CURRENT_VIDEO_STATE');assert.equal(b.sent[0].videoId,'aqz-KE-bpKQ');

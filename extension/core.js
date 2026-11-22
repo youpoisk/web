@@ -1,6 +1,6 @@
 /* Shared domain rules. No DOM, network, or Chrome dependencies. */
 (() => {
-  const defaults = {enabled:true, site:'http://127.0.0.1:5173/'};
+  const defaults = {enabled:true, site:globalThis.YPConfig.siteOrigin};
   const empty = () => ({version:1,videos:{},options:{...defaults}});
   function videoId(value) {
     try { const u=new URL(value); return u.origin==='https://www.youtube.com' && !u.username && !u.password && u.pathname==='/watch' && /^[\w-]{11}$/.test(u.searchParams.get('v')||'') ? u.searchParams.get('v') : null; } catch { return null; }
@@ -25,10 +25,8 @@
   }
   function rating(value) {if(value!==null && (!Number.isInteger(value)||value<1||value>10)) throw Error('Оценка должна быть целым числом от 1 до 10'); return value;}
   function options(value) {
-    const site=new URL(String(value.site||defaults.site));
-    if(site.protocol!=='https:' && !(site.protocol==='http:' && ['localhost','127.0.0.1'].includes(site.hostname))) throw Error('Сайт должен использовать HTTPS (HTTP разрешён только локально)');
-    if(site.username||site.password||site.search||site.hash) throw Error('Укажите адрес сайта без пароля, параметров и #');
-    return {enabled:value.enabled!==false,site:site.href.replace(/\/?$/,'/')};
+    if(Object.hasOwn(value,'site'))throw Error('Адрес сайта задаётся сборкой расширения');
+    return {enabled:value.enabled!==false,site:defaults.site};
   }
   function apply(state, command, now=new Date().toISOString()) {
     const next=structuredClone(state);
