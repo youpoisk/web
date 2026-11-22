@@ -171,7 +171,7 @@ export interface paths {
         put?: never;
         /**
          * Log in with login and password
-         * @description Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open.
+         * @description Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open. A successful new web login atomically revokes all previous web sessions and their refresh families for this user. Extension sessions remain independent. Refresh and browser-code exchange reuse the existing session.
          */
         post: operations["loginAccount"];
         delete?: never;
@@ -251,7 +251,7 @@ export interface paths {
         put?: never;
         /**
          * Register a new account
-         * @description Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open.
+         * @description Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open. A successful new web login atomically revokes all previous web sessions and their refresh families for this user. Extension sessions remain independent. Refresh and browser-code exchange reuse the existing session.
          */
         post: operations["registerAccount"];
         delete?: never;
@@ -660,6 +660,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/navigation-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own unread dialog and pending incoming friend request counts
+         * @description Own unread dialog and pending incoming friend request counts
+         */
+        get: operations["getNavigationCounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/notifications": {
         parameters: {
             query?: never;
@@ -802,6 +822,26 @@ export interface paths {
          * @description Changes only the supplied policies when expected_revision is current (409 otherwise); at least one policy is required (422). An unchanged request returns change_seq null; a change is recorded in the sync log (object privacy) and applies to every following read.
          */
         patch: operations["patchPrivacy"];
+        trace?: never;
+    };
+    "/v1/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change my display name only
+         * @description Change my display name only
+         */
+        patch: operations["changeMyName"];
         trace?: never;
     };
     "/v1/me/ratings": {
@@ -1482,6 +1522,15 @@ export interface components {
             id: string;
             title: string | null;
             youtube_video_id: string;
+        };
+        /** @description NFC trimmed display name, 1..100 Unicode code points, no control characters. Login/email unchanged; concurrent edits serialize with last successful write winning. */
+        NameChange: {
+            name: string;
+        };
+        /** @description Own live visible counts across all pages. Unread conversations counts dialogs with any unread incoming message, not messages. Pending incoming requests independent of notification read state; blocked/inactive counterparts excluded. */
+        NavigationCounts: {
+            incoming_friend_requests: number;
+            unread_conversations: number;
         };
         /** @description One site notification. It grants no rights; open the related page to see current data. */
         NotificationItem: {
@@ -3780,6 +3829,54 @@ export interface operations {
             };
         };
     };
+    getNavigationCounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Get the current private profile */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NavigationCounts"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     listNotifications: {
         parameters: {
             query?: {
@@ -4149,6 +4246,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PrivacyResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    changeMyName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameChange"];
+            };
+        };
+        responses: {
+            /** @description Get the current private profile */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

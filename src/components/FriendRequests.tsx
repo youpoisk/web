@@ -45,10 +45,10 @@ export function FriendRequestsList({ client, direction }: { client: Pick<ApiClie
     try {
       if (accept) await acceptFriendRequest(client, item.id); else await deleteFriendRequest(client, item.id);
       setItems(prev => prev.filter(x => x.id !== item.id));
-      if (accept) window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
+      window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
       setMessage(accept ? `Теперь вы друзья с ${item.user.name || item.user.login}.` : direction === 'incoming' ? 'Заявка отклонена.' : 'Заявка отменена.');
     } catch (e) {
-      if (e instanceof ApiError && e.status === 404) { setItems(prev => prev.filter(x => x.id !== item.id)); setMessage('Этой заявки уже нет.'); }
+      if (e instanceof ApiError && e.status === 404) { setItems(prev => prev.filter(x => x.id !== item.id)); setMessage('Этой заявки уже нет.'); window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED)); }
       else setMessage(friendLimitMessage(e) ?? 'Не удалось выполнить действие. Попробуйте ещё раз.');
     } finally {
       setBusy(null);

@@ -37,7 +37,7 @@
       "post": {
         "operationId": "registerAccount",
         "summary": "Register a new account",
-        "description": "Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open.",
+        "description": "Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open. A successful new web login atomically revokes all previous web sessions and their refresh families for this user. Extension sessions remain independent. Refresh and browser-code exchange reuse the existing session.",
         "tags": [
           "Accounts"
         ],
@@ -142,7 +142,7 @@
       "post": {
         "operationId": "loginAccount",
         "summary": "Log in with login and password",
-        "description": "Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open.",
+        "description": "Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open. A successful new web login atomically revokes all previous web sessions and their refresh families for this user. Extension sessions remain independent. Refresh and browser-code exchange reuse the existing session.",
         "tags": [
           "Accounts"
         ],
@@ -5381,8 +5381,8 @@
           }
         ],
         "responses": {
-          "201": {
-            "description": "Message created",
+          "200": {
+            "description": "Stored message returned for a retry",
             "headers": {
               "X-Request-ID": {
                 "description": "Server-generated diagnostic ID; not an auth token.",
@@ -5400,8 +5400,8 @@
               }
             }
           },
-          "200": {
-            "description": "Stored message returned for a retry",
+          "201": {
+            "description": "Message created",
             "headers": {
               "X-Request-ID": {
                 "description": "Server-generated diagnostic ID; not an auth token.",
@@ -5999,8 +5999,8 @@
         ],
         "parameters": [],
         "responses": {
-          "201": {
-            "description": "Report created",
+          "200": {
+            "description": "Existing report returned",
             "headers": {
               "X-Request-ID": {
                 "description": "Server-generated diagnostic ID; not an auth token.",
@@ -6018,8 +6018,8 @@
               }
             }
           },
-          "200": {
-            "description": "Existing report returned",
+          "201": {
+            "description": "Report created",
             "headers": {
               "X-Request-ID": {
                 "description": "Server-generated diagnostic ID; not an auth token.",
@@ -6548,6 +6548,25 @@
         ],
         "parameters": [],
         "responses": {
+          "202": {
+            "description": "Deletion started",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionStarted"
+                }
+              }
+            }
+          },
           "default": {
             "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
             "headers": {
@@ -6573,9 +6592,37 @@
                 }
               }
             }
-          },
-          "202": {
-            "description": "Deletion started",
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDeletionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/profile": {
+      "patch": {
+        "operationId": "changeMyName",
+        "summary": "Change my display name only",
+        "description": "Change my display name only",
+        "tags": [
+          "Accounts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Get the current private profile",
             "headers": {
               "X-Request-ID": {
                 "description": "Server-generated diagnostic ID; not an auth token.",
@@ -6588,7 +6635,59 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AccountDeletionStarted"
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -6599,7 +6698,96 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AccountDeletionRequest"
+                "$ref": "#/components/schemas/NameChange"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/navigation-counts": {
+      "get": {
+        "operationId": "getNavigationCounts",
+        "summary": "Own unread dialog and pending incoming friend request counts",
+        "description": "Own unread dialog and pending incoming friend request counts",
+        "tags": [
+          "Accounts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Get the current private profile",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavigationCounts"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
               }
             }
           }
@@ -9502,6 +9690,42 @@
           "status"
         ],
         "additionalProperties": false
+      },
+      "NameChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "description": "NFC trimmed display name, 1..100 Unicode code points, no control characters. Login/email unchanged; concurrent edits serialize with last successful write winning."
+      },
+      "NavigationCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "unread_conversations",
+          "incoming_friend_requests"
+        ],
+        "properties": {
+          "unread_conversations": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "incoming_friend_requests": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "description": "Own live visible counts across all pages. Unread conversations counts dialogs with any unread incoming message, not messages. Pending incoming requests independent of notification read state; blocked/inactive counterparts excluded."
       }
     },
     "parameters": {

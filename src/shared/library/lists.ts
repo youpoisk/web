@@ -480,3 +480,12 @@ export function moderationError(error: unknown): string {
   return 'Не удалось выполнить действие. Попробуйте ещё раз.';
 }
 
+
+export type OwnProfile=components['schemas']['User'];
+export type NavigationCounts=components['schemas']['NavigationCounts'];
+export async function changeMyName(client:Pick<ApiClient,'request'>,name:string):Promise<OwnProfile>{
+ return client.request('changeMyName',{body:{name:name.normalize('NFC').trim()}});
+}
+export async function loadNavigationCounts(client:Pick<ApiClient,'request'>,signal?:AbortSignal):Promise<NavigationCounts>{
+ return client.request('getNavigationCounts',{signal});
+}

@@ -51,7 +51,7 @@ export function SecuritySessions({ client, onLogout }: { client: Pick<ApiClient,
   const visibleItems = activeDevices(items, now);
   return <section className="panel form-panel" aria-busy={loading || saving}>
     <h2>Активные сессии</h2>
-    <p className="muted">Только действующие входы на сайте и в расширении. Завершённые и просроченные сессии не показываются. Вход остаётся активным до выхода или окончания срока, даже если окно закрыто.</p>
+    <p className="muted">Только действующие входы на сайте и в расширении. Завершённые и просроченные сессии не показываются. Новый вход на сайт автоматически завершает предыдущий web-вход. Сессии расширения независимы.</p>
     <div className="actions"><button className="secondary" disabled={loading || saving} onClick={() => read(null)}>Обновить список</button><button className="secondary" disabled={loading || saving || error} onClick={() => { setMessage(''); setConfirm('others'); }}>Выйти на остальных устройствах</button></div>
     {loading && <p role="status">Загружаем сессии…</p>}
     {error && <p role="alert">Не удалось загрузить сессии. <button disabled={loading || saving} onClick={() => read(failedAfter)}>Повторить</button></p>}

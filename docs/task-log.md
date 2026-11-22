@@ -154,3 +154,7 @@ Sessions active-only UI: server already excludes revoked/expired rows. QA DB cou
 Active sessions validation PASS:102CSPtests100corelines/functions, build/typecheckPASS. CUA settings Security showed exactly4active rows (current+3other) vs38excluded DB historical, active labels and revoke actions, no created-at history line, no session writes.
 
 740cca0 independentreviewPASS, noMEDIUM+.102CSP/typecheck independentlyPASS. Report docs/reviews/active-sessions-display.md. User screenshot shows3other active web sessions plus current fourth; Site denotes client_type, not unique device. Existing server lifecycle excludes38historical rows; do not deduplicate/hide or autorevoke legitimate sessionfamilies by identical label.
+
+Self-account UI:66-operationcontract pinned, own NameEditor serverconfirmation/draftpreservation/headerrefresh; sharednavigationcountshook acrosssidebarMessages/Friends andRequests tab,30svisiblepoll+changeevents, independentowner/generation/no unreadmessagecountguessing. Frienddecline/404 settlement triggerscountrefresh. Singlewebpolicyhintupdated. Gates/browser/reviewpending.
+
+Self-account UI checks PASS:103CSPtests100API/auth/library lines/functions +build/typecheck/sourcecheck+extension9. ActualCUA changed QA E2E→QA E2E Проверка and restored original viaUI; headerupdatedaftercommit, menuunreaddialogs2/Friends0/Requests0. PerformednormalQAweb logout/login toexercise newpolicy: settings now1currentweb/0otherweb, brokerrestorecompletednormally. No friendships/messages/reviews changed. Independentreviewpending.
