@@ -158,3 +158,7 @@ Active sessions validation PASS:102CSPtests100corelines/functions, build/typeche
 Self-account UI:66-operationcontract pinned, own NameEditor serverconfirmation/draftpreservation/headerrefresh; sharednavigationcountshook acrosssidebarMessages/Friends andRequests tab,30svisiblepoll+changeevents, independentowner/generation/no unreadmessagecountguessing. Frienddecline/404 settlement triggerscountrefresh. Singlewebpolicyhintupdated. Gates/browser/reviewpending.
 
 Self-account UI checks PASS:103CSPtests100API/auth/library lines/functions +build/typecheck/sourcecheck+extension9. ActualCUA changed QA E2E→QA E2E Проверка and restored original viaUI; headerupdatedaftercommit, menuunreaddialogs2/Friends0/Requests0. PerformednormalQAweb logout/login toexercise newpolicy: settings now1currentweb/0otherweb, brokerrestorecompletednormally. No friendships/messages/reviews changed. Independentreviewpending.
+
+User followup: hide zero navigation badges (Messages/Friends/Requests and guest Watchlist); show only>=1. Overrides earlier gray-zero decision. No backend/count semantics changed.
+
+Finalzero policy: hide0 onlysidebarMessages/Friends/Watchlist; Requeststab keeps0 via explicitshowZero. CUA guest sidebar has noWatchlist0; during verification anothernewwebsession caused browserdemotion toguest (expected single-web semantics); do not repeatedly reloginsharedQA and displace user's current browser.

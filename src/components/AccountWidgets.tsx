@@ -22,8 +22,8 @@ export function useNavigationCounts(client: Pick<ApiClient,'request'> | null, ow
   return client&&owner&&snapshot?.owner===owner?snapshot.counts:null;
 }
 
-export function NavigationCount({count,label}:{count:number|undefined;label:string}){
-  return count===undefined?null:<span className={'navigation-count'+(count===0?' zero':'')}><span aria-hidden="true">{count}</span><span className="sr-only">{label}: {count}</span></span>;
+export function NavigationCount({count,label,showZero=false}:{count:number|undefined;label:string;showZero?:boolean}){
+  return count===undefined||(!showZero&&count<1)?null:<span className={'navigation-count'+(count===0?' zero':'')}><span aria-hidden="true">{count}</span><span className="sr-only">{label}: {count}</span></span>;
 }
 
 export function NameEditor({client,user,onSaved}:{client:Pick<ApiClient,'request'>;user:OwnProfile;onSaved:(user:OwnProfile)=>void}){
