@@ -175,3 +175,4 @@ Independent source review PASS for sent counter: no MEDIUM+. See docs/reviews/pa
 Outgoing cancellation: removed success notice per request; item removal, empty list and error handling retained. Source checked; no API change.
 
 Profile friendship controls: add/remove, accept/decline incoming, cancel outgoing. Pending request ID resolved across all API pages; no write on load. Reload profile/privacy after mutations; abort/generation guards and synchronous write lock. Self profile excluded.
+Profile action layout: friendship wrapper uses same flex row as subscription/message; metadata placed first, shared button sizing, moderation actions separate at mobile widths. Friendship source review found no MEDIUM+; LOW component scenarios remain useful.

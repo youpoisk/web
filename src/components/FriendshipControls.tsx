@@ -36,7 +36,7 @@ export function FriendshipControls({client,userId,friend,onChanged}:{client:Pick
   }catch(e){if(stamp===generation.current){if(e instanceof ApiError&&(e.status===404||e.status===409)){window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));onChanged();setRevision(v=>v+1);}else setError(friendLimitMessage(e)??'Не удалось изменить дружбу. Повторите попытку.');}}
   finally{if(stamp===generation.current){busy.current=false;setSaving(false);}}
  }
- return <div aria-busy={loading||saving}>
+ return <div className="profile-friendship" aria-busy={loading||saving}>
   {error?<p role="status">{error} <button className="text-button" disabled={saving} onClick={()=>setRevision(v=>v+1)}>Повторить</button></p>:loading?<span className="muted">Проверяем дружбу…</span>:<>
    {pending?.direction==='incoming'&&<button className="primary" disabled={saving} onClick={()=>void act(true)}>Принять заявку</button>}
    <button className="secondary" disabled={saving} onClick={()=>void act()}>{friend?'Удалить из друзей':pending?.direction==='incoming'?'Отклонить заявку':pending?'Отменить заявку':'Добавить в друзья'}</button>
