@@ -134,3 +134,7 @@ test('runtime validates exact trusted documents, strict shapes and current top f
  assert.equal((await w.send({type:'YP_GET_CURRENT_VIDEO_STATE',videoId:video.id},{...page,frameId:1})).ok,false);
  assert.equal((await w.send({type:'YP_GET_CURRENT_VIDEO_STATE',videoId:'jNQXAC9IVRw'},page)).ok,false);
 });
+
+test('saved library records become metadata-only popup commands and preserve null/false patches',async()=>{
+ const w=worker();await w.send({type:'YP_UPDATE_CURRENT_VIDEO',video,patch:{rating:8,later:true,review:'My review'}});const saved=(await w.send({type:'YP_GET_ACCOUNT_LIBRARY'})).data.videos[video.id];assert.ok(saved.updatedAt);const response=await w.send({type:'YP_UPDATE_CURRENT_VIDEO',video:core.metadata(saved),patch:{rating:null,later:false}});assert.equal(response.ok,true);assert.equal(response.data.videos[video.id].rating,null);assert.equal(response.data.videos[video.id].later,false);assert.equal(response.data.videos[video.id].review,'My review');
+});
