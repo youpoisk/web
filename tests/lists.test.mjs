@@ -7,7 +7,7 @@ const item = (over = {}) => ({
   availability: 'unknown', url: 'https://www.youtube.com/watch?v=AbCdEf_12-3', preview_url: 'https://i.ytimg.com/vi/AbCdEf_12-3/hqdefault.jpg',
   hashtags: ['обзор'], hashtags_observation_status: 'partial',
   channel: { id: '00000000-0000-4000-8000-0000000000c1', youtube_channel_id: 'UC' + 'a'.repeat(22), name: 'Канал', url: 'https://www.youtube.com/channel/UC' + 'a'.repeat(22), identity_verified: true, association_verified: false },
-  rating: { count: 2, average: 7.5 }, my_state: { revision: 3, rating: 8, added: true, later: true }, listed_at: '2026-11-21T10:00:00Z', ...over
+  rating: { count: 2, average: 7.5 }, my_state: { revision: 3, rating: 8, added: true, later: true }, listed_at: '2026-11-21T10:00:00Z', has_review: false, ...over
 });
 
 test('routes map to own server lists only', () => {
@@ -37,6 +37,8 @@ test('toCard keeps real data and never invents titles or durations', () => {
   assert.equal(card.rating, 7.5);
   assert.equal(card.myRating, 8);
   assert.equal(card.later, true);
+  assert.equal(card.hasReview, false);
+  assert.equal(toCard(item({ has_review: true })).hasReview, true);
   assert.equal(card.tag, 'обзор');
   assert.ok(['forest', 'city', 'mountain', 'music', 'tech', 'art'].includes(card.color));
   const bare = toCard(item({ title: null, duration_seconds: null, channel: null, hashtags: [], rating: { count: 0, average: null }, my_state: { revision: 0, rating: null } }));

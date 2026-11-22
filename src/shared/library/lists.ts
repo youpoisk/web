@@ -8,7 +8,7 @@ export type ListPage = { items: ListItem[]; next: string | null };
 export type ListCard = {
   id: string; title: string; channel: string; handle: string; channelId: string; channelUuid: string; durationSeconds: number; duration: string;
   hashtags: readonly string[]; source: string; channelSource: string; checkedAt: string; color: string; tag: string; rating: number;
-  myRating: number | null; later: boolean; uuid: string; revision: number;
+  myRating: number | null; later: boolean; hasReview: boolean; uuid: string; revision: number;
 };
 export type VideoState = components['schemas']['VideoState'];
 
@@ -30,7 +30,7 @@ export async function loadList(client: Pick<ApiClient, 'request'>, kind: ListKin
 }
 
 export type SearchSort = 'new' | 'top' | 'popular';
-export type PublicCard = Omit<ListCard, 'uuid' | 'revision' | 'later' | 'myRating'> & { publicCard: true; votes: number };
+export type PublicCard = Omit<ListCard, 'uuid' | 'revision' | 'later' | 'myRating' | 'hasReview'> & { publicCard: true; votes: number };
 export type SearchPage = { items: PublicCard[]; next: string | null };
 
 /** One page of the public catalog search (no viewer state, no Authorization). */
@@ -71,6 +71,7 @@ export function toCard(item: ListItem): ListCard {
     rating: item.rating.average ?? 0,
     myRating: item.my_state.rating ?? null,
     later: item.my_state.later === true,
+    hasReview: item.has_review,
     uuid: item.id,
     revision: item.my_state.revision
   };

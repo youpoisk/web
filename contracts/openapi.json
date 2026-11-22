@@ -8588,6 +8588,10 @@
             "type": "string",
             "format": "date-time",
             "description": "Keyset timestamp of this list (library: last own change; watchlist: addition time; ratings: last rating change)."
+          },
+          "has_review": {
+            "type": "boolean",
+            "description": "The authenticated owner has a saved non-empty video review, independently of publication/moderation status."
           }
         },
         "required": [
@@ -8603,7 +8607,8 @@
           "channel",
           "rating",
           "my_state",
-          "listed_at"
+          "listed_at",
+          "has_review"
         ],
         "additionalProperties": false
       },

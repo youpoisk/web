@@ -1961,6 +1961,8 @@ export interface components {
             availability: "unknown" | "available" | "unavailable";
             channel: components["schemas"]["CardChannel"] | null;
             duration_seconds: number | null;
+            /** @description The authenticated owner has a saved non-empty video review, independently of publication/moderation status. */
+            has_review: boolean;
             hashtags: string[];
             /** @enum {string} */
             hashtags_observation_status: "unknown" | "partial" | "complete";
