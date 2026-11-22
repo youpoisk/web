@@ -107,6 +107,7 @@ export function PeopleSearch({ client }: { client: Pick<ApiClient, 'request'> })
     setBusy(person.user.id); setError('');
     try {
       const result = await sendFriendRequest(client, person.user.id);
+      window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
       const relation = result.status === 'incoming' ? 'incoming' : 'outgoing';
       setItems(prev => prev && prev.map(x => x.user.id === person.user.id ? { ...x, relation } : x));
     } catch (e) {

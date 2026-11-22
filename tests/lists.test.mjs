@@ -502,7 +502,7 @@ test('report and moderation helpers call the right operations', async () => {
 
 test('own display name and exact navigation count requests use only own endpoints',async()=>{
  const {changeMyName,loadNavigationCounts}=await import('../src/shared/library/lists.ts');
- const calls=[],signal=new AbortController().signal,user={id:'own',name:'Й',login:'owner',email:'owner@example.invalid'},counts={unread_conversations:2,incoming_friend_requests:3};
+ const calls=[],signal=new AbortController().signal,user={id:'own',name:'Й',login:'owner',email:'owner@example.invalid'},counts={unread_conversations:2,incoming_friend_requests:3,outgoing_friend_requests:4};
  const client={async request(op,options){calls.push([op,options]);return op==='changeMyName'?user:counts;}};
  assert.deepEqual(await changeMyName(client,'  И\u0306  '),user);
  assert.deepEqual(await loadNavigationCounts(client,signal),counts);

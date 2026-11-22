@@ -1527,9 +1527,10 @@ export interface components {
         NameChange: {
             name: string;
         };
-        /** @description Own live visible counts across all pages. Unread conversations counts dialogs with any unread incoming message, not messages. Pending incoming requests independent of notification read state; blocked/inactive counterparts excluded. */
+        /** @description Own live visible counts across all pages. Unread conversations counts dialogs with any unread incoming message, not messages. Pending incoming requests independent of notification read state; blocked/inactive counterparts excluded. Pending outgoing requests are counted across all pages with the same visibility rules. */
         NavigationCounts: {
             incoming_friend_requests: number;
+            outgoing_friend_requests: number;
             unread_conversations: number;
         };
         /** @description One site notification. It grants no rights; open the related page to see current data. */

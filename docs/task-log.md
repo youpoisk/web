@@ -166,3 +166,8 @@ Finalzero policy: hide0 onlysidebarMessages/Friends/Watchlist; Requeststab keeps
 5cf4d26+9258249 independentUIreviewPASS/noMEDIUM+.103CSP/typecheck/sourcecheck/extension9 independentPASS; finaltypecheckafterzeropolicyPASS. Reports docs/reviews/self-account-ui-initial.md and self-account-ui-followup.md. Userlatest: sidebarzero hidden,RequestsTab0retained. Next12itemcursor/infinite task.
 
 12-item video/review cursor pages + infinite LoadMore: publiccatalog, watchlist/ratings/library, userrecommendations, personalfeed. One intersection request per cursor/count, late callbacks disconnected, no auto retries on failure, manual keyboard/retry button retained. Main paging has separate busy/error states and initial-list abort guard. Social/device/message limits unchanged. Existing fallback7videos within12. Unit/build/CUA/review pending.
+
+## Счётчик исходящих заявок
+Вкладка «Отправленные» показывает все ожидающие ответа исходящие заявки через outgoing_friend_requests, включая записи за пределами первой страницы. Неактивные и заблокированные получатели исключены. После отмены заявки счётчики обновляются.
+Спорные вопросы: показывать ли 0 у «Отправленные»? Выбрано показывать, как у «Заявки»; в левом меню нули остаются скрыты. Независимое ревью ожидается.
+Validation: 105 API/CSP tests PASS (core lines/functions100), production build PASS. Backend source pinned11ed312. Pagination review of current source found no MEDIUM+; LOW: reset remembered cursor on identical refresh and add React adapter lifecycle tests. Browser scroll verification was not completed.

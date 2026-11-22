@@ -7328,13 +7328,13 @@ function validate158(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.unread_conversations === void 0 && (missing0 = "unread_conversations") || data.incoming_friend_requests === void 0 && (missing0 = "incoming_friend_requests")) {
+      if (data.unread_conversations === void 0 && (missing0 = "unread_conversations") || data.incoming_friend_requests === void 0 && (missing0 = "incoming_friend_requests") || data.outgoing_friend_requests === void 0 && (missing0 = "outgoing_friend_requests")) {
         validate158.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "unread_conversations" || key0 === "incoming_friend_requests")) {
+          if (!(key0 === "unread_conversations" || key0 === "incoming_friend_requests" || key0 === "outgoing_friend_requests")) {
             validate158.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -7389,6 +7389,32 @@ function validate158(data, { instancePath = "", parentData, parentDataProperty, 
               var valid0 = _errs4 === errors;
             } else {
               var valid0 = true;
+            }
+            if (valid0) {
+              if (data.outgoing_friend_requests !== void 0) {
+                let data2 = data.outgoing_friend_requests;
+                const _errs6 = errors;
+                if (!(typeof data2 == "number" && (!(data2 % 1) && !isNaN(data2)))) {
+                  validate158.errors = [{ instancePath: instancePath + "/outgoing_friend_requests", schemaPath: "#/properties/outgoing_friend_requests/type", keyword: "type", params: { type: "integer" }, message: "must be integer" }];
+                  return false;
+                }
+                if (errors === _errs6) {
+                  if (typeof data2 == "number") {
+                    if (data2 > 9007199254740991 || isNaN(data2)) {
+                      validate158.errors = [{ instancePath: instancePath + "/outgoing_friend_requests", schemaPath: "#/properties/outgoing_friend_requests/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                      return false;
+                    } else {
+                      if (data2 < 0 || isNaN(data2)) {
+                        validate158.errors = [{ instancePath: instancePath + "/outgoing_friend_requests", schemaPath: "#/properties/outgoing_friend_requests/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                        return false;
+                      }
+                    }
+                  }
+                }
+                var valid0 = _errs6 === errors;
+              } else {
+                var valid0 = true;
+              }
             }
           }
         }
@@ -37920,13 +37946,13 @@ function validate575(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.unread_conversations === void 0 && (missing0 = "unread_conversations") || data.incoming_friend_requests === void 0 && (missing0 = "incoming_friend_requests")) {
+      if (data.unread_conversations === void 0 && (missing0 = "unread_conversations") || data.incoming_friend_requests === void 0 && (missing0 = "incoming_friend_requests") || data.outgoing_friend_requests === void 0 && (missing0 = "outgoing_friend_requests")) {
         validate575.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "unread_conversations" || key0 === "incoming_friend_requests")) {
+          if (!(key0 === "unread_conversations" || key0 === "incoming_friend_requests" || key0 === "outgoing_friend_requests")) {
             validate575.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -37981,6 +38007,32 @@ function validate575(data, { instancePath = "", parentData, parentDataProperty, 
               var valid0 = _errs4 === errors;
             } else {
               var valid0 = true;
+            }
+            if (valid0) {
+              if (data.outgoing_friend_requests !== void 0) {
+                let data2 = data.outgoing_friend_requests;
+                const _errs6 = errors;
+                if (!(typeof data2 == "number" && (!(data2 % 1) && !isNaN(data2)))) {
+                  validate575.errors = [{ instancePath: instancePath + "/outgoing_friend_requests", schemaPath: "#/properties/outgoing_friend_requests/type", keyword: "type", params: { type: "integer" }, message: "must be integer" }];
+                  return false;
+                }
+                if (errors === _errs6) {
+                  if (typeof data2 == "number") {
+                    if (data2 > 9007199254740991 || isNaN(data2)) {
+                      validate575.errors = [{ instancePath: instancePath + "/outgoing_friend_requests", schemaPath: "#/properties/outgoing_friend_requests/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                      return false;
+                    } else {
+                      if (data2 < 0 || isNaN(data2)) {
+                        validate575.errors = [{ instancePath: instancePath + "/outgoing_friend_requests", schemaPath: "#/properties/outgoing_friend_requests/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                        return false;
+                      }
+                    }
+                  }
+                }
+                var valid0 = _errs6 === errors;
+              } else {
+                var valid0 = true;
+              }
             }
           }
         }
