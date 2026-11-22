@@ -172,3 +172,4 @@ Finalzero policy: hide0 onlysidebarMessages/Friends/Watchlist; Requeststab keeps
 Спорные вопросы: показывать ли 0 у «Отправленные»? Выбрано показывать, как у «Заявки»; в левом меню нули остаются скрыты. Независимое ревью ожидается.
 Validation: 105 API/CSP tests PASS (core lines/functions100), production build PASS. Backend source pinned11ed312. Pagination review of current source found no MEDIUM+; LOW: reset remembered cursor on identical refresh and add React adapter lifecycle tests. Browser scroll verification was not completed.
 Independent source review PASS for sent counter: no MEDIUM+. See docs/reviews/pagination-sent-counter.md.
+Outgoing cancellation: removed success notice per request; item removal, empty list and error handling retained. Source checked; no API change.
