@@ -41,8 +41,8 @@ test('reject invalid ratings, state and unsafe settings',()=>{
 });
 function worker(){
  let listener,db={},fail=false,currentUrl='https://www.youtube.com/watch?v=aqz-KE-bpKQ';
- const chrome={runtime:{id:'test-extension',getURL:page=>'chrome-extension://test-extension/'+page,onMessage:{addListener(fn){listener=fn}}},storage:{local:{async setAccessLevel(){},async get(key){return structuredClone({[key]:db[key]})},async set(value){await new Promise(r=>setTimeout(r,2));if(fail){fail=false;throw Error('Storage full')}db={...db,...structuredClone(value)}}}},tabs:{async get(){return {url:currentUrl}},async query(){return[]},async sendMessage(){}}};
- const context={chrome,URL,structuredClone,console,importScripts(){vm.runInContext(code,context)}};vm.createContext(context);vm.runInContext(readFileSync(new URL('../background.js',import.meta.url),'utf8'),context);
+ const chrome={runtime:{id:'test-extension',getURL:page=>'chrome-extension://test-extension/'+page,onMessage:{addListener(fn){listener=fn}},async sendMessage(){}},storage:{local:{async setAccessLevel(){},async get(key){return structuredClone({[key]:db[key]})},async set(value){await new Promise(r=>setTimeout(r,2));if(fail){fail=false;throw Error('Storage full')}db={...db,...structuredClone(value)}}}},tabs:{async get(){return {url:currentUrl}},async query(){return[]},async sendMessage(){}}};
+ const context={chrome,URL,structuredClone,console,importScripts(...files){for(const file of files)vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);}};vm.createContext(context);vm.runInContext(readFileSync(new URL('../background.js',import.meta.url),'utf8'),context);
  const send=(command,sender={id:'test-extension',url:'chrome-extension://test-extension/popup.html'})=>new Promise(resolve=>listener(command,sender,resolve));
  return{send,failNext(){fail=true},navigate(url){currentUrl=url},seed(state){db={'yp-library-v1':structuredClone(state)}}};
 }
@@ -65,6 +65,44 @@ test('manifest declares all runtime files and restricts content scripts to YouTu
  assert.equal(manifest.manifest_version,3);assert.deepEqual(manifest.permissions,['storage','activeTab']);assert.equal(manifest.content_scripts.length,1);assert.deepEqual(manifest.content_scripts[0].matches,['https://www.youtube.com/*']);
  const files=[manifest.background.service_worker,manifest.action.default_popup,manifest.options_page,...manifest.content_scripts[0].js,...manifest.content_scripts[0].css];for(const file of files)assert.ok(readFileSync(new URL('../'+file,import.meta.url)).length>0,file);
  assert.equal(manifest.externally_connectable,undefined);
+});
+
+test('firefox manifest uses an event page, no storage permission and the firefox worker files',()=>{
+ const manifest=JSON.parse(readFileSync(new URL('../manifest.firefox.json',import.meta.url),'utf8'));
+ assert.equal(manifest.manifest_version,3);
+ assert.deepEqual(manifest.permissions,['activeTab'],'storage must not be granted to page/content contexts in Firefox');
+ assert.equal(manifest.background.service_worker,undefined);
+ assert.deepEqual(manifest.background.scripts,['core.js','storage-firefox.js','background-common.js','background.firefox.js']);
+ assert.equal(manifest.browser_specific_settings.gecko.id,'youpoisk-dev@local.invalid');
+ assert.equal(manifest.content_scripts.length,1);assert.deepEqual(manifest.content_scripts[0].matches,['https://www.youtube.com/*']);
+ const files=[...manifest.background.scripts,manifest.action.default_popup,manifest.options_page,...manifest.content_scripts[0].js,...manifest.content_scripts[0].css];for(const file of files)assert.ok(readFileSync(new URL('../'+file,import.meta.url)).length>0,file);
+ assert.equal(manifest.externally_connectable,undefined);
+});
+
+test('firefox IndexedDB store round-trips and replaces the whole library atomically',async()=>{
+ const {IDBFactory}=await import('fake-indexeddb');
+ const context={indexedDB:new IDBFactory(),structuredClone};vm.createContext(context);vm.runInContext(readFileSync(new URL('../storage-firefox.js',import.meta.url),'utf8'),context);
+ const storage=context.YPStorageFirefox,read=async()=>JSON.stringify(await storage.read()),same=value=>JSON.stringify(value);
+ assert.equal(await storage.read(),null);
+ await storage.write(core.empty());assert.equal(await read(),same(core.empty()));
+ const next=core.apply(core.empty(),update({rating:8,later:true}));
+ await storage.write(next);assert.equal(await read(),same(next));
+ await storage.write(core.empty());assert.equal(await read(),same(core.empty()));
+});
+
+test('firefox background event page serves the same commands through the injected browser API',async()=>{
+ const {IDBFactory}=await import('fake-indexeddb');
+ let listener,currentUrl='https://www.youtube.com/watch?v='+video.id;
+ const browser={runtime:{id:'test-extension',getURL:page=>'moz-extension://test-extension/'+page,onMessage:{addListener(fn){listener=fn}},async sendMessage(){}},tabs:{async get(){return{url:currentUrl}},async query(){return[]},async sendMessage(){}}};
+ const context={browser,indexedDB:new IDBFactory(),URL,structuredClone,console};
+ vm.createContext(context);
+ for(const file of ['core.js','storage-firefox.js','background-common.js','background.firefox.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);
+ const send=(command,sender={id:'test-extension',url:'moz-extension://test-extension/popup.html'})=>new Promise(resolve=>listener(command,sender,resolve));
+ const page={id:'test-extension',tab:{id:1},frameId:0,url:'https://www.youtube.com/watch?v='+video.id};
+ assert.equal((await send({type:'YP_UPDATE_CURRENT_VIDEO',video,patch:{rating:9}},page)).ok,true);
+ const snapshot=await send({type:'YP_GET_ACCOUNT_LIBRARY'});assert.equal(snapshot.ok,true);assert.equal(snapshot.data.videos[video.id].rating,9);
+ const current=await send({type:'YP_GET_CURRENT_VIDEO_STATE',videoId:video.id},page);assert.equal(current.ok,true);assert.deepEqual(Object.keys(current.data.videos),[video.id]);
+ assert.equal((await send({type:'YP_GET_ACCOUNT_LIBRARY'},{...page,frameId:1})).ok,false);
 });
 
 test('marks: watched keeps watch-later, not interested clears it, later clears not interested',()=>{

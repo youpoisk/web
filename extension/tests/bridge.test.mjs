@@ -11,5 +11,5 @@ test('content bridge sends current-video commands and subscribes to signal-only 
  let count=0;const stop=b.api.subscribe(()=>count++);assert.equal(b.events.storage,undefined);b.events.runtime({type:'YP_CHANGED'});assert.equal(count,1);stop();assert.equal(b.events.runtime,undefined);
 });
 test('trusted UI bridge gets library and keeps options updates on explicit command',async()=>{
- const b=bridge('chrome-extension://test/options.html');await b.api.request('GET');assert.equal(b.sent[0].type,'YP_GET_ACCOUNT_LIBRARY');await b.api.request('OPTIONS',{options:{enabled:false,site:'https://example.com/'}});assert.equal(b.sent[1].type,'YP_OPTIONS');let n=0;const stop=b.api.subscribe(()=>n++);b.events.storage({'yp-library-v1':{}},'local');assert.equal(n,1);stop();
+ const b=bridge('chrome-extension://test/options.html');await b.api.request('GET');assert.equal(b.sent[0].type,'YP_GET_ACCOUNT_LIBRARY');await b.api.request('OPTIONS',{options:{enabled:false,site:'https://example.com/'}});assert.equal(b.sent[1].type,'YP_OPTIONS');let n=0;const stop=b.api.subscribe(()=>n++);assert.equal(b.events.storage,undefined);b.events.runtime({type:'YP_CHANGED'});assert.equal(n,1);stop();
 });
