@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { MessageCircle, RefreshCw } from 'lucide-react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { ReportButton } from './Moderation.tsx';
 import { MAX_MESSAGE_LENGTH, loadConversations, loadMessages, markConversationRead, mergeMessages, messageError, messageGap, sendMessage, NOTIFICATIONS_CHANGED, type Conversation, type Message } from '../shared/library/lists.ts';
@@ -28,11 +29,20 @@ export function ConversationsList({ client }: { client: Pick<ApiClient, 'request
     generation.current++; reading.current = false; const ctl = new AbortController(); void load(null, ctl.signal);
     return () => { generation.current++; ctl.abort(); };
   }, [client]);
-  return <section className="panel" aria-busy={loading}>
-    <div className="actions"><button className="secondary" disabled={loading} onClick={() => void load(null)}>Обновить</button></div>
-    {loading && !items.length && <p role="status">Загружаем переписки…</p>}
-    {error && <p role="alert">Не удалось загрузить переписки. <button className="text-button" onClick={() => void load(failedAfter)}>Повторить</button></p>}
-    {!loading && !error && !items.length && <p className="notice">Переписок пока нет. Написать другу можно из его профиля.</p>}
+  const empty = !loading && !error && !items.length;
+  return <section className="panel conversations-panel" aria-busy={loading}>
+    <div className="list-head">
+      <h2>Диалоги{items.length > 0 && <span className="list-count">{items.length}{next ? '+' : ''}</span>}</h2>
+      <button className="secondary refresh-button" disabled={loading} onClick={() => void load(null)}><RefreshCw size={15} aria-hidden="true" className={loading ? 'spin' : undefined}/>Обновить</button>
+    </div>
+    {loading && !items.length && <p className="muted list-status" role="status">Загружаем переписки…</p>}
+    {error && <p className="list-status" role="alert">Не удалось загрузить переписки. <button className="text-button" onClick={() => void load(failedAfter)}>Повторить</button></p>}
+    {empty && <div className="empty conversations-empty">
+      <span className="empty-icon" aria-hidden="true"><MessageCircle size={28}/></span>
+      <h2>Переписок пока нет</h2>
+      <p>Писать можно только друзьям. Откройте профиль друга и нажмите «Написать сообщение», чтобы начать диалог.</p>
+      <a className="primary" href="#/friends">Перейти к друзьям</a>
+    </div>}
     {items.map(it => <a className={`conversation-line${it.unread_count ? ' unread' : ''}`} key={it.id} href={`#/messages/${it.user.id}`}>
       <span className="avatar small-avatar" aria-hidden="true">{initial(it.user.name || it.user.login)}</span>
       <span className="conversation-text"><strong>{it.user.name || it.user.login}</strong><span className="small muted"><bdi dir="auto">{preview(it.last_message)}</bdi></span></span>
