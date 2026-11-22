@@ -130,3 +130,5 @@ YP-083.2 site follow-up: contract import with review_id; review reports from the
 
 YP-084 site (DEC-WEB-030): contract import (64 operations); «Удалить аккаунт…» opens backend /auth/delete; BrowserSession deleteAccountURL and shared nonce-bound account-flow capture (password/delete keys separate); runtime deleteAccount + boot notices; scrubCallback strips account. test:api with session/runtime lines/functions100; frontend gate PASS.
 
+User request 2026-11-22: profile actions in one panel — counters on top, then «Подписаться»/«Отписаться» and «Написать сообщение» on the left, «Пожаловаться» and «Заблокировать» (danger style) on the right; report form and block confirmation open full-width inside the same panel. FollowControls/BlockControl/ReportButton gained an inline mode; other pages unchanged. Frontend gate PASS.
+

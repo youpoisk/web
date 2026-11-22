@@ -53,7 +53,7 @@ export function SubscriptionsList({ client, direction }: { client: Pick<ApiClien
 }
 
 /** Viewer-to-author subscription is independent of the profile friendship. */
-export function FollowControls({ client, userId, canFollow, onChanged }: { client: Pick<ApiClient, 'request'>; userId: string; canFollow: boolean; onChanged: () => void }) {
+export function FollowControls({ client, userId, canFollow, onChanged, inline = false }: { client: Pick<ApiClient, 'request'>; userId: string; canFollow: boolean; onChanged: () => void; inline?: boolean }) {
   const [relation, setRelation] = useState<Relationship | null>(null), [loading, setLoading] = useState(true), [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(''), [error, setError] = useState(false);
   const generation = useRef(0), serial = useRef(0), busy = useRef(false);
@@ -76,6 +76,12 @@ export function FollowControls({ client, userId, canFollow, onChanged }: { clien
       if (stamp === generation.current) setMessage(failure instanceof ApiError && failure.status === 429 ? 'Слишком много изменений подписок. Подождите минуту.' : 'Не удалось подтвердить изменение подписки. Повторите попытку или обновите данные.');
     } finally { if (stamp === generation.current) { busy.current = false; setSaving(false); } }
   }
+  if (inline) return <>
+    <p className="profile-meta muted" role="status" aria-busy={loading || saving}>{loading ? 'Загружаем подписки…' : relation ? (relation.followers_count === null ? 'Счётчики подписок скрыты настройками приватности.' : `Подписчики: ${relation.followers_count} · Подписки: ${relation.following_count}`) + (relation.followed_by ? ' · подписан на вас' : '') : ''}</p>
+    {error && <p className="profile-meta" role="alert">Не удалось загрузить подписки. <button className="text-button" disabled={loading || saving} onClick={() => void load()}>Повторить</button></p>}
+    {relation && canFollow && <button className={relation.following ? 'secondary' : 'primary'} aria-pressed={relation.following} disabled={loading || saving || error} onClick={() => void change()}>{relation.following ? 'Отписаться' : 'Подписаться'}</button>}
+    {message && <p className="profile-meta" role="status">{message}</p>}
+  </>;
   return <div className="panel" aria-busy={loading || saving}>
     {loading && <p role="status">Загружаем подписки…</p>}
     {error && <p role="alert">Не удалось загрузить подписки. <button disabled={loading || saving} onClick={() => void load()}>Повторить</button></p>}

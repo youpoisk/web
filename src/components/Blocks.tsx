@@ -62,7 +62,7 @@ export function BlocksPanel({ client }: { client: Client }) {
 }
 
 /** Explicit inline confirmation, with no optimistic success on an uncertain write. */
-export function BlockControl({ client, userId, onBlocked }: { client: Client; userId: string; onBlocked: () => void }) {
+export function BlockControl({ client, userId, onBlocked, inline = false }: { client: Client; userId: string; onBlocked: () => void; inline?: boolean }) {
   const [confirming, setConfirming] = useState(false), [saving, setSaving] = useState(false), [message, setMessage] = useState('');
   const generation = useRef(0), busy = useRef(false);
   useEffect(() => { generation.current++; return () => { generation.current++; }; }, [client, userId]);
@@ -75,6 +75,13 @@ export function BlockControl({ client, userId, onBlocked }: { client: Client; us
     } catch (failure) { if (stamp === generation.current) setMessage(failureMessage(failure)); }
     finally { if (stamp === generation.current) { busy.current = false; setSaving(false); } }
   }
+  if (inline) return <>
+    {!confirming ? <button className="secondary danger-button" onClick={() => setConfirming(true)}>Заблокировать</button> : <div className="profile-confirm" role="group" aria-label="Подтверждение блокировки" aria-busy={saving}>
+      <p>Заблокировать пользователя? Вы перестанете видеть профили и рекомендации друг друга. Дружба, обе подписки и заявки будут удалены. После разблокировки они автоматически не восстановятся.</p>
+      <div className="actions"><button className="primary" disabled={saving} onClick={() => void block()}>{saving ? 'Блокируем…' : 'Подтвердить блокировку'}</button><button className="secondary" disabled={saving} onClick={() => { setConfirming(false); setMessage(''); }}>Отмена</button></div>
+    </div>}
+    {message && <p className="profile-meta" role="status">{message} <a href="#/settings">Управление блокировками в настройках</a></p>}
+  </>;
   return <div className="panel" aria-busy={saving}>
     {!confirming ? <button className="secondary" onClick={() => setConfirming(true)}>Заблокировать пользователя</button> : <>
       <p>Заблокировать пользователя? Вы перестанете видеть профили и рекомендации друг друга. Дружба, обе подписки и заявки будут удалены. После разблокировки они автоматически не восстановятся.</p>

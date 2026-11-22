@@ -5,7 +5,7 @@ import { REPORT_REASONS, createReport, loadAudit, loadStaffRole, loadReports, mo
 const when = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 /** Inline report form. The server decides whether the target is reportable. */
-export function ReportButton({ client, kind, targetId, label = 'Пожаловаться' }: { client: Pick<ApiClient, 'request'>; kind: ReportKind; targetId: string; label?: string }) {
+export function ReportButton({ client, kind, targetId, label = 'Пожаловаться', inline = false }: { client: Pick<ApiClient, 'request'>; kind: ReportKind; targetId: string; label?: string; inline?: boolean }) {
   const [open, setOpen] = useState(false), [reason, setReason] = useState<ReportReason>('spam'), [details, setDetails] = useState('');
   const [sending, setSending] = useState(false), [notice, setNotice] = useState(''), [done, setDone] = useState(false);
   const mounted = useRef(true);
@@ -21,8 +21,8 @@ export function ReportButton({ client, kind, targetId, label = 'Пожалова
     } catch (failure) { if (mounted.current) setNotice(reportError(failure)); }
     finally { if (mounted.current) setSending(false); }
   }
-  return <span className="report-control">
-    {!open && !done && <button type="button" className="text-button" onClick={() => setOpen(true)}>{label}</button>}
+  return <span className={inline ? 'report-control report-inline' : 'report-control'}>
+    {!open && !done && <button type="button" className={inline ? 'secondary' : 'text-button'} onClick={() => setOpen(true)}>{label}</button>}
     {open && <form className="report-form" aria-label="Жалоба" onSubmit={e => { e.preventDefault(); void submit(); }}>
       <label>Причина<select value={reason} onChange={e => setReason(e.target.value as ReportReason)}>{REPORT_REASONS.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>
       <label>Комментарий (необязательно)<textarea value={details} maxLength={500} rows={2} onChange={e => setDetails(e.target.value)}/></label>

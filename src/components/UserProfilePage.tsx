@@ -56,10 +56,11 @@ export function UserProfilePage({ client, userId }: { client: Pick<ApiClient, 'r
       <h1>{profile ? name : 'Профиль'}</h1>
       {profile && <p className="muted">@{profile.user.login}{profile.relation === 'friend' ? ' · у вас в друзьях' : profile.relation === 'self' ? ' · это вы' : ''}</p>}
     </div></div>
-    {profile && <FollowControls client={client} userId={userId} canFollow={profile.relation!=='self'} onChanged={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setRevision(v=>v+1)}}/>}
-    {profile && profile.relation === 'friend' && <p><a className="secondary" href={`#/messages/${userId}`}>Написать сообщение</a></p>}
-    {profile && profile.relation !== 'self' && <div><ReportButton client={client} kind="user" targetId={userId} label="Пожаловаться на пользователя"/></div>}
-    {profile && profile.relation !== 'self' && <BlockControl client={client} userId={userId} onBlocked={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setError('');location.hash='#/settings'}}/>}
+    {profile && <div className="panel profile-actions" role="group" aria-label="Действия с профилем">
+      <FollowControls inline client={client} userId={userId} canFollow={profile.relation!=='self'} onChanged={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setRevision(v=>v+1)}}/>
+      {profile.relation === 'friend' && <a className="secondary" href={`#/messages/${userId}`}>Написать сообщение</a>}
+      {profile.relation !== 'self' && <span className="profile-actions-end"><ReportButton inline client={client} kind="user" targetId={userId} label="Пожаловаться"/><BlockControl inline client={client} userId={userId} onBlocked={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setError('');location.hash='#/settings'}}/></span>}
+    </div>}
     {profile && (!profile.ratings_visible || !profile.reviews_visible) && <p className="notice">
       {!profile.ratings_visible && !profile.reviews_visible ? 'Пользователь скрыл оценки и рецензии от вас.' : !profile.ratings_visible ? 'Пользователь скрыл от вас свои оценки; видны только рецензии.' : 'Пользователь скрыл от вас свои рецензии; видны только оценки.'}
     </p>}
