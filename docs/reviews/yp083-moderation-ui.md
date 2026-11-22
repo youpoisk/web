@@ -75,3 +75,37 @@ Fix: keep `busy` in state as well, or track the report id being resolved. Disabl
 - Two `getStaffRole` requests go out on `#/moderation` (one from the link, one from the route). This is acceptable; it could be lifted into one hook if desired.
 - Every incoming message in the chat gets its own «Пожаловаться» text button. This is visually busy but works; consider a per-message menu later.
 - Reporting reviews is deferred until public models expose review ids, as stated in DEC-WEB-029.
+
+## Follow-up: commit 3c3acd9 ("fix(moderation): busy state on decisions; report reviews from the feed")
+
+### Gate: PASS
+
+MEDIUM-1 is fixed. No MEDIUM or higher finding remains or was introduced. The remaining items are LOW.
+
+### Verification
+- `test:api` run directly with node 22.23.5: 99/99 pass. `lists.ts` coverage: 100% lines, 99.59% branches, 100% functions.
+- `contracts/openapi.json` is byte-identical to backend `api/openapi.json` (backend 311f5dc). `source.json` is updated. `review_id` (`string|null`, uuid, required) was added to `FeedItem` and `Recommendation` only. No new operations, so the validators count stays at 63.
+- `tsc` was still not run (no TypeScript in `node_modules` on this machine).
+
+### Status of earlier findings
+- **MEDIUM-1: fixed.** `Moderation.tsx:47,70,81,104-105`: `saving` is now state. While a decision is in flight, «Подтвердить» shows «Выполняем…» and both confirm buttons are disabled, so «Отмена» can no longer look like a cancel. A status line inside the confirmation box (`role="status"`, rendered empty first and then filled) reads «Решение отправляется…». A second confirm can no longer be a silent no-op, because its button is disabled.
+- **LOW-1: fixed.** `:80`: a 409 removes the report and closes the confirmation. «Обновить» was added (`:86`, disabled while loading or saving).
+- **LOW-2: partly fixed.** «Обновить» is disabled while a decision is saving, but the opposite race remains (see residual R2). With the 409 fix the effect is benign: the reappeared item disappears on the next click.
+- **LOW-3: fixed.** `:117-134`: `useStaffRole` tells a failed check from a null role. `ModerationRoute` shows «Не удалось проверить доступ.» with «Повторить», and the retry resets `loading`. The sidebar link stays hidden on failure, which is acceptable.
+- **LOW-4: open, recorded** in DEC-WEB-029 (tabpanel and arrow keys).
+- **LOW-5: mostly fixed.** The status element is always rendered (`:31`), and «Отмена» clears the notice (`:29`). Focus management is still open and recorded.
+- **LOW-6: fixed.** `UserProfilePage.tsx:61` now uses `<div>`.
+- **LOW-7: mostly fixed.** A repeat report reports its real status (`:20`). The Retry-After text is open and recorded. The 403-on-suspend wording is unchanged and not recorded (trivial).
+- **LOW-8: open, not recorded in todo.md.** «Жалоб нет» shown next to «Показать ещё»; stale status on other reports about a suspended user; a late resolve after a view switch is dropped with no notice.
+- **LOW-9: open, recorded** (component tests).
+- **LOW-10: fixed.** `person()` wraps logins in `<bdi>` (`:40`), and the review title is in `<bdi>` (`:95`).
+
+### New code: review reports
+- `FeedList.tsx` `FeedAuthor` shows «Пожаловаться на рецензию» when `review_id` is present. It is shared by the grouped and single modes, keyed by `user.id` within a card, and it is not nested in `<p>`. Per the contract, the feed contains only friends and followed authors, never your own items, so the own-content 422 cannot be reached.
+- `UserProfilePage.tsx:77` shows the button only when `profile.relation !== 'self'`. This also covers the owner-only view of hidden reviews. `review_id` is null whenever no review text is shown, and the button is gated on it.
+- The server still decides whether a target can be reported (404/422 are mapped).
+
+### Residual LOW findings
+- **R1:** `Moderation.tsx:97-101,74`. While a decision is saving, the decision buttons on *other* reports stay enabled. Opening another report's confirmation hides the in-flight indicator of the first one. When the first request succeeds, `setConfirm(null)` closes the confirmation the moderator just opened. Nothing is applied without confirmation (the new «Подтвердить» is disabled while saving), but the feedback can be confusing. Suggestion: disable all decision buttons while `saving`, and clear `confirm` only if it still targets `target.report.id`.
+- **R2:** `:86,88,58` and `:97-104`. Decisions stay enabled while «Обновить»/«Повторить» reloads the first page. A response that left the server before the resolve can bring the resolved report back. The next click removes it with a 409 message, so the impact is cosmetic.
+- **R3:** LOW-8 items are not listed among the open LOWs in DEC-WEB-029. Consider recording them.

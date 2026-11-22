@@ -71,7 +71,7 @@ export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'requ
     try {
       await resolveReport(client, target.report.id, target.action);
       if (stamp !== generation.current) return;
-      setItems(prev => prev.filter(x => x.id !== target.report.id)); setConfirm(null);
+      setItems(prev => prev.filter(x => x.id !== target.report.id)); setConfirm(c => c?.report.id === target.report.id ? null : c);
       setNotice(`Готово: ${ACTION_LABEL[target.action].toLowerCase()}.`);
     } catch (failure) {
       if (stamp !== generation.current) return;
@@ -95,9 +95,9 @@ export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'requ
       {r.review && <blockquote><p className="small muted">Рецензия к видео «<bdi>{r.review.title ?? r.review.youtube_video_id}</bdi>»{r.review.moderation_status === 'hidden' ? ' · скрыта' : ''}</p>{r.review.text && <p><bdi dir="auto">{r.review.text}</bdi></p>}</blockquote>}
       {r.message && <blockquote><p className="small muted">Сообщение от {when(r.message.created_at)}</p>{r.message.body && <p><bdi dir="auto">{r.message.body}</bdi></p>}{r.message.has_video && <p className="small muted">С приложенным видео</p>}</blockquote>}
       {r.status === 'open' && <div className="actions">
-        <button className="secondary" onClick={() => setConfirm({ report: r, action: 'dismiss' })}>Отклонить</button>
-        {r.target_kind === 'review' && <button className="secondary" onClick={() => setConfirm({ report: r, action: 'hide' })}>Скрыть рецензию</button>}
-        <button className="secondary" onClick={() => setConfirm({ report: r, action: 'suspend' })}>Заблокировать аккаунт</button>
+        <button className="secondary" disabled={saving} onClick={() => setConfirm({ report: r, action: 'dismiss' })}>Отклонить</button>
+        {r.target_kind === 'review' && <button className="secondary" disabled={saving} onClick={() => setConfirm({ report: r, action: 'hide' })}>Скрыть рецензию</button>}
+        <button className="secondary" disabled={saving} onClick={() => setConfirm({ report: r, action: 'suspend' })}>Заблокировать аккаунт</button>
       </div>}
       {confirm?.report.id === r.id && <div className="notice" role="group" aria-label="Подтверждение решения">
         <p>{confirm.action === 'suspend' ? <>Заблокировать {person(r.target_user)}? Все его сессии будут завершены, вернуть доступ может только оператор.</> : confirm.action === 'hide' ? 'Скрыть эту рецензию от всех?' : 'Отклонить жалобу без мер?'}</p>
