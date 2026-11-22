@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
 import { groupFeedByVideo, loadFeed, type FeedItem } from '../shared/library/lists.ts';
+import { ReportButton } from './Moderation.tsx';
 
-function FeedAuthor({ item: it }: { item: FeedItem }) {
+function FeedAuthor({ item: it, client }: { item: FeedItem; client: Pick<ApiClient, 'request'> }) {
   return <div className="feed-contribution">
     <div className="person-line">
       <span className="avatar small-avatar" aria-hidden="true">{[...(it.user.name || it.user.login)][0]}</span>
@@ -10,6 +11,7 @@ function FeedAuthor({ item: it }: { item: FeedItem }) {
       {it.rating !== null && <b className="friend-score">{it.rating}/10</b>}
     </div>
     {it.review !== null && <p className="own-review-text" dir="auto">{it.review}</p>}
+    {it.review_id && <ReportButton client={client} kind="review" targetId={it.review_id} label="Пожаловаться на рецензию"/>}
   </div>;
 }
 
@@ -52,7 +54,7 @@ export function FeedList({ client }: { client: Pick<ApiClient, 'request'> }) {
         <a className="card-title" href={`#/video/${group.video.youtube_video_id}`}>{group.video.title ?? 'Название пока неизвестно'}</a>
         {group.video.channel && <p className="small muted">{group.video.channel.name ?? 'Канал без названия'}</p>}
         {grouped && <p className="small muted">Показано авторов: {group.items.length}</p>}
-        {group.items.map(it => <FeedAuthor key={it.user.id} item={it}/>)}
+        {group.items.map(it => <FeedAuthor key={it.user.id} item={it} client={client}/>)}
       </div>
     </article>)}
     {next && <div className="actions"><button className="secondary" disabled={loading} onClick={() => read(next)}>Показать ещё</button></div>}

@@ -1342,6 +1342,11 @@ export interface components {
             changed_at: string;
             rating: number | null;
             review: string | null;
+            /**
+             * Format: uuid
+             * @description Id of the visible review (to report it); null when no review text is shown.
+             */
+            review_id: string | null;
             user: components["schemas"]["FriendUser"];
             video: components["schemas"]["VideoCard"];
         };
@@ -1597,6 +1602,11 @@ export interface components {
             changed_at: string;
             rating: number | null;
             review: string | null;
+            /**
+             * Format: uuid
+             * @description Id of the visible review (to report it); null when no review text is shown.
+             */
+            review_id: string | null;
             video: components["schemas"]["VideoCard"];
         };
         RecommendationPage: {

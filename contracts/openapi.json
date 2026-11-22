@@ -8153,13 +8153,22 @@
           "changed_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "review_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Id of the visible review (to report it); null when no review text is shown."
           }
         },
         "required": [
           "video",
           "rating",
           "review",
-          "changed_at"
+          "changed_at",
+          "review_id"
         ],
         "additionalProperties": false
       },
@@ -8379,6 +8388,14 @@
           "changed_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "review_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Id of the visible review (to report it); null when no review text is shown."
           }
         },
         "required": [
@@ -8386,7 +8403,8 @@
           "video",
           "rating",
           "review",
-          "changed_at"
+          "changed_at",
+          "review_id"
         ],
         "additionalProperties": false
       },

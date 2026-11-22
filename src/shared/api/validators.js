@@ -4731,7 +4731,7 @@ function validate119(data, { instancePath = "", parentData, parentDataProperty, 
 }
 validate119.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_FeedItem = validate120;
-var schema57 = { "type": "object", "properties": { "user": { "$ref": "#/components/schemas/FriendUser" }, "video": { "$ref": "#/components/schemas/VideoCard" }, "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 }, "review": { "type": ["string", "null"], "minLength": 1, "maxLength": 4e3 }, "changed_at": { "type": "string", "format": "date-time" } }, "required": ["user", "video", "rating", "review", "changed_at"], "additionalProperties": false };
+var schema57 = { "type": "object", "properties": { "user": { "$ref": "#/components/schemas/FriendUser" }, "video": { "$ref": "#/components/schemas/VideoCard" }, "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 }, "review": { "type": ["string", "null"], "minLength": 1, "maxLength": 4e3 }, "changed_at": { "type": "string", "format": "date-time" }, "review_id": { "type": ["string", "null"], "format": "uuid", "description": "Id of the visible review (to report it); null when no review text is shown." } }, "required": ["user", "video", "rating", "review", "changed_at", "review_id"], "additionalProperties": false };
 var schema58 = { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "youtube_video_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{11}$", "minLength": 11, "maxLength": 11 }, "title": { "type": ["string", "null"], "minLength": 1, "maxLength": 250 }, "duration_seconds": { "type": ["integer", "null"], "minimum": 0, "maximum": 2147483647 }, "availability": { "type": "string", "enum": ["unknown", "available", "unavailable"] }, "url": { "type": "string", "format": "uri", "pattern": "^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$" }, "preview_url": { "type": "string", "format": "uri", "pattern": "^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$" }, "hashtags": { "type": "array", "maxItems": 100, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 100, "pattern": "^[^#]" } }, "hashtags_observation_status": { "type": "string", "enum": ["unknown", "partial", "complete"] }, "channel": { "anyOf": [{ "$ref": "#/components/schemas/CardChannel" }, { "type": "null" }] }, "rating": { "$ref": "#/components/schemas/Rating" }, "my_state": { "$ref": "#/components/schemas/VideoState", "description": "Omitted for guest; only current live viewer, never another author. Absent carrier means real revision0." } }, "required": ["id", "youtube_video_id", "title", "duration_seconds", "availability", "url", "preview_url", "hashtags", "hashtags_observation_status", "channel", "rating"], "additionalProperties": false };
 var pattern20 = new RegExp("^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$", "u");
 var pattern21 = new RegExp("^https://i\\.ytimg\\.com/vi/[A-Za-z0-9_-]{11}/hqdefault\\.jpg$", "u");
@@ -5329,13 +5329,13 @@ function validate120(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.user === void 0 && (missing0 = "user") || data.video === void 0 && (missing0 = "video") || data.rating === void 0 && (missing0 = "rating") || data.review === void 0 && (missing0 = "review") || data.changed_at === void 0 && (missing0 = "changed_at")) {
+      if (data.user === void 0 && (missing0 = "user") || data.video === void 0 && (missing0 = "video") || data.rating === void 0 && (missing0 = "rating") || data.review === void 0 && (missing0 = "review") || data.changed_at === void 0 && (missing0 = "changed_at") || data.review_id === void 0 && (missing0 = "review_id")) {
         validate120.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "user" || key0 === "video" || key0 === "rating" || key0 === "review" || key0 === "changed_at")) {
+          if (!(key0 === "user" || key0 === "video" || key0 === "rating" || key0 === "review" || key0 === "changed_at" || key0 === "review_id")) {
             validate120.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -5433,6 +5433,29 @@ function validate120(data, { instancePath = "", parentData, parentDataProperty, 
                     var valid0 = _errs8 === errors;
                   } else {
                     var valid0 = true;
+                  }
+                  if (valid0) {
+                    if (data.review_id !== void 0) {
+                      let data5 = data.review_id;
+                      const _errs10 = errors;
+                      if (typeof data5 !== "string" && data5 !== null) {
+                        validate120.errors = [{ instancePath: instancePath + "/review_id", schemaPath: "#/properties/review_id/type", keyword: "type", params: { type: schema57.properties.review_id.type }, message: "must be string,null" }];
+                        return false;
+                      }
+                      if (errors === _errs10) {
+                        if (errors === _errs10) {
+                          if (typeof data5 === "string") {
+                            if (!formats0.test(data5)) {
+                              validate120.errors = [{ instancePath: instancePath + "/review_id", schemaPath: "#/properties/review_id/format", keyword: "format", params: { format: "uuid" }, message: 'must match format "uuid"' }];
+                              return false;
+                            }
+                          }
+                        }
+                      }
+                      var valid0 = _errs10 === errors;
+                    } else {
+                      var valid0 = true;
+                    }
                   }
                 }
               }
@@ -9243,7 +9266,7 @@ function validate180(data, { instancePath = "", parentData, parentDataProperty, 
 }
 validate180.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_Recommendation = validate181;
-var schema95 = { "type": "object", "properties": { "video": { "$ref": "#/components/schemas/VideoCard" }, "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 }, "review": { "type": ["string", "null"], "minLength": 1, "maxLength": 4e3 }, "changed_at": { "type": "string", "format": "date-time" } }, "required": ["video", "rating", "review", "changed_at"], "additionalProperties": false };
+var schema95 = { "type": "object", "properties": { "video": { "$ref": "#/components/schemas/VideoCard" }, "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 }, "review": { "type": ["string", "null"], "minLength": 1, "maxLength": 4e3 }, "changed_at": { "type": "string", "format": "date-time" }, "review_id": { "type": ["string", "null"], "format": "uuid", "description": "Id of the visible review (to report it); null when no review text is shown." } }, "required": ["video", "rating", "review", "changed_at", "review_id"], "additionalProperties": false };
 function validate181(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -9257,13 +9280,13 @@ function validate181(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.video === void 0 && (missing0 = "video") || data.rating === void 0 && (missing0 = "rating") || data.review === void 0 && (missing0 = "review") || data.changed_at === void 0 && (missing0 = "changed_at")) {
+      if (data.video === void 0 && (missing0 = "video") || data.rating === void 0 && (missing0 = "rating") || data.review === void 0 && (missing0 = "review") || data.changed_at === void 0 && (missing0 = "changed_at") || data.review_id === void 0 && (missing0 = "review_id")) {
         validate181.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "video" || key0 === "rating" || key0 === "review" || key0 === "changed_at")) {
+          if (!(key0 === "video" || key0 === "rating" || key0 === "review" || key0 === "changed_at" || key0 === "review_id")) {
             validate181.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -9350,6 +9373,29 @@ function validate181(data, { instancePath = "", parentData, parentDataProperty, 
                   var valid0 = _errs7 === errors;
                 } else {
                   var valid0 = true;
+                }
+                if (valid0) {
+                  if (data.review_id !== void 0) {
+                    let data4 = data.review_id;
+                    const _errs9 = errors;
+                    if (typeof data4 !== "string" && data4 !== null) {
+                      validate181.errors = [{ instancePath: instancePath + "/review_id", schemaPath: "#/properties/review_id/type", keyword: "type", params: { type: schema95.properties.review_id.type }, message: "must be string,null" }];
+                      return false;
+                    }
+                    if (errors === _errs9) {
+                      if (errors === _errs9) {
+                        if (typeof data4 === "string") {
+                          if (!formats0.test(data4)) {
+                            validate181.errors = [{ instancePath: instancePath + "/review_id", schemaPath: "#/properties/review_id/format", keyword: "format", params: { format: "uuid" }, message: 'must match format "uuid"' }];
+                            return false;
+                          }
+                        }
+                      }
+                    }
+                    var valid0 = _errs9 === errors;
+                  } else {
+                    var valid0 = true;
+                  }
                 }
               }
             }

@@ -1,7 +1,7 @@
 {
   "repository": "youpoisk-backend",
-  "commit": "270e5cde537a58847ad42af57d898fb560fd05a5",
+  "commit": "311f5dc22a7d2199e084e769c408e5a791355f1b",
   "path": "api/openapi.json",
-  "sha256": "5c33c7b9c88437c6b58cc8148609cf944da5098eb7b73145e8d890892d926878",
+  "sha256": "59587a6e453defa4cf7feaf5e912b56beefdee352ec4f35b97a9179f6f1f3590",
   "generator": "openapi-typescript@7.13.0"
 }

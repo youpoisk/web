@@ -126,3 +126,5 @@ YP-062 site (DEC-WEB-028): contract import (58 operations), Notifications.tsx No
 
 YP-083.2 site (DEC-WEB-029): contract import (63 operations); Moderation.tsx ReportButton/ModerationPage/ModerationRoute/ModerationLink; reports from profiles and chat messages; #/moderation for staff (role from server), audit tab for admins. lists.ts report/moderation helpers lines/functions100. Frontend gate PASS. Review reporting UI pending review ids in read models.
 
+YP-083.2 site follow-up: contract import with review_id; review reports from the feed and profile recommendations; moderation UI review FAIL (M1 no in-progress state on confirm) fixed with busy state, refresh, role-check retry and several LOWs. Frontend gate PASS.
+
