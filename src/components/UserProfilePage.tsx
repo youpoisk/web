@@ -81,7 +81,7 @@ export function UserProfilePage({ client, userId, embedded=false, filter='all' }
       <div>
         <a className="card-title" href={`#/video/${it.video.youtube_video_id}`}>{it.video.title ?? 'Название пока неизвестно'}</a>
         {it.video.channel && <p className="small muted">{it.video.channel.name ?? 'Канал без названия'}</p>}
-        <p className="small">{it.rating !== null && <b className="friend-score">Оценка {name ? `${name}: ` : ''}{it.rating}/10</b>}{it.rating !== null && ' · '}<span className="muted">{new Date(it.changed_at).toLocaleDateString('ru-RU')}</span></p>
+        <p className="small">{it.rating !== null && <b className="friend-score">Оценка {name ? `${name}: ` : ''}<span className="rating-value">{it.rating}</span>/10</b>}{it.rating !== null && ' · '}<span className="muted">{new Date(it.changed_at).toLocaleDateString('ru-RU')}</span></p>
         {it.review !== null && <p className="own-review-text">{it.review}</p>}
         {it.review_id && profile?.relation !== 'self' && <ReportButton client={client} kind="review" targetId={it.review_id} label="Пожаловаться на рецензию"/>}
       </div>

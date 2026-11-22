@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { routeList, loadList, toCard, searchCatalog, toPublicCard } from '../src/shared/library/lists.ts';
+import { routeList, loadList, toCard, searchCatalog, toPublicCard, readFeedView, saveFeedView, FEED_VIEW_KEY } from '../src/shared/library/lists.ts';
 
 const item = (over = {}) => ({
   id: '00000000-0000-4000-8000-0000000000a1', youtube_video_id: 'AbCdEf_12-3', title: 'Видео', duration_seconds: 3725,
@@ -511,3 +511,22 @@ test('own display name and exact navigation count requests use only own endpoint
 });
 
 test('profile tabs select actual ratings and reviews, preserve order and shared entries',async()=>{const{profileRecommendations}=await import('../src/shared/library/lists.ts');const rated={rating:8,review:null},reviewed={rating:null,review:'Text'},both={rating:9,review:'Both'};const items=[rated,reviewed,both];assert.deepEqual(profileRecommendations(items,'all'),items);assert.deepEqual(profileRecommendations(items,'ratings'),[rated,both]);assert.deepEqual(profileRecommendations(items,'reviews'),[reviewed,both]);assert.deepEqual(profileRecommendations([],'reviews'),[]);});
+
+test('feed view preference is stored locally and defaults to authors', () => {
+  const data = new Map();
+  const storage = { getItem: k => data.get(k) ?? null, setItem: (k, v) => data.set(k, v) };
+  assert.equal(readFeedView(storage), false);
+  saveFeedView(storage, true);
+  assert.equal(data.get(FEED_VIEW_KEY), 'videos');
+  assert.equal(readFeedView(storage), true);
+  saveFeedView(storage, false);
+  assert.equal(data.get(FEED_VIEW_KEY), 'authors');
+  assert.equal(readFeedView(storage), false);
+  data.set(FEED_VIEW_KEY, 'unexpected');
+  assert.equal(readFeedView(storage), false);
+  const broken = { getItem() { throw new Error('denied'); }, setItem() { throw new Error('quota'); } };
+  assert.equal(readFeedView(broken), false);
+  assert.doesNotThrow(() => saveFeedView(broken, true));
+  assert.equal(readFeedView(undefined), false);
+  assert.doesNotThrow(() => saveFeedView(undefined, true));
+});

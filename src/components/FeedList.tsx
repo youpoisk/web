@@ -1,7 +1,7 @@
 import{LoadMore}from'./LoadMore.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
-import { groupFeedByVideo, loadFeed, type FeedItem } from '../shared/library/lists.ts';
+import { groupFeedByVideo, loadFeed, readFeedView, saveFeedView, type FeedItem } from '../shared/library/lists.ts';
 import { ReportButton } from './Moderation.tsx';
 
 function FeedAuthor({ item: it, client }: { item: FeedItem; client: Pick<ApiClient, 'request'> }) {
@@ -9,18 +9,21 @@ function FeedAuthor({ item: it, client }: { item: FeedItem; client: Pick<ApiClie
     <div className="person-line">
       <span className="avatar small-avatar" aria-hidden="true">{[...(it.user.name || it.user.login)][0]}</span>
       <div><a href={`#/user/${it.user.id}`}><strong><bdi>{it.user.name || it.user.login}</bdi></strong></a><p className="muted small">{it.review !== null && it.rating !== null ? 'оценил и написал рецензию' : it.review !== null ? 'написал рецензию' : 'оценил видео'} · {new Date(it.changed_at).toLocaleDateString('ru-RU')}</p></div>
-      {it.rating !== null && <b className="friend-score">{it.rating}/10</b>}
+      {it.rating !== null && <b className="friend-score"><span className="rating-value">{it.rating}</span>/10</b>}
     </div>
     {it.review !== null && <p className="own-review-text" dir="auto">{it.review}</p>}
     {it.review_id && <ReportButton client={client} kind="review" targetId={it.review_id} label="Пожаловаться на рецензию"/>}
   </div>;
 }
 
+const browserStorage = () => { try { return globalThis.localStorage; } catch { return undefined; } };
+
 /** Grouping is presentation only: consumes the same permission-filtered cursor stream. */
 export function FeedList({ client }: { client: Pick<ApiClient, 'request'> }) {
   const [items, setItems] = useState<FeedItem[]>([]), [next, setNext] = useState<string | null>(null);
   const [loading, setLoading] = useState(true), [error, setError] = useState(false);
-  const [failedAfter, setFailedAfter] = useState<string | null>(null), [grouped, setGrouped] = useState(false);
+  const [failedAfter, setFailedAfter] = useState<string | null>(null), [grouped, setGroupedState] = useState(() => readFeedView(browserStorage()));
+  const setGrouped = (value: boolean) => { setGroupedState(value); saveFeedView(browserStorage(), value); };
   const generation = useRef(0), serial = useRef(0), reading = useRef(false);
   async function load(after: string | null, signal?: AbortSignal) {
     const stamp = generation.current, read = ++serial.current; reading.current = true; setLoading(true); setError(false);

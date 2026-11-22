@@ -45,7 +45,7 @@ export function FriendRatingsPanel({ client, videoId }: { client: Pick<ApiClient
     {items.map(it => <div className="person-line" key={it.user.id}>
       <span className="avatar small-avatar" aria-hidden="true">{[...(it.user.name || it.user.login)][0]}</span>
       <div><a href={`#/user/${it.user.id}`}><strong>{it.user.name || it.user.login}</strong></a><p className="small muted">@{it.user.login} · {new Date(it.rated_at).toLocaleDateString('ru-RU')}</p></div>
-      <b className="friend-score">{it.rating}/10</b>
+      <b className="friend-score"><span className="rating-value">{it.rating}</span>/10</b>
     </div>)}
     {next && <button className="text-button" disabled={loading} onClick={() => void loadMore()}>Показать ещё</button>}
   </div>;

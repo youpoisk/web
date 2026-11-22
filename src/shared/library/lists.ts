@@ -492,3 +492,12 @@ export async function loadNavigationCounts(client:Pick<ApiClient,'request'>,sign
 
 /** Filter real recommendation records without inventing local ratings/reviews. */
 export function profileRecommendations(items:Recommendation[],filter:'all'|'ratings'|'reviews'):Recommendation[]{return items.filter(item=>filter==='all'||(filter==='ratings'?item.rating!==null:item.review!==null));}
+
+/** Feed view (#/feed «По авторам» / «По видео»): a browser-local UI preference, not personal data, so it survives sign-out. Missing, unknown or unreadable means «По авторам». */
+export const FEED_VIEW_KEY = 'youpoisk.feed-view';
+export function readFeedView(storage: Pick<Storage, 'getItem'> | undefined): boolean {
+  try { return storage?.getItem(FEED_VIEW_KEY) === 'videos'; } catch { return false; }
+}
+export function saveFeedView(storage: Pick<Storage, 'setItem'> | undefined, grouped: boolean): void {
+  try { storage?.setItem(FEED_VIEW_KEY, grouped ? 'videos' : 'authors'); } catch { /* storage unavailable: the in-memory choice still applies */ }
+}
