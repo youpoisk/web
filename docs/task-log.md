@@ -152,3 +152,5 @@ Subscriptions All validation: build/typecheck PASS;101CSPtests PASS. Actual CUA 
 Sessions active-only UI: server already excludes revoked/expired rows. QA DB count verified4active vs38excluded historical. UI labels active, removes misleading created-at history line, hides expired DTOs via15s local UX clock, refetches on visible focus/return. Live older logins remain manageable; no automatic revoke, no server auth change. Tests/build/review pending.
 
 Active sessions validation PASS:102CSPtests100corelines/functions, build/typecheckPASS. CUA settings Security showed exactly4active rows (current+3other) vs38excluded DB historical, active labels and revoke actions, no created-at history line, no session writes.
+
+740cca0 independentreviewPASS, noMEDIUM+.102CSP/typecheck independentlyPASS. Report docs/reviews/active-sessions-display.md. User screenshot shows3other active web sessions plus current fourth; Site denotes client_type, not unique device. Existing server lifecycle excludes38historical rows; do not deduplicate/hide or autorevoke legitimate sessionfamilies by identical label.

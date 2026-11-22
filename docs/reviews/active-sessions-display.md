@@ -1,0 +1,13 @@
+# Independent review — frontend 740cca0
+
+Verdict: PASS. No actionable MEDIUM/HIGH findings in the active-session presentation delta.
+
+Backend DeviceStore.List already selects only own sessions with revoked_at IS NULL and both expiry timestamps greater than server clock time; the displayed expiry is their minimum. Frontend activeDevices is explicitly an additional UX expiry guard, not authorization or revocation. It preserves old but still valid logins, rejects expired/equal-boundary/invalid dates and does not mutate received arrays. Removing creation-date display avoids presenting login history as the primary session status. Current-session logout and owned targeted/bulk revocation paths remain unchanged.
+
+The new fifteen-second clock timer and focus/visibility listeners are removed on effect cleanup, and the effect abort controller cancels its owned loads. Refreshes check both immediate reading and saving refs; a focus and visibility event in succession cannot start overlapping reads because load marks reading synchronously. Refresh clears pending confirmation before reloading page one, avoiding stale page cursors and targets. Existing generation/serial guards ignore obsolete results; a bulk revoke's explicit reload can run while saving and is not raced by focus refresh. Pagination is preserved, including when local expiry removes all visible rows from the current page. Reaching expiry between opening confirmation and sending still leaves server validation authoritative.
+
+Independent pnpm typecheck:api PASS and pnpm test:api PASS102/102, gated handwritten core lines/functions100 and devices.ts branches100. Actual browser four-active-session rendering and database counts were author-reported, not independently rerun. Reviewer did not mutate data, revoke sessions or edit/commit repository files.
+
+Minor limits: local clock skew can hide a still-valid row; this is display-only and does not alter server authentication. A server-side revoke in another device while this tab stays focused may remain visible until refresh/focus; this patch does not promise realtime revocation delivery. These do not block this presentation fix.
+
+Additional source verification for the homepage explanation: public search new sorts catalog created_at descending then UUID; top sorts half-up rounded average hundredths, votes, UUID; popular sorts votes, rounded average, UUID. Aggregates include active users' ratings only. Text matches title/current channel name, tags use any/all; current frontend page request limit30. Hero uses static demo videos[0] and the rail sorts the static demo array by demo rating, not a personalized recommendation model or YouTube publication/popularity ranking.
