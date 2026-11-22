@@ -1,11 +1,37 @@
 {
-  "manifest_version":3,
-  "name":"YouPoisk",
-  "version":"0.4.0",
-  "description":"Оценка видео YouTube 1–10, «Посмотрю позже» и рецензии. Данные хранятся локально.",
-  "permissions":["storage","activeTab"],
-  "background":{"service_worker":"background.js"},
-  "action":{"default_popup":"popup.html","default_title":"YouPoisk"},
-  "options_page":"options.html",
-  "content_scripts":[{"matches":["https://www.youtube.com/*"],"js":["core.js","bridge.js","content.js"],"css":["content.css"],"run_at":"document_idle"}]
+  "manifest_version": 3,
+  "name": "YouPoisk",
+  "version": "0.4.0",
+  "description": "Оценка видео YouTube 1–10, «Посмотрю позже» и рецензии. Данные хранятся локально.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "YouPoisk"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "js": [
+        "core.js",
+        "bridge.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*"
+  ]
 }
