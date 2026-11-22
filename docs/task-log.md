@@ -134,3 +134,7 @@ User request 2026-11-22: profile actions in one panel — counters on top, then 
 
 
 User2026-11-22 encrypted-at-rest DM requirement recorded in backend YP-079.1/9049a01 and frontend DEC-WEB-DM-ENCRYPT. Planning only; existing message storage remains plaintext until separately implemented/reviewed. No client keys or E2EE claim.
+
+### Спорные вопросы — DEC-WEB-REVIEW-CONTENT
+- Требование 2026-11-22: рецензия со ссылкой или оскорблением не должна сохраняться. Backend YP-055.1 выполняет обязательную проверку всех write paths и отвечает422 с понятной причиной. Сайт и extension должны показать причину отказа, оставить черновик и не менять показанную сохранённую версию до успеха. Клиентская предварительная проверка не заменяет сервер; словарь/правила версионируются совместно. Video reviews и будущие channel reviews; на DM автоматически не распространять. Не отправлять текст внешнему moderation provider без отдельного решения. Сейчас это открытая задача, готовая фильтрация не заявляется.
+- [ ] WEB/EXT review validation (YP-055.1): запрет сохранения ссылок и оскорблений, отображение server422, сохранение черновика, unit/API/E2E проверки после backend-реализации.
