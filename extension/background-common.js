@@ -9,10 +9,10 @@ globalThis.YPWorker=(()=>{
    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!allowed.includes(k))||required.some(k=>!Object.hasOwn(value,k)))throw Error('Некорректная команда');
   }
   function validate(command){
-   fields(command,['type','videoId','video','patch','options','login','password','after'],['type']);
-   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch'],GET_ACCOUNT_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type']};
+   fields(command,['type','videoId','video','patch','options','login','password','after','scope'],['type']);
+   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type']};
    if(!Object.hasOwn(shapes,command.type))throw Error('Неизвестная команда');
-   fields(command,shapes[command.type],shapes[command.type].filter(k=>k!=='after'));
+   fields(command,shapes[command.type],shapes[command.type].filter(k=>!['after','scope'].includes(k)));
    if(command.after!==undefined&&(typeof command.after!=='string'||command.after.length>512))throw Error('Некорректный курсор');
    if(command.type==='GET_CURRENT_VIDEO_STATE'&&!/^[\w-]{11}$/.test(command.videoId))throw Error('Некорректный ID видео');
    if(command.type==='UPDATE_CURRENT_VIDEO'){
@@ -67,6 +67,7 @@ globalThis.YPWorker=(()=>{
      if(auth?.state==='authenticated'){
       let result;
       if(request.type==='UPDATE_CURRENT_VIDEO'){
+       if(request.scope!==auth.epoch)throw Object.assign(new Error('Stale UI scope'),{kind:'stale'});
        const validated=YPCore.apply(YPCore.empty(),{type:'UPDATE',video:request.video,patch:request.patch});
        const patch={...request.patch};if(Object.hasOwn(patch,'review'))patch.review=validated.videos[request.video.id]?.review??null;
        result=await backend.update(request.video,patch);broadcast().catch(()=>{});

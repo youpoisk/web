@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const yt='p0iTgHMEoi4',trusted={id:'extension',url:'moz-extension://extension/popup.html'},page={id:'extension',url:'https://www.youtube.com/watch?v='+yt,tab:{id:1},frameId:0};
-function worker(){let listener,auth={state:'guest',owner:null,epoch:null,user:null},calls=0,legacy={version:1,options:{enabled:true,site:'https://old.invalid/'},videos:{[yt]:{id:yt,title:'Legacy',rating:3,later:true}}};const context={URL,structuredClone};
+function worker(){let loginRound=0,listener,auth={state:'guest',owner:null,epoch:null,user:null},calls=0,legacy={version:1,options:{enabled:true,site:'https://old.invalid/'},videos:{[yt]:{id:yt,title:'Legacy',rating:3,later:true}}};const context={URL,structuredClone};
  context.api={runtime:{id:'extension',getURL:p=>'moz-extension://extension/'+p,onMessage:{addListener(fn){listener=fn}},async sendMessage(){}},tabs:{async get(){return {url:page.url}},async query(){return[]},async sendMessage(){}}};
  context.storage={async read(){return structuredClone(legacy)},async write(v){legacy=structuredClone(v)}};
- context.session={async status(){return structuredClone(auth)},async login(){calls++;auth={state:'authenticated',owner:'owner',epoch:'epoch-a',user:{id:'owner',login:'qa_owner',name:'QA'}};return auth},async logout(){calls++;auth={state:'guest',owner:null,epoch:null,user:null};return auth}};
+ context.session={async status(){return structuredClone(auth)},async login(){calls++;auth={state:'authenticated',owner:'owner',epoch:loginRound++===0?'epoch-a':'epoch-b',user:{id:'owner',login:'qa_owner',name:'QA'}};return auth},async logout(){calls++;auth={state:'guest',owner:null,epoch:null,user:null};return auth}};
  context.backend={
   async current(id){return {videos:{[id]:{id,title:'Server',rating:8,later:true,review:'Server review'}}};},
   async library(){return {videos:{[yt]:{id:yt,title:'Server',rating:8,later:true}},next:'next-page'};},
@@ -22,6 +22,10 @@ test('auth is trusted-only and guest mutations do not write new local ratings',a
 test('signed-in reads and writes use server data, with no legacy account mixing or content identity',async()=>{
  const w=worker();assert.equal((await w.send({type:'YP_AUTH_LOGIN',login:'name',password:'secret'})).ok,true);const list=(await w.send({type:'YP_GET_ACCOUNT_LIBRARY'})).data;assert.equal(list.videos[yt].rating,8);assert.equal(list.auth.user.login,'qa_owner');assert.equal(list.options.site,'http://127.0.0.1:5173/');assert.equal(list.next,'next-page');
  const current=(await w.send({type:'YP_GET_CURRENT_VIDEO_STATE',videoId:yt},page)).data;assert.equal(current.videos[yt].review,'Server review');assert.equal(current.auth.scope,'epoch-a');assert.equal(current.auth.owner,undefined);assert.equal(current.auth.user,undefined);
- const changed=await w.send({type:'YP_UPDATE_CURRENT_VIDEO',video:{id:yt,title:'Video'},patch:{rating:null,later:false}},page);assert.equal(changed.ok,true);assert.equal(changed.data.videos[yt].rating,null);assert.equal(changed.data.videos[yt].later,false);assert.equal(w.legacy().videos[yt].rating,3);assert.equal(JSON.stringify(changed).includes('secret'),false);
+ const changed=await w.send({type:'YP_UPDATE_CURRENT_VIDEO',video:{id:yt,title:'Video'},patch:{rating:null,later:false},scope:'epoch-a'},page);assert.equal(changed.ok,true);assert.equal(changed.data.videos[yt].rating,null);assert.equal(changed.data.videos[yt].later,false);assert.equal(w.legacy().videos[yt].rating,3);assert.equal(JSON.stringify(changed).includes('secret'),false);
  await w.send({type:'YP_AUTH_LOGOUT'});assert.equal((await w.send({type:'YP_AUTH_STATUS'})).data.state,'guest');
+});
+
+test('an UPDATE from the previously displayed account scope is rejected before backend access',async()=>{
+ const w=worker();await w.send({type:'YP_AUTH_LOGIN',login:'A',password:'secret'});await w.send({type:'YP_AUTH_LOGOUT'});await w.send({type:'YP_AUTH_LOGIN',login:'B',password:'secret'});const count=w.calls();const response=await w.send({type:'YP_UPDATE_CURRENT_VIDEO',video:{id:yt,title:'Video'},patch:{review:'Old A draft'},scope:'epoch-a'},page);assert.equal(response.ok,false);assert.equal(w.calls(),count);assert.equal((await w.send({type:'YP_UPDATE_CURRENT_VIDEO',video:{id:yt,title:'Video'},patch:{rating:7}},page)).ok,false);assert.equal(w.calls(),count);
 });
