@@ -132,3 +132,5 @@ YP-084 site (DEC-WEB-030): contract import (64 operations); «Удалить а�
 
 User request 2026-11-22: profile actions in one panel — counters on top, then «Подписаться»/«Отписаться» and «Написать сообщение» on the left, «Пожаловаться» and «Заблокировать» (danger style) on the right; report form and block confirmation open full-width inside the same panel. FollowControls/BlockControl/ReportButton gained an inline mode; other pages unchanged. Frontend gate PASS.
 
+
+User2026-11-22 encrypted-at-rest DM requirement recorded in backend YP-079.1/9049a01 and frontend DEC-WEB-DM-ENCRYPT. Planning only; existing message storage remains plaintext until separately implemented/reviewed. No client keys or E2EE claim.
