@@ -3,3 +3,4 @@
 header .brand{display:flex;gap:7px;align-items:center}header .rhino{width:51px;height:34px}header .logo-text{width:106px;height:auto}
 
 textarea.review{display:block;width:100%;margin:12px 0 0;padding:10px 12px;border:1px solid #ccd6dd;border-radius:7px;background:white;color:#14171a;font:13px/1.5 Arial,sans-serif;resize:vertical;min-height:96px}textarea.review:focus{outline:2px solid #b8e2fc}#review-delete{margin-top:10px}
+#account{margin:14px 0 18px;padding:14px;border:1px solid #e2eaf0;border-radius:12px;background:#f8fbfd}#login-form{display:grid;gap:10px}#login-form label{display:grid;gap:5px;font-size:12px;font-weight:500}#login-form input{box-sizing:border-box;width:100%;padding:10px 12px;border:1px solid #ccd8e2;border-radius:8px;font:inherit;background:#fff;color:#17212a}#login-form input:focus{outline:2px solid #8bd0fb;border-color:#1da1f2}#account #mode{margin-bottom:0}#account-name{font-size:13px;font-weight:600;margin:0 0 6px}
