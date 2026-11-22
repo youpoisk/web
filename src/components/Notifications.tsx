@@ -10,19 +10,25 @@ const changed = () => window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
 /** Header badge: polls while the tab is visible and refreshes on changes. */
 export function NotificationBadge({ client }: { client: Pick<ApiClient, 'request'> }) {
   const [count, setCount] = useState(0);
-  const generation = useRef(0), busy = useRef(false);
+  const generation = useRef(0), busy = useRef(false), again = useRef(false);
   useEffect(() => {
     const stamp = ++generation.current, ctl = new AbortController();
+    // A change during a request queues one more read, so the newest count wins.
     const load = () => {
-      if (busy.current || document.visibilityState !== 'visible') return;
-      busy.current = true;
-      loadUnreadNotifications(client, ctl.signal).then(n => { if (stamp === generation.current) setCount(n); }).catch(() => {}).finally(() => { busy.current = false; });
+      if (document.visibilityState !== 'visible') return;
+      if (busy.current) { again.current = true; return; }
+      busy.current = true; again.current = false;
+      loadUnreadNotifications(client, ctl.signal).then(n => { if (stamp === generation.current) setCount(n); }).catch(() => {}).finally(() => {
+        if (stamp !== generation.current) return;
+        busy.current = false;
+        if (again.current) load();
+      });
     };
     load();
     const timer = setInterval(load, BADGE_POLL_MS);
     window.addEventListener(NOTIFICATIONS_CHANGED, load);
     document.addEventListener('visibilitychange', load);
-    return () => { generation.current++; ctl.abort(); busy.current = false; clearInterval(timer); window.removeEventListener(NOTIFICATIONS_CHANGED, load); document.removeEventListener('visibilitychange', load); };
+    return () => { generation.current++; ctl.abort(); busy.current = false; again.current = false; clearInterval(timer); window.removeEventListener(NOTIFICATIONS_CHANGED, load); document.removeEventListener('visibilitychange', load); };
   }, [client]);
   return count > 0 ? <><i className="notification-dot" aria-hidden="true"/><span className="sr-only">, непрочитанных: {count}</span></> : null;
 }
@@ -51,7 +57,7 @@ export function NotificationsList({ client, open }: { client: Pick<ApiClient, 'r
     const target = notificationTarget(n);
     if (!n.read) {
       setItems(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
-      markNotificationRead(client, n.id).then(changed).catch(() => {});
+      markNotificationRead(client, n.id).catch(() => {}).finally(changed);
     }
     open(target.route, target.tab);
   }
