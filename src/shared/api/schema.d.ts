@@ -2665,19 +2665,6 @@ export interface operations {
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
-            403: {
-                headers: {
-                    /** @description Seconds before retry on rate/busy responses. */
-                    "Retry-After"?: string;
-                    /** @description Server-generated diagnostic ID; not an auth token. */
-                    "X-Request-ID"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
             default: {
                 headers: {
                     /** @description Seconds before retry on rate/busy responses. */

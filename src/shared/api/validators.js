@@ -37156,7 +37156,7 @@ function validate566(data, { instancePath = "", parentData, parentDataProperty, 
   return errors === 0;
 }
 validate566.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
-var deleteAccount_response_403 = validate567;
+var deleteAccount_response_default = validate567;
 function validate567(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -37271,7 +37271,7 @@ function validate567(data, { instancePath = "", parentData, parentDataProperty, 
   return errors === 0;
 }
 validate567.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
-var deleteAccount_response_default = validate568;
+var deleteAccount_request = validate568;
 function validate568(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -37285,93 +37285,36 @@ function validate568(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.code === void 0 && (missing0 = "code") || data.message === void 0 && (missing0 = "message") || data.field_errors === void 0 && (missing0 = "field_errors") || data.request_id === void 0 && (missing0 = "request_id")) {
+      if (data.current_password === void 0 && (missing0 = "current_password")) {
         validate568.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "code" || key0 === "message" || key0 === "field_errors" || key0 === "request_id")) {
+          if (!(key0 === "current_password")) {
             validate568.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
           }
         }
         if (_errs1 === errors) {
-          if (data.code !== void 0) {
-            let data0 = data.code;
+          if (data.current_password !== void 0) {
+            let data0 = data.current_password;
             const _errs2 = errors;
             if (errors === _errs2) {
               if (typeof data0 === "string") {
-                if (func1(data0) < 1) {
-                  validate568.errors = [{ instancePath: instancePath + "/code", schemaPath: "#/properties/code/minLength", keyword: "minLength", params: { limit: 1 }, message: "must NOT have fewer than 1 characters" }];
+                if (func1(data0) > 128) {
+                  validate568.errors = [{ instancePath: instancePath + "/current_password", schemaPath: "#/properties/current_password/maxLength", keyword: "maxLength", params: { limit: 128 }, message: "must NOT have more than 128 characters" }];
                   return false;
-                }
-              } else {
-                validate568.errors = [{ instancePath: instancePath + "/code", schemaPath: "#/properties/code/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                return false;
-              }
-            }
-            var valid0 = _errs2 === errors;
-          } else {
-            var valid0 = true;
-          }
-          if (valid0) {
-            if (data.message !== void 0) {
-              const _errs4 = errors;
-              if (typeof data.message !== "string") {
-                validate568.errors = [{ instancePath: instancePath + "/message", schemaPath: "#/properties/message/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                return false;
-              }
-              var valid0 = _errs4 === errors;
-            } else {
-              var valid0 = true;
-            }
-            if (valid0) {
-              if (data.field_errors !== void 0) {
-                let data2 = data.field_errors;
-                const _errs6 = errors;
-                if (errors === _errs6) {
-                  if (data2 && typeof data2 == "object" && !Array.isArray(data2)) {
-                    for (const key1 in data2) {
-                      const _errs9 = errors;
-                      if (typeof data2[key1] !== "string") {
-                        validate568.errors = [{ instancePath: instancePath + "/field_errors/" + key1.replace(/~/g, "~0").replace(/\//g, "~1"), schemaPath: "#/properties/field_errors/additionalProperties/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                        return false;
-                      }
-                      var valid1 = _errs9 === errors;
-                      if (!valid1) {
-                        break;
-                      }
-                    }
-                  } else {
-                    validate568.errors = [{ instancePath: instancePath + "/field_errors", schemaPath: "#/properties/field_errors/type", keyword: "type", params: { type: "object" }, message: "must be object" }];
+                } else {
+                  if (func1(data0) < 8) {
+                    validate568.errors = [{ instancePath: instancePath + "/current_password", schemaPath: "#/properties/current_password/minLength", keyword: "minLength", params: { limit: 8 }, message: "must NOT have fewer than 8 characters" }];
                     return false;
                   }
                 }
-                var valid0 = _errs6 === errors;
               } else {
-                var valid0 = true;
-              }
-              if (valid0) {
-                if (data.request_id !== void 0) {
-                  let data4 = data.request_id;
-                  const _errs11 = errors;
-                  if (errors === _errs11) {
-                    if (typeof data4 === "string") {
-                      if (func1(data4) < 1) {
-                        validate568.errors = [{ instancePath: instancePath + "/request_id", schemaPath: "#/properties/request_id/minLength", keyword: "minLength", params: { limit: 1 }, message: "must NOT have fewer than 1 characters" }];
-                        return false;
-                      }
-                    } else {
-                      validate568.errors = [{ instancePath: instancePath + "/request_id", schemaPath: "#/properties/request_id/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                      return false;
-                    }
-                  }
-                  var valid0 = _errs11 === errors;
-                } else {
-                  var valid0 = true;
-                }
+                validate568.errors = [{ instancePath: instancePath + "/current_password", schemaPath: "#/properties/current_password/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+                return false;
               }
             }
           }
@@ -37386,64 +37329,6 @@ function validate568(data, { instancePath = "", parentData, parentDataProperty, 
   return errors === 0;
 }
 validate568.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
-var deleteAccount_request = validate569;
-function validate569(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
-  let vErrors = null;
-  let errors = 0;
-  const evaluated0 = validate569.evaluated;
-  if (evaluated0.dynamicProps) {
-    evaluated0.props = void 0;
-  }
-  if (evaluated0.dynamicItems) {
-    evaluated0.items = void 0;
-  }
-  if (errors === 0) {
-    if (data && typeof data == "object" && !Array.isArray(data)) {
-      let missing0;
-      if (data.current_password === void 0 && (missing0 = "current_password")) {
-        validate569.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
-        return false;
-      } else {
-        const _errs1 = errors;
-        for (const key0 in data) {
-          if (!(key0 === "current_password")) {
-            validate569.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
-            return false;
-            break;
-          }
-        }
-        if (_errs1 === errors) {
-          if (data.current_password !== void 0) {
-            let data0 = data.current_password;
-            const _errs2 = errors;
-            if (errors === _errs2) {
-              if (typeof data0 === "string") {
-                if (func1(data0) > 128) {
-                  validate569.errors = [{ instancePath: instancePath + "/current_password", schemaPath: "#/properties/current_password/maxLength", keyword: "maxLength", params: { limit: 128 }, message: "must NOT have more than 128 characters" }];
-                  return false;
-                } else {
-                  if (func1(data0) < 8) {
-                    validate569.errors = [{ instancePath: instancePath + "/current_password", schemaPath: "#/properties/current_password/minLength", keyword: "minLength", params: { limit: 8 }, message: "must NOT have fewer than 8 characters" }];
-                    return false;
-                  }
-                }
-              } else {
-                validate569.errors = [{ instancePath: instancePath + "/current_password", schemaPath: "#/properties/current_password/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
-                return false;
-              }
-            }
-          }
-        }
-      }
-    } else {
-      validate569.errors = [{ instancePath, schemaPath: "#/type", keyword: "type", params: { type: "object" }, message: "must be object" }];
-      return false;
-    }
-  }
-  validate569.errors = vErrors;
-  return errors === 0;
-}
-validate569.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 export {
   acceptFriendRequest_parameter_0,
   acceptFriendRequest_response_200,
@@ -37471,7 +37356,6 @@ export {
   createReport_response_default,
   deleteAccount_request,
   deleteAccount_response_202,
-  deleteAccount_response_403,
   deleteAccount_response_default,
   deleteFriendRequest_parameter_0,
   deleteFriendRequest_response_403,
@@ -39130,7 +39014,6 @@ export const contract = {
     "request": "deleteAccount_request",
     "responses": {
       "202": "deleteAccount_response_202",
-      "403": "deleteAccount_response_403",
       "default": "deleteAccount_response_default"
     },
     "auth": "required",

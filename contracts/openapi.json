@@ -6548,32 +6548,6 @@
         ],
         "parameters": [],
         "responses": {
-          "403": {
-            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
-            "headers": {
-              "X-Request-ID": {
-                "description": "Server-generated diagnostic ID; not an auth token.",
-                "schema": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              },
-              "Retry-After": {
-                "description": "Seconds before retry on rate/busy responses.",
-                "schema": {
-                  "type": "string",
-                  "pattern": "^[0-9]+$"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
           "default": {
             "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
             "headers": {

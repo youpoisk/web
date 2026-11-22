@@ -25,7 +25,6 @@ export declare const createReport_response_403: (value: unknown) => boolean;
 export declare const createReport_response_default: (value: unknown) => boolean;
 export declare const deleteAccount_request: (value: unknown) => boolean;
 export declare const deleteAccount_response_202: (value: unknown) => boolean;
-export declare const deleteAccount_response_403: (value: unknown) => boolean;
 export declare const deleteAccount_response_default: (value: unknown) => boolean;
 export declare const deleteFriendRequest_parameter_0: (value: unknown) => boolean;
 export declare const deleteFriendRequest_response_403: (value: unknown) => boolean;
