@@ -22,10 +22,12 @@ const host=createSession({origin:'http://127.0.0.1:18080',store:{async load(){re
 const hostState=await host.login('qa_block_probe','qa_block_probe');
 const request=(op,options={})=>host.authorize((token,scope)=>new ApiClient({baseUrl:'http://127.0.0.1:18080',session:()=>({state:'authenticated',owner:scope.owner,epoch:scope.epoch,accessToken:token})}).request(op,options));
 const repair=createProbeRepair({request,logout:()=>host.logout(),owner:hostState.owner,recoverySession:hostRecord.session});
-try{await repair.prepare();}catch(error){await host.logout();throw error;}
+let runner,timer,server;
+try {
+ await repair.prepare();
 const controlled=process.argv.includes('--abort-after-write');
 let complete;const result=new Promise(resolve=>{complete=resolve});
-const server=createServer(async(req,res)=>{
+server=createServer(async(req,res)=>{
  if(req.method!=='POST'||![('/origin/'+nonce),('/result/'+nonce),('/session/'+nonce),('/written/'+nonce)].includes(req.url)){res.writeHead(404).end();return;}
  let raw='';for await(const data of req){raw+=data;if(raw.length>4096){res.writeHead(413).end();return;}}
  try{const value=JSON.parse(raw);if(req.url==='/session/'+nonce){repair.register(value);res.writeHead(200,{'Content-Type':'application/json'}).end('{}');return;}if(req.url==='/written/'+nonce){res.writeHead(200,{'Content-Type':'application/json'}).end('{}');complete({ok:false,stage:'controlled-abort'});return;}if(req.url==='/origin/'+nonce){if(!/^moz-extension:\/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value.origin))throw Error('Invalid test origin');configured=true;await configure(primary+','+value.origin);res.writeHead(200,{'Content-Type':'application/json'}).end('{}');return;}if(typeof value.ok!=='boolean')throw Error('Invalid probe');res.writeHead(200,{'Content-Type':'application/json'}).end('{}');complete(value);}catch{res.writeHead(400).end();}
@@ -38,8 +40,6 @@ const probe='('+browserProbe.toString()+')('+JSON.stringify(report)+','+JSON.str
 new Script(probe,{filename:'browser-smoke.js'});
 await writeFile(resolve(sourceDir,'browser-smoke.js'),probe);
 const manifest=JSON.parse(await readFile(resolve(sourceDir,'manifest.json'),'utf8'));manifest.background.scripts.push('browser-smoke.js');await writeFile(resolve(sourceDir,'manifest.json'),JSON.stringify(manifest,null,2));
-let runner,timer;
-try{
  await mkdir(resolve(root,'.artifacts/firefox-smoke'),{recursive:true});
  runner=await cmd.run({sourceDir,artifactsDir:resolve(root,'.artifacts/firefox-smoke'),firefox:'C:/Program Files/Mozilla Firefox/firefox.exe',target:['firefox-desktop'],args:['-headless'],noReload:true,noInput:true,startUrl:['about:blank']});
  const outcome=await Promise.race([result,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Firefox smoke timed out')),45000);})]);
@@ -54,7 +54,7 @@ try{
   try { if(configured)await configure(primary); }
   finally {
    try { await repair.repair();console.log('PASS host restored QA fixture and revoked both test sessions'); }
-   finally { server.closeAllConnections();await new Promise(resolve=>server.close(resolve)); }
+   finally { if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));} }
   }
  }
 }
