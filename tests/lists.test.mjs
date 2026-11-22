@@ -433,3 +433,35 @@ test('direct message helpers call the right operations and merge by seq', async 
   assert.match(m.messageError(new Error('x')), /дубль не появится/);
 });
 
+test('notification helpers call the right operations and describe items', async () => {
+  const m = await import('../src/shared/library/lists.ts');
+  const calls = [];
+  const client = { async request(op, options) { calls.push([op, options.path, options.query, options.body]);
+    if (op === 'listNotifications') return calls.length === 1 ? { items: [{ id: 'n1' }], next_cursor: 'c1' } : { items: [] };
+    if (op === 'countUnreadNotifications') return { unread_count: 4 };
+    if (op === 'markAllNotificationsRead') return { unread_count: 1 };
+    return null; } };
+  assert.deepEqual(await m.loadNotifications(client, null), { items: [{ id: 'n1' }], next: 'c1' });
+  assert.deepEqual(await m.loadNotifications(client, 'c1'), { items: [], next: null });
+  assert.equal(await m.loadUnreadNotifications(client), 4);
+  assert.equal(await m.markNotificationRead(client, 'n1'), undefined);
+  assert.equal(await m.markAllNotificationsRead(client, '2026-11-22T10:00:00Z'), 1);
+  assert.deepEqual(calls.map(c => [c[0], c[1], c[2], c[3]]), [
+    ['listNotifications', undefined, { limit: 30 }, undefined],
+    ['listNotifications', undefined, { limit: 30, after: 'c1' }, undefined],
+    ['countUnreadNotifications', undefined, undefined, undefined],
+    ['markNotificationRead', { id: 'n1' }, undefined, undefined],
+    ['markAllNotificationsRead', undefined, undefined, { through: '2026-11-22T10:00:00Z' }]]);
+  const actor = { id: 'u1', login: 'anna', name: null };
+  const item = (over) => ({ id: 'n', kind: 'message', actor, count: 1, read: false, request_status: null, occurred_at: 'x', ...over });
+  assert.match(m.notificationText(item({ kind: 'friend_request', request_status: 'pending' })), /anna хочет добавить/);
+  assert.match(m.notificationText(item({ kind: 'friend_request', request_status: 'resolved' })), /неактуальна/);
+  assert.match(m.notificationText(item({ kind: 'friend_accepted', actor: { ...actor, name: 'Анна' } })), /Анна принял/);
+  assert.equal(m.notificationText(item({})), 'Сообщение от anna');
+  assert.match(m.notificationText(item({ count: 3 })), /новых сообщений — 3/);
+  assert.deepEqual(m.notificationTarget(item({ kind: 'friend_request', request_status: 'pending' })), { route: '/friends', tab: 'Заявки' });
+  assert.deepEqual(m.notificationTarget(item({ kind: 'friend_request', request_status: 'resolved' })), { route: '/user/u1' });
+  assert.deepEqual(m.notificationTarget(item({ kind: 'friend_accepted' })), { route: '/user/u1' });
+  assert.deepEqual(m.notificationTarget(item({})), { route: '/messages/u1' });
+});
+

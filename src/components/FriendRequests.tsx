@@ -1,7 +1,7 @@
 import {PeopleListSearch,peopleSearchPlaceholder} from './PeopleListSearch.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
-import { filterPeopleList, acceptFriendRequest, deleteFriendRequest, friendLimitMessage, loadFriendRequests, searchPeople, sendFriendRequest, type FriendRequest, type Person } from '../shared/library/lists.ts';
+import { NOTIFICATIONS_CHANGED, filterPeopleList, acceptFriendRequest, deleteFriendRequest, friendLimitMessage, loadFriendRequests, searchPeople, sendFriendRequest, type FriendRequest, type Person } from '../shared/library/lists.ts';
 
 const initial = (name: string) => [...name][0];
 
@@ -45,6 +45,7 @@ export function FriendRequestsList({ client, direction }: { client: Pick<ApiClie
     try {
       if (accept) await acceptFriendRequest(client, item.id); else await deleteFriendRequest(client, item.id);
       setItems(prev => prev.filter(x => x.id !== item.id));
+      if (accept) window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
       setMessage(accept ? `Теперь вы друзья с ${item.user.name || item.user.login}.` : direction === 'incoming' ? 'Заявка отклонена.' : 'Заявка отменена.');
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) { setItems(prev => prev.filter(x => x.id !== item.id)); setMessage('Этой заявки уже нет.'); }

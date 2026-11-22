@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
-import { MAX_MESSAGE_LENGTH, loadConversations, loadMessages, markConversationRead, mergeMessages, messageError, messageGap, sendMessage, type Conversation, type Message } from '../shared/library/lists.ts';
+import { MAX_MESSAGE_LENGTH, loadConversations, loadMessages, markConversationRead, mergeMessages, messageError, messageGap, sendMessage, NOTIFICATIONS_CHANGED, type Conversation, type Message } from '../shared/library/lists.ts';
 
 const initial = (name: string) => [...name][0];
 const when = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -80,7 +80,7 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
       const latest = page.items[0]?.seq ?? 0;
       if (document.visibilityState === 'visible' && latest > Math.max(page.read_seq, readUpTo.current)) {
         readUpTo.current = latest;
-        markConversationRead(client, userId, latest).catch(() => { readUpTo.current = 0; });
+        markConversationRead(client, userId, latest).then(() => window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED))).catch(() => { readUpTo.current = 0; });
       }
     } catch (failure) {
       if (live() && !signal?.aborted) setError(failure instanceof ApiError && failure.status === 404 ? 'Переписка недоступна: пользователь не найден или ограничил общение.' : 'Не удалось загрузить переписку.');

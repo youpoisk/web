@@ -122,3 +122,5 @@ cdfc38c messages UI independent review FAIL (M1 lost messages after missed polls
 
 YP-079 messages UI accepted: follow-up reviews FAIL (M1-R) → fixed 00be1f6 → Follow-up 2 PASS (docs/reviews/yp079-messages-ui.md); gap filling stops when the cursor does not move (future-proofing for YP-084 deletions). Frontend gate PASS. Remaining LOWs in todo.md under DEC-WEB-027.
 
+YP-062 site (DEC-WEB-028): contract import (58 operations), Notifications.tsx NotificationBadge/NotificationsList, #/notifications for signed-in users, header badge; chat read and request accept refresh the badge. lists.ts notification helpers lines/functions100. Frontend gate PASS.
+

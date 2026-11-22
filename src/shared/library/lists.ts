@@ -402,3 +402,35 @@ export function messageError(error: unknown): string {
   return 'Не удалось отправить сообщение. Повторите — дубль не появится.';
 }
 
+// Site notifications (YP-062). A notification grants nothing: links open
+// pages that load current data under the usual rules.
+export type NotificationItem = components['schemas']['NotificationItem'];
+export const NOTIFICATIONS_CHANGED = 'yp:notifications-changed';
+export async function loadNotifications(client: Pick<ApiClient, 'request'>, after: string | null, signal?: AbortSignal): Promise<{ items: NotificationItem[]; next: string | null }> {
+  const query: { limit: number; after?: string } = { limit: 30 };
+  if (after) query.after = after;
+  const page = await client.request('listNotifications', { query, signal });
+  return { items: page.items, next: page.next_cursor ?? null };
+}
+export async function loadUnreadNotifications(client: Pick<ApiClient, 'request'>, signal?: AbortSignal): Promise<number> {
+  return (await client.request('countUnreadNotifications', { signal })).unread_count;
+}
+export async function markNotificationRead(client: Pick<ApiClient, 'request'>, id: string): Promise<void> {
+  await client.request('markNotificationRead', { path: { id } });
+}
+export async function markAllNotificationsRead(client: Pick<ApiClient, 'request'>, through: string): Promise<number> {
+  return (await client.request('markAllNotificationsRead', { body: { through } })).unread_count;
+}
+const who = (n: NotificationItem) => n.actor.name || n.actor.login;
+export function notificationText(n: NotificationItem): string {
+  if (n.kind === 'friend_request') return n.request_status === 'pending' ? `${who(n)} хочет добавить вас в друзья` : `${who(n)} отправлял(а) заявку в друзья — она уже неактуальна`;
+  if (n.kind === 'friend_accepted') return `${who(n)} принял(а) вашу заявку в друзья`;
+  return n.count > 1 ? `${who(n)}: новых сообщений — ${n.count}` : `Сообщение от ${who(n)}`;
+}
+/** Hash route and tab for a notification. */
+export function notificationTarget(n: NotificationItem): { route: string; tab?: string } {
+  if (n.kind === 'friend_request' && n.request_status === 'pending') return { route: '/friends', tab: 'Заявки' };
+  if (n.kind === 'message') return { route: `/messages/${n.actor.id}` };
+  return { route: `/user/${n.actor.id}` };
+}
+
