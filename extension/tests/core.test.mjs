@@ -8,7 +8,7 @@ const video={id:'aqz-KE-bpKQ',title:' Test ',channel:'Channel',channelUrl:'https
 const update=patch=>({type:'UPDATE',video,patch});
 test('only ordinary canonical YouTube watch URLs are supported',()=>{
  assert.equal(core.videoId('https://www.youtube.com/watch?v=aqz-KE-bpKQ&t=10'),'aqz-KE-bpKQ');
- for(const url of ['https://www.youtube.com/shorts/aqz-KE-bpKQ','https://evil.test/watch?v=aqz-KE-bpKQ','https://www.youtube.com/watch?v=bad','http://www.youtube.com/watch?v=aqz-KE-bpKQ'])assert.equal(core.videoId(url),null);
+ for(const url of ['https://www.youtube.com/shorts/aqz-KE-bpKQ','https://evil.test/watch?v=aqz-KE-bpKQ','https://www.youtube.com/watch?v=bad','http://www.youtube.com/watch?v=aqz-KE-bpKQ','https://www.youtube.com:8443/watch?v=aqz-KE-bpKQ','https://user:pass@www.youtube.com/watch?v=aqz-KE-bpKQ'])assert.equal(core.videoId(url),null);
 });
 test('metadata derives URLs instead of trusting client links',()=>{
  const result=core.metadata({...video,url:'javascript:alert(1)',preview:'https://evil.test/tracker',channelUrl:'https://evil.test/@name'});

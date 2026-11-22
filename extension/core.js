@@ -3,10 +3,10 @@
   const defaults = {enabled:true, site:'http://127.0.0.1:5173/'};
   const empty = () => ({version:1,videos:{},options:{...defaults}});
   function videoId(value) {
-    try { const u=new URL(value); return u.protocol==='https:' && u.hostname==='www.youtube.com' && u.pathname==='/watch' && /^[\w-]{11}$/.test(u.searchParams.get('v')||'') ? u.searchParams.get('v') : null; } catch { return null; }
+    try { const u=new URL(value); return u.origin==='https://www.youtube.com' && !u.username && !u.password && u.pathname==='/watch' && /^[\w-]{11}$/.test(u.searchParams.get('v')||'') ? u.searchParams.get('v') : null; } catch { return null; }
   }
   function channelUrl(value) {
-    try { const u=new URL(value,'https://www.youtube.com'); return u.protocol==='https:' && u.hostname==='www.youtube.com' && /^\/(channel\/UC[\w-]{22}|@[\p{L}\p{N}_.%\-]{1,150})\/?$/u.test(u.pathname) ? u.origin+u.pathname.replace(/\/$/,'') : ''; } catch { return ''; }
+    try { const u=new URL(value,'https://www.youtube.com'); return u.origin==='https://www.youtube.com' && !u.username && !u.password && /^\/(channel\/UC[\w-]{22}|@[\p{L}\p{N}_.%\-]{1,150})\/?$/u.test(u.pathname) ? u.origin+u.pathname.replace(/\/$/,'') : ''; } catch { return ''; }
   }
   function metadata(value) {
     if(!value || !/^[\w-]{11}$/.test(value.id||'')) throw Error('Некорректный ID видео');
