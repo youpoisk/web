@@ -2152,7 +2152,7 @@ function validate82(data, { instancePath = "", parentData, parentDataProperty, r
   return errors === 0;
 }
 validate82.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
-var schema38 = { "type": "object", "description": "Immutable direct message: text and/or a catalog video. seq numbers messages within the conversation.", "properties": { "id": { "type": "string", "format": "uuid" }, "seq": { "type": "integer", "minimum": 1 }, "mine": { "type": "boolean" }, "body": { "type": ["string", "null"], "minLength": 1, "maxLength": 2e3 }, "video": { "anyOf": [{ "$ref": "#/components/schemas/MessageVideo" }, { "type": "null" }] }, "created_at": { "type": "string", "format": "date-time" } }, "required": ["id", "seq", "mine", "body", "video", "created_at"], "additionalProperties": false };
+var schema38 = { "type": "object", "description": "Immutable direct message: text and/or a catalog video. seq numbers messages within the conversation.", "properties": { "id": { "type": "string", "format": "uuid" }, "seq": { "type": "integer", "minimum": 1 }, "mine": { "type": "boolean" }, "body": { "type": ["string", "null"], "minLength": 1, "maxLength": 1e3 }, "video": { "anyOf": [{ "$ref": "#/components/schemas/MessageVideo" }, { "type": "null" }] }, "created_at": { "type": "string", "format": "date-time" } }, "required": ["id", "seq", "mine", "body", "video", "created_at"], "additionalProperties": false };
 var schema39 = { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "youtube_video_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{11}$" }, "title": { "type": ["string", "null"], "maxLength": 250 } }, "required": ["id", "youtube_video_id", "title"], "additionalProperties": false };
 var pattern11 = new RegExp("^[A-Za-z0-9_-]{11}$", "u");
 function validate85(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
@@ -2340,8 +2340,8 @@ function validate84(data, { instancePath = "", parentData, parentDataProperty, r
                   }
                   if (errors === _errs8) {
                     if (typeof data3 === "string") {
-                      if (func1(data3) > 2e3) {
-                        validate84.errors = [{ instancePath: instancePath + "/body", schemaPath: "#/properties/body/maxLength", keyword: "maxLength", params: { limit: 2e3 }, message: "must NOT have more than 2000 characters" }];
+                      if (func1(data3) > 1e3) {
+                        validate84.errors = [{ instancePath: instancePath + "/body", schemaPath: "#/properties/body/maxLength", keyword: "maxLength", params: { limit: 1e3 }, message: "must NOT have more than 1000 characters" }];
                         return false;
                       } else {
                         if (func1(data3) < 1) {
@@ -5536,8 +5536,8 @@ function validate132(data, { instancePath = "", parentData, parentDataProperty, 
                   }
                   if (errors === _errs8) {
                     if (typeof data3 === "string") {
-                      if (func1(data3) > 2e3) {
-                        validate132.errors = [{ instancePath: instancePath + "/body", schemaPath: "#/properties/body/maxLength", keyword: "maxLength", params: { limit: 2e3 }, message: "must NOT have more than 2000 characters" }];
+                      if (func1(data3) > 1e3) {
+                        validate132.errors = [{ instancePath: instancePath + "/body", schemaPath: "#/properties/body/maxLength", keyword: "maxLength", params: { limit: 1e3 }, message: "must NOT have more than 1000 characters" }];
                         return false;
                       } else {
                         if (func1(data3) < 1) {
@@ -5638,7 +5638,7 @@ function validate132(data, { instancePath = "", parentData, parentDataProperty, 
 }
 validate132.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_MessageCreate = validate134;
-var schema66 = { "type": "object", "description": "client_message_id makes retries idempotent per sender. body is trimmed; an empty or whitespace-only body (or null) means no text. After trimming, text (1..2000 code points, no NUL) and/or video_id (catalog video UUID) is required. The request body is limited to 8192 bytes, so send text as UTF-8 rather than \\u-escaped.", "properties": { "client_message_id": { "type": "string", "format": "uuid" }, "body": { "type": ["string", "null"] }, "video_id": { "type": ["string", "null"], "format": "uuid" } }, "required": ["client_message_id"], "additionalProperties": false };
+var schema66 = { "type": "object", "description": "client_message_id makes retries idempotent per sender. body is trimmed; an empty or whitespace-only body (or null) means no text. After trimming, text (1..1000 code points, no NUL) and/or video_id (catalog video UUID) is required. The request body is limited to 8192 bytes, so send text as UTF-8 rather than \\u-escaped.", "properties": { "client_message_id": { "type": "string", "format": "uuid" }, "body": { "type": ["string", "null"] }, "video_id": { "type": ["string", "null"], "format": "uuid" } }, "required": ["client_message_id"], "additionalProperties": false };
 function validate134(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;

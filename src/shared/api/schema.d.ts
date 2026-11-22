@@ -1276,7 +1276,7 @@ export interface components {
             seq: number;
             video: components["schemas"]["MessageVideo"] | null;
         };
-        /** @description client_message_id makes retries idempotent per sender. body is trimmed; an empty or whitespace-only body (or null) means no text. After trimming, text (1..2000 code points, no NUL) and/or video_id (catalog video UUID) is required. The request body is limited to 8192 bytes, so send text as UTF-8 rather than \u-escaped. */
+        /** @description client_message_id makes retries idempotent per sender. body is trimmed; an empty or whitespace-only body (or null) means no text. After trimming, text (1..1000 code points, no NUL) and/or video_id (catalog video UUID) is required. The request body is limited to 8192 bytes, so send text as UTF-8 rather than \u-escaped. */
         MessageCreate: {
             body?: string | null;
             /** Format: uuid */

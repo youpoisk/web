@@ -426,7 +426,7 @@ test('direct message helpers call the right operations and merge by seq', async 
   assert.equal(m.messageGap([...range(71, 120), { seq: 181 }], range(132, 181).reverse()), 132, 'own sent message above the hole');
   assert.equal(m.messageGap([...range(71, 120), ...range(130, 181)], range(171, 181)), 130, 'hole inside the loaded range');
   assert.equal(m.messageGap([...range(71, 120), { seq: 181 }], range(82, 181)), null, 'filled');
-  for (const [status, text] of [[403, /друзьям/], [404, /недоступна/], [409, /другим текстом/], [422, /2000/], [429, /через минуту/], [503, /дубль не появится/]]) {
+  for (const [status, text] of [[403, /друзьям/], [404, /недоступна/], [409, /другим текстом/], [422, /1000/], [429, /через минуту/], [503, /дубль не появится/]]) {
     assert.match(m.messageError(new ApiError('http', status, 'x')), text);
   }
   assert.match(m.messageError(new ApiError('network')), /дубль не появится/);

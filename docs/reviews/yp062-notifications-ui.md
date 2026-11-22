@@ -79,3 +79,17 @@ Fix: correct the DEC text, or remove the dead branch.
 - **Events.** `Messages.tsx` dispatches only after a successful `markConversationRead`. `FriendRequests.tsx` dispatches only after a successful accept. Decline does not dispatch, which is fine: the contract does not mark the notification read on decline.
 - **UX states.** The page has loading (`role=status`), error (`role=alert` with retry at the failed cursor), empty, and a persistent `role=status` notice region. List items are real `<button>`s. The «Новое:» marker is sr-only, with bold text and a tinted background visually. The avatar is `aria-hidden`.
 - **React keys.** `li key={n.id}`, and appended pages are deduplicated by id. In `main.tsx`, the new branch adds no sibling elements without keys and no duplicate keys, because the badge is the only keyed child inside the button. The old always-on dot was removed.
+
+## Follow-up (frontend commit 1989205)
+
+### Gate: PASS
+
+No MEDIUM or higher findings remain, and none are new.
+
+- **M1 retracted (false positive).** `apiClient` is a module-level constant at `src/main.tsx:15`, outside `function App` (`main.tsx:27`). It was already there in 1c545d0. `stateWriter` (`main.tsx:16`) and `guestClient` (`main.tsx:18`) are module-level too. No `new ApiClient` exists inside a render body, so `client` props are stable. The badge effect runs once per mount. The list is not reset by App re-renders. I misread the minified one-line file in the first pass.
+- **M2 fixed.** The bell button no longer has `aria-label`. It contains `<Bell aria-hidden>`, `<span className="sr-only">Уведомления</span>` and the badge's sr-only text, so the accessible name is "Уведомления, непрочитанных: N" when there are unread items and "Уведомления" otherwise.
+- **L1 fixed** (`Notifications.tsx:16-25`). A load while busy sets `again`. The stamped `finally` clears `busy` and reloads once. A stale instance's `finally` returns without touching the refs, and cleanup resets `busy` and `again`. A load skipped while hidden leaves a harmless `again=true`, which the next real load clears.
+- **L3 fixed.** `markNotificationRead(...).catch(() => {}).finally(changed)` refreshes the badge after either outcome.
+- **L6 fixed.** DEC-WEB-028 now says guests see the general «Эта страница доступна с профилем» page. The dead demo branch for `/notifications` in `main.tsx` is harmless and can be removed later.
+- **Still open, all LOW and recorded in todo.md:** L2 (a late refresh shows stale read state), L4 (focus loss after «Отметить все»), L5 (`bdi` around the whole sentence), L7 (no component tests).
+- **Tests.** `test:api` (node 22, run directly): 98/98 pass. `lists.ts` is at 100% lines and 100% functions (99.53% branches).

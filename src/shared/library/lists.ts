@@ -350,7 +350,7 @@ export function groupFeedByVideo(items:readonly FeedItem[]):FeedVideoGroup[]{
 export type Conversation = components['schemas']['ConversationItem'];
 export type Message = components['schemas']['Message'];
 export type MessagePage = components['schemas']['MessagePage'];
-export const MAX_MESSAGE_LENGTH = 2000;
+export const MAX_MESSAGE_LENGTH = 1000;
 export async function loadConversations(client: Pick<ApiClient, 'request'>, after: string | null, signal?: AbortSignal): Promise<{ items: Conversation[]; next: string | null }> {
   const query: { limit: number; after?: string } = { limit: 30 };
   if (after) query.after = after;
