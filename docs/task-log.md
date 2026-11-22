@@ -173,3 +173,5 @@ Finalzero policy: hide0 onlysidebarMessages/Friends/Watchlist; Requeststab keeps
 Validation: 105 API/CSP tests PASS (core lines/functions100), production build PASS. Backend source pinned11ed312. Pagination review of current source found no MEDIUM+; LOW: reset remembered cursor on identical refresh and add React adapter lifecycle tests. Browser scroll verification was not completed.
 Independent source review PASS for sent counter: no MEDIUM+. See docs/reviews/pagination-sent-counter.md.
 Outgoing cancellation: removed success notice per request; item removal, empty list and error handling retained. Source checked; no API change.
+
+Profile friendship controls: add/remove, accept/decline incoming, cancel outgoing. Pending request ID resolved across all API pages; no write on load. Reload profile/privacy after mutations; abort/generation guards and synchronous write lock. Self profile excluded.

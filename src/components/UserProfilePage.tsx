@@ -1,3 +1,4 @@
+import{FriendshipControls}from'./FriendshipControls.tsx';
 import{LoadMore}from'./LoadMore.tsx';
 import {BlockControl} from './Blocks.tsx';
 import {FollowControls} from './Subscriptions.tsx';
@@ -58,6 +59,7 @@ export function UserProfilePage({ client, userId }: { client: Pick<ApiClient, 'r
       {profile && <p className="muted">@{profile.user.login}{profile.relation === 'friend' ? ' · у вас в друзьях' : profile.relation === 'self' ? ' · это вы' : ''}</p>}
     </div></div>
     {profile && <div className="panel profile-actions" role="group" aria-label="Действия с профилем">
+      {profile.relation!=='self'&&<FriendshipControls client={client} userId={userId} friend={profile.relation==='friend'} onChanged={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setRevision(v=>v+1)}}/>}
       <FollowControls inline client={client} userId={userId} canFollow={profile.relation!=='self'} onChanged={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setRevision(v=>v+1)}}/>
       {profile.relation === 'friend' && <a className="secondary" href={`#/messages/${userId}`}>Написать сообщение</a>}
       {profile.relation !== 'self' && <span className="profile-actions-end"><ReportButton inline client={client} kind="user" targetId={userId} label="Пожаловаться"/><BlockControl inline client={client} userId={userId} onBlocked={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setError('');location.hash='#/settings'}}/></span>}
