@@ -6606,6 +6606,79 @@
         }
       }
     },
+    "/v1/me/account/identity": {
+      "post": {
+        "operationId": "changeIdentity",
+        "summary": "Change my login and email",
+        "description": "Called from the API-origin page so the site never handles the password (DEC-IMPL-IDENTITY-CHANGE). Sets the sign-in login and the email together (send the current value for a field that does not change). login: 3..32 ASCII letters, digits or underscore; email: a bare address without whitespace, at most 254 bytes, stored lower-case. 422 incorrect_current_password or invalid_fields changes nothing; 409 login_taken or email_taken when another account (including one being deleted) holds the value. Sessions stay valid because the password is unchanged; there is no email confirmation yet. Shares the login/password KDF admission.",
+        "tags": [
+          "Accounts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Changed user",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentityChange"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me/profile": {
       "patch": {
         "operationId": "changeMyName",
@@ -9728,6 +9801,36 @@
         },
         "required": [
           "status"
+        ],
+        "additionalProperties": false
+      },
+      "IdentityChange": {
+        "type": "object",
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "writeOnly": true,
+            "description": "Same rules as PasswordChange.current_password. Never stored or retried by a client."
+          },
+          "login": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_]{3,32}$",
+            "description": "New sign-in login; case is kept, uniqueness is case-insensitive. No whitespace."
+          },
+          "email": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 254,
+            "pattern": "^[^\\s]+$",
+            "description": "New email: a bare address without whitespace; the server lower-cases it."
+          }
+        },
+        "required": [
+          "current_password",
+          "login",
+          "email"
         ],
         "additionalProperties": false
       },

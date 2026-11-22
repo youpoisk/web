@@ -6,8 +6,8 @@ import type { SessionScope } from '../api/client.ts';
 import type { components } from '../api/schema';
 
 type Scope = { owner: string | null; epoch: string };
-type AccountFlow = 'password' | 'delete';
-export type AccountOutcome = 'password_changed' | 'password_uncertain' | 'password_session' | 'account_deleted' | 'account_uncertain' | 'account_session';
+type AccountFlow = 'password' | 'delete' | 'identity';
+export type AccountOutcome = 'password_changed' | 'password_uncertain' | 'password_session' | 'account_deleted' | 'account_uncertain' | 'account_session' | 'identity_changed' | 'identity_session';
 type Storage = Pick<globalThis.Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type Crypto = Pick<globalThis.Crypto, 'randomUUID' | 'getRandomValues' | 'subtle'>;
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -129,22 +129,26 @@ export class BrowserSession {
     let state: string;
     try { state = this.#nonce(); } catch { throw new FlowError('crypto'); }
     try { this.#flowStorage.setItem(this.#flowKey(flow), JSON.stringify({ state, returnHash })); } catch { throw new FlowError('storage'); }
-    return `${this.#api}/auth/${flow === 'password' ? 'password' : 'delete'}?${new URLSearchParams({ redirect_uri: this.#callback, state })}`;
+    return `${this.#api}/auth/${flow}?${new URLSearchParams({ redirect_uri: this.#callback, state })}`;
   }
   /** URL of the API-origin password page. */
   passwordURL(returnHash: string): string { return this.#accountFlowURL('password', returnHash); }
   /** URL of the API-origin account deletion page. */
   deleteAccountURL(returnHash: string): string { return this.#accountFlowURL('delete', returnHash); }
+  /** URL of the API-origin login/email change page. */
+  identityURL(returnHash: string): string { return this.#accountFlowURL('identity', returnHash); }
   /** Return from an account page. A forged or cancelled return changes
    * nothing (null: the normal restore runs). Any other valid outcome ends the
    * local sign-in, because the server revoked (or may have revoked) every
-   * session of the account. undefined: not such a return. */
+   * session of the account. A login/email change keeps every session, so its
+   * outcome keeps the local sign-in and returns to the saved route, where the
+   * normal restore reloads the account. undefined: not such a return. */
   #captureAccountFlow(rawURL: string, replaceURL: (clean: string) => void): { returnHash: string; outcome: AccountOutcome } | null | undefined {
     let url: URL;
     try { url = new URL(rawURL); } catch { return undefined; }
-    const flow: AccountFlow | null = url.searchParams.has('password') ? 'password' : url.searchParams.has('account') ? 'delete' : null;
+    const flow: AccountFlow | null = url.searchParams.has('password') ? 'password' : url.searchParams.has('account') ? 'delete' : url.searchParams.has('identity') ? 'identity' : null;
     if (!flow) return undefined;
-    const param = flow === 'password' ? 'password' : 'account';
+    const param = flow === 'password' ? 'password' : flow === 'delete' ? 'account' : 'identity';
     let saved: { state?: unknown; returnHash?: unknown } | null = null;
     try { const raw = this.#flowStorage.getItem(this.#flowKey(flow)); this.#flowStorage.removeItem(this.#flowKey(flow)); saved = raw === null ? null : JSON.parse(raw); } catch { saved = null; }
     const valid = saved !== null && typeof saved.state === 'string' && url.searchParams.getAll('state').length === 1 && url.searchParams.get('state') === saved.state &&
@@ -153,9 +157,14 @@ export class BrowserSession {
     const outcomes: Record<AccountFlow, Record<string, AccountOutcome>> = {
       password: { changed: 'password_changed', uncertain: 'password_uncertain', session: 'password_session' },
       delete: { deleted: 'account_deleted', uncertain: 'account_uncertain', session: 'account_session' },
+      identity: { changed: 'identity_changed', session: 'identity_session' },
     };
     const value = url.searchParams.get(param)!;
     const outcome = valid && Object.prototype.hasOwnProperty.call(outcomes[flow], value) ? outcomes[flow][value] : null;
+    if (flow === 'identity') {
+      replaceURL(url.origin + url.pathname + hash);
+      return outcome ? { returnHash: hash || '#/settings', outcome } : null;
+    }
     replaceURL(url.origin + url.pathname + (outcome ? '' : hash));
     if (!outcome) return null;
     this.#identity();

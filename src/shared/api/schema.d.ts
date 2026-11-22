@@ -320,6 +320,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/account/identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change my login and email
+         * @description Called from the API-origin page so the site never handles the password (DEC-IMPL-IDENTITY-CHANGE). Sets the sign-in login and the email together (send the current value for a field that does not change). login: 3..32 ASCII letters, digits or underscore; email: a bare address without whitespace, at most 254 bytes, stored lower-case. 422 incorrect_current_password or invalid_fields changes nothing; 409 login_taken or email_taken when another account (including one being deleted) holds the value. Sessions stay valid because the password is unchanged; there is no email confirmation yet. Shares the login/password KDF admission.
+         */
+        post: operations["changeIdentity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/blocks": {
         parameters: {
             query?: never;
@@ -1467,6 +1487,14 @@ export interface components {
         Healthy: {
             /** @constant */
             status: "ok";
+        };
+        IdentityChange: {
+            /** @description Same rules as PasswordChange.current_password. Never stored or retried by a client. */
+            current_password: string;
+            /** @description New email: a bare address without whitespace; the server lower-cases it. */
+            email: string;
+            /** @description New sign-in login; case is kept, uniqueness is case-insensitive. No whitespace. */
+            login: string;
         };
         Lease: {
             /** @description Signed account age anchor, not an authentication credential. Keep the original anchor with each queued command. */
@@ -2724,6 +2752,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountDeletionStarted"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    changeIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IdentityChange"];
+            };
+        };
+        responses: {
+            /** @description Changed user */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

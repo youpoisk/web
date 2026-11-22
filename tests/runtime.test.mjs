@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authConfig, bootAuth, changePassword, deleteAccount, signIn, signOut, scrubCallback, startupFailure, AuthConfigError } from '../src/shared/auth/runtime.ts';
+import { authConfig, bootAuth, changeIdentity, changePassword, deleteAccount, signIn, signOut, scrubCallback, startupFailure, AuthConfigError } from '../src/shared/auth/runtime.ts';
 
 const user = { id: '00000000-0000-4000-8000-000000000001', login: 'anton', name: 'Anton', email: 'a@example.invalid' };
 function port(over = {}) {
@@ -37,9 +37,10 @@ test('scrubCallback removes only callback parameters and keeps the route', () =>
   scrubCallback({ href: 'https://web.example/?logout=done', replace: (v) => seen.push(v) });
   scrubCallback({ href: 'https://web.example/?password=changed&state=s', replace: (v) => seen.push(v) });
   scrubCallback({ href: 'https://web.example/?account=deleted&state=s', replace: (v) => seen.push(v) });
+  scrubCallback({ href: 'https://web.example/?identity=changed&state=s#/settings', replace: (v) => seen.push(v) });
   scrubCallback({ href: 'https://web.example/#/feed', replace: (v) => seen.push(v) });
   scrubCallback({ href: 'not a url', replace: (v) => seen.push(v) });
-  assert.deepEqual(seen, ['https://web.example/#/feed', 'https://web.example/', 'https://web.example/', 'https://web.example/']);
+  assert.deepEqual(seen, ['https://web.example/#/feed', 'https://web.example/', 'https://web.example/', 'https://web.example/', 'https://web.example/#/settings']);
 });
 
 test('startup failures have distinct messages', () => {
@@ -152,5 +153,25 @@ test('account deletion opens the API page and boot maps its outcomes to notices'
     assert.equal(view.status, 'guest');
     if(text)assert.match(view.message, text);else assert.equal(view.message, undefined);
   }
+});
+
+test('identity change opens the API page; boot restores the account after its outcome', async () => {
+  const s = port({ identityURL(hash) { this.calls.push(['identity', hash]); return 'https://api.example/auth/identity?x=1'; } });
+  const b = browser('#/settings');
+  assert.deepEqual(changeIdentity(s, b, '#/settings'), { status: 'redirecting', user: null });
+  assert.deepEqual(b.assigned, ['https://api.example/auth/identity?x=1']);
+  changeIdentity(s, b);
+  assert.deepEqual(s.calls.at(-1), ['identity', '#/settings']);
+  assert.match(changeIdentity(port({ identityURL() { throw kind('storage'); } }), browser(), 'bad').message, /логина и email/);
+  for (const outcome of ['identity_changed', 'identity_session']) {
+    const r = port({ scope: 'recovering', done: { returnHash: '#/settings', outcome } });
+    const rb = browser('#/settings');
+    assert.deepEqual(await bootAuth(r, rb), { status: 'redirecting', user: null });
+    assert.deepEqual(r.calls.at(-1), ['authorize', 'restore', '#/settings']);
+    assert.deepEqual(rb.assigned, ['https://api.example/auth/authorize?intent=restore']);
+  }
+  const live = await bootAuth(port({ scope: 'authenticated', user, done: { returnHash: '#/settings', outcome: 'identity_changed' } }), browser());
+  assert.equal(live.status, 'authenticated');
+  assert.equal((await bootAuth(port({ done: { returnHash: '#/settings', outcome: 'identity_session' } }), browser())).status, 'guest');
 });
 

@@ -175,3 +175,25 @@ test('account deletion page: nonce-bound outcomes end the local sign-in; cancel 
  assert.equal(proto.session.businessScope().state,'authenticated');
 });
 
+test('identity page: nonce-bound outcomes keep the local sign-in and return to the saved route',async()=>{
+ const signed=async()=>{const f=fixture();await f.session.completeCallback(await start(f.session),()=>{});return f;};
+ const f=await signed();const url=new URL(f.session.identityURL('#/settings'));
+ assert.equal(url.origin+url.pathname,apiOrigin+'/auth/identity');assert.deepEqual([...url.searchParams.keys()].sort(),['redirect_uri','state']);
+ const st=url.searchParams.get('state');const cleaned=[];
+ assert.deepEqual(await f.session.completeCallback(callback+'?'+new URLSearchParams({identity:'changed',state:st}),v=>cleaned.push(v)),{returnHash:'#/settings',outcome:'identity_changed'});
+ assert.deepEqual(cleaned,[callback+'#/settings']);assert.equal(f.session.businessScope().state,'authenticated','sessions survive a login/email change');
+ const g=await signed();const gs=new URL(g.session.identityURL('#/settings')).searchParams.get('state');
+ assert.deepEqual(await g.session.completeCallback(callback+'?'+new URLSearchParams({identity:'session',state:gs}),()=>{}),{returnHash:'#/settings',outcome:'identity_session'});
+ const c=await signed();const cs=new URL(c.session.identityURL('#/settings')).searchParams.get('state');const back=[];
+ assert.equal(await c.session.completeCallback(callback+'?'+new URLSearchParams({identity:'cancelled',state:cs}),v=>back.push(v)),null);
+ assert.deepEqual(back,[callback+'#/settings']);
+ const forged=await signed();forged.session.identityURL('#/settings');const fb=[];
+ assert.equal(await forged.session.completeCallback(callback+'?'+new URLSearchParams({identity:'changed',state:'X'.repeat(43)}),v=>fb.push(v)),null,'a forged nonce changes nothing');
+ assert.deepEqual(fb,[callback]);
+ const p=await signed();const ps=new URL(p.session.passwordURL('#/settings')).searchParams.get('state');
+ assert.equal(await p.session.completeCallback(callback+'?'+new URLSearchParams({identity:'changed',state:ps}),()=>{}),null,'a password nonce cannot confirm an identity change');
+ const nh=await signed();const key=[...nh.data.keys()];nh.session.identityURL('#/settings');const k=[...nh.data.keys()].find(x=>!key.includes(x)&&x.startsWith('yp.auth.identity'));
+ const saved=JSON.parse(nh.data.get(k));nh.data.set(k,JSON.stringify({state:saved.state,returnHash:'https://evil'}));
+ assert.deepEqual(await nh.session.completeCallback(callback+'?'+new URLSearchParams({identity:'changed',state:saved.state}),()=>{}),{returnHash:'#/settings',outcome:'identity_changed'},'only hash routes are restored');
+});
+

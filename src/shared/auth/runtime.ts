@@ -10,9 +10,10 @@ export type SessionPort = {
   pendingSummary(): { state: string; status: 'pending' | 'expired' | 'stale' } | null;
   cancel(state: string): unknown;
   authorize(intent: 'restore' | Intent, returnHash: string): Promise<string>;
-  completeCallback(rawURL: string, replaceURL: (clean: string) => void): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' | 'logged_out' | 'password_changed' | 'password_uncertain' | 'password_session' | 'account_deleted' | 'account_uncertain' | 'account_session' } | null>;
+  completeCallback(rawURL: string, replaceURL: (clean: string) => void): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' | 'logged_out' | 'password_changed' | 'password_uncertain' | 'password_session' | 'account_deleted' | 'account_uncertain' | 'account_session' | 'identity_changed' | 'identity_session' } | null>;
   passwordURL(returnHash: string): string;
   deleteAccountURL(returnHash: string): string;
+  identityURL(returnHash: string): string;
   logout(): Promise<{ result: 'revoked' } | { result: 'broker'; url: string }>;
 };
 export type AuthView =
@@ -40,7 +41,7 @@ export function authConfig(env: Record<string, string | boolean | undefined>, lo
 export function scrubCallback(browser: Pick<Browser, 'href' | 'replace'>): void {
   let url: URL;
   try { url = new URL(browser.href); } catch { return; }
-  if (['code', 'state', 'error', 'logout', 'password', 'account'].some((key) => url.searchParams.has(key))) browser.replace(url.origin + url.pathname + url.hash);
+  if (['code', 'state', 'error', 'logout', 'password', 'account', 'identity'].some((key) => url.searchParams.has(key))) browser.replace(url.origin + url.pathname + url.hash);
 }
 
 export function startupFailure(error: unknown): AuthView {
@@ -83,6 +84,12 @@ export async function bootAuth(session: SessionPort, browser: Browser): Promise<
       if (done.outcome === 'account_deleted') return settled(session);
       if (done.outcome === 'account_uncertain') return settled(session, 'Не удалось подтвердить удаление аккаунта. Если войти не получается — удаление прошло.');
       if (done.outcome === 'account_session') return settled(session, 'Сессия завершилась. Войдите снова, чтобы удалить аккаунт.');
+      // Login/email change keeps the sessions: restore the account so the
+      // settings page shows the new values.
+      if ((done.outcome === 'identity_changed' || done.outcome === 'identity_session') && session.businessScope().state === 'recovering') {
+        browser.assign(await session.authorize('restore', route(done.returnHash)));
+        return { status: 'redirecting', user: null };
+      }
       return settled(session);
     }
     const pending = session.pendingSummary();
@@ -127,6 +134,16 @@ export function deleteAccount(session: SessionPort, browser: Browser, returnHash
     return { status: 'redirecting', user: null };
   } catch {
     return { status: 'error', user: null, message: 'Не удалось открыть удаление аккаунта. Обновите страницу и попробуйте ещё раз.' };
+  }
+}
+
+/** Opens the API-origin login/email change page; the site never handles passwords. */
+export function changeIdentity(session: SessionPort, browser: Browser, returnHash = '#/settings'): AuthView {
+  try {
+    browser.assign(session.identityURL(route(returnHash)));
+    return { status: 'redirecting', user: null };
+  } catch {
+    return { status: 'error', user: null, message: 'Не удалось открыть изменение логина и email. Обновите страницу и попробуйте ещё раз.' };
   }
 }
 
