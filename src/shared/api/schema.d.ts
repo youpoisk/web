@@ -1112,6 +1112,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/users/{id}/marks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * User video marks
+         * @description «Просмотрено» (watched) and «Неинтересно» (not_interested) marks of an active, unblocked user (YP-102), newest mark first, keyset pagination like recommendations. Visible only when the user's library policy admits the viewer (always to the owner); otherwise the list is empty. Marks are never recommendations: they do not appear in /v1/users/{id}/recommendations items on their own or in the feed.
+         */
+        get: operations["listUserMarks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/users/{id}/recommendations": {
         parameters: {
             query?: never;
@@ -1711,7 +1731,7 @@ export interface components {
             /** Format: date-time */
             changed_at: string;
             /**
-             * @description Own mark (YP-102) shown when the library policy admits the viewer; a mark alone is listed in the profile but never in the feed.
+             * @description Own mark (YP-102) of an item that is listed for its rating or review, shown when the library policy admits the viewer. A mark never lists an item on its own; marks have their own list /v1/users/{id}/marks.
              * @enum {string|null}
              */
             mark: "watched" | "not_interested" | null;
@@ -1818,6 +1838,17 @@ export interface components {
             id: string;
             login: string;
             name: string;
+        };
+        UserMark: {
+            /** @enum {string} */
+            mark: "watched" | "not_interested";
+            /** Format: date-time */
+            marked_at: string;
+            video: components["schemas"]["VideoCard"];
+        };
+        UserMarkPage: {
+            items: components["schemas"]["UserMark"][];
+            next_cursor?: string;
         };
         UserProfile: {
             /** @description Exact count across all pages; null when hidden by the relevant audience policy. */
@@ -5143,6 +5174,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserProfile"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listUserMarks: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor, no duplicate keys. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User video marks */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserMarkPage"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

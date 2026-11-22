@@ -510,7 +510,7 @@ test('own display name and exact navigation count requests use only own endpoint
  const error=new Error('uncertain');await assert.rejects(changeMyName({request:async()=>{throw error}},'Имя'),e=>e===error);
 });
 
-test('profile tabs select actual ratings and reviews, preserve order and shared entries',async()=>{const{profileRecommendations}=await import('../src/shared/library/lists.ts');const rated={rating:8,review:null},reviewed={rating:null,review:'Text'},both={rating:9,review:'Both'};const items=[rated,reviewed,both];assert.deepEqual(profileRecommendations(items,'all'),items);assert.deepEqual(profileRecommendations(items,'ratings'),[rated,both]);assert.deepEqual(profileRecommendations(items,'reviews'),[reviewed,both]);assert.deepEqual(profileRecommendations([],'reviews'),[]);const marked={rating:null,review:null,mark:'watched'};assert.deepEqual(profileRecommendations([rated,marked,{...both,mark:'not_interested'}],'marks'),[marked,{...both,mark:'not_interested'}]);assert.deepEqual(profileRecommendations([rated,marked],'all'),[rated,marked]);});
+test('profile tabs select actual ratings and reviews, preserve order and shared entries',async()=>{const{profileRecommendations}=await import('../src/shared/library/lists.ts');const rated={rating:8,review:null},reviewed={rating:null,review:'Text'},both={rating:9,review:'Both'};const items=[rated,reviewed,both];assert.deepEqual(profileRecommendations(items,'all'),items);assert.deepEqual(profileRecommendations(items,'ratings'),[rated,both]);assert.deepEqual(profileRecommendations(items,'reviews'),[reviewed,both]);assert.deepEqual(profileRecommendations([],'reviews'),[]);});
 
 test('feed view preference is stored locally and defaults to authors', () => {
   const data = new Map();
@@ -530,3 +530,13 @@ test('feed view preference is stored locally and defaults to authors', () => {
   assert.equal(readFeedView(undefined), false);
   assert.doesNotThrow(() => saveFeedView(undefined, true));
 });
+
+test('loadUserMarks reads the separate marks list', async () => {
+  const { loadUserMarks } = await import('../src/shared/library/lists.ts');
+  const calls = [];
+  const client = { async request(op, options) { calls.push([op, options.path, options.query]); return calls.length === 1 ? { items: [{ mark: 'watched' }], next_cursor: 'm1' } : { items: [] }; } };
+  assert.deepEqual(await loadUserMarks(client, 'u1', null), { items: [{ mark: 'watched' }], next: 'm1' });
+  assert.deepEqual(await loadUserMarks(client, 'u1', 'm1'), { items: [], next: null });
+  assert.deepEqual(calls, [['listUserMarks', { id: 'u1' }, { limit: 12 }], ['listUserMarks', { id: 'u1' }, { limit: 12, after: 'm1' }]]);
+});
+

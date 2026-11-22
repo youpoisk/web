@@ -3904,6 +3904,125 @@
         }
       }
     },
+    "/v1/users/{id}/marks": {
+      "get": {
+        "operationId": "listUserMarks",
+        "summary": "User video marks",
+        "description": "«Просмотрено» (watched) and «Неинтересно» (not_interested) marks of an active, unblocked user (YP-102), newest mark first, keyset pagination like recommendations. Visible only when the user's library policy admits the viewer (always to the owner); otherwise the list is empty. Marks are never recommendations: they do not appear in /v1/users/{id}/recommendations items on their own or in the feed.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            },
+            "description": "Opaque previous next_cursor, no duplicate keys."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30
+            },
+            "description": "Bounded page size; unknown/repeated/malformed query keys rejected."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User video marks",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMarkPage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/me/library": {
       "get": {
         "operationId": "listLibrary",
@@ -8576,7 +8695,7 @@
               "not_interested",
               null
             ],
-            "description": "Own mark (YP-102) shown when the library policy admits the viewer; a mark alone is listed in the profile but never in the feed."
+            "description": "Own mark (YP-102) of an item that is listed for its rating or review, shown when the library policy admits the viewer. A mark never lists an item on its own; marks have their own list /v1/users/{id}/marks."
           }
         },
         "required": [
@@ -8597,6 +8716,52 @@
             "maxItems": 100,
             "items": {
               "$ref": "#/components/schemas/Recommendation"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "UserMark": {
+        "type": "object",
+        "properties": {
+          "video": {
+            "$ref": "#/components/schemas/VideoCard"
+          },
+          "mark": {
+            "type": "string",
+            "enum": [
+              "watched",
+              "not_interested"
+            ]
+          },
+          "marked_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "video",
+          "mark",
+          "marked_at"
+        ],
+        "additionalProperties": false
+      },
+      "UserMarkPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/UserMark"
             }
           },
           "next_cursor": {

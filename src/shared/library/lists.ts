@@ -209,6 +209,15 @@ export async function loadUserRecommendations(client: Pick<ApiClient, 'request'>
   return { items: page.items, next: page.next_cursor ?? null };
 }
 
+export type UserMark = components['schemas']['UserMark'];
+/** «Отметки» of a profile (YP-102): a separate list, never part of recommendations. */
+export async function loadUserMarks(client: Pick<ApiClient, 'request'>, userId: string, after: string | null, signal?: AbortSignal): Promise<{ items: UserMark[]; next: string | null }> {
+  const query: { limit: number; after?: string } = { limit: 12 };
+  if (after) query.after = after;
+  const page = await client.request('listUserMarks', { path: { id: userId }, query, signal });
+  return { items: page.items, next: page.next_cursor ?? null };
+}
+
 export type PrivacySettings = components['schemas']['PrivacySettings'];
 export type Audience = PrivacySettings['ratings'];
 export type PrivacyField = 'ratings' | 'watchlist' | 'recommendations' | 'library' | 'reviews' | 'social';
@@ -494,7 +503,7 @@ export async function loadNavigationCounts(client:Pick<ApiClient,'request'>,sign
 }
 
 /** Filter real recommendation records without inventing local ratings/reviews. */
-export function profileRecommendations(items:Recommendation[],filter:'all'|'ratings'|'reviews'|'marks'):Recommendation[]{return items.filter(item=>filter==='all'||(filter==='ratings'?item.rating!==null:filter==='marks'?item.mark!=null:item.review!==null));}
+export function profileRecommendations(items:Recommendation[],filter:'all'|'ratings'|'reviews'):Recommendation[]{return items.filter(item=>filter==='all'||(filter==='ratings'?item.rating!==null:item.review!==null));}
 
 /** Feed view (#/feed «По авторам» / «По видео»): a browser-local UI preference, not personal data, so it survives sign-out. Missing, unknown or unreadable means «По авторам». */
 export const FEED_VIEW_KEY = 'youpoisk.feed-view';
