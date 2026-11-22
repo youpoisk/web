@@ -13,7 +13,7 @@ const files = [
   'core.js', 'bridge.js', 'content.js', 'content.css',
   'background-common.js', 'storage-firefox.js', 'background.firefox.js',
   'popup.html', 'popup.js', 'options.html', 'options.js',
-  'extension.css', 'demo-catalog.js', 'assets'
+  'extension.css', 'assets'
 ];
 
 const manifest = JSON.parse(await readFile(resolve(source, 'manifest.firefox.json'), 'utf8'));
