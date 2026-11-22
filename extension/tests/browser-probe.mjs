@@ -1,5 +1,5 @@
 // Runs only in an isolated Firefox QA build, never in a shipped package.
-export default async function browserProbe(report,originReport){
+export default async function browserProbe(report,originReport,options){
  let result={ok:false,stage:'login',origin:new URL(browser.runtime.getURL('')).origin};
  let active=session,card,originalState,originalReview;
  async function api(path,method='GET',body,headers={}){
@@ -12,6 +12,7 @@ export default async function browserProbe(report,originReport){
  try{
   const setup=await fetch(originReport,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({origin:result.origin}),signal:AbortSignal.timeout(30000)});if(!setup.ok)throw Error('Test origin setup failed');
   const signed=await active.login('qa_block_probe','qa_block_probe');if(signed.state!=='authenticated')throw Error('Invalid login');
+  const record=await YPStorageFirefox.read('yp-auth-v1');const registered=await fetch(options.sessionReport,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({owner:record.owner,session:record.session})});if(!registered.ok)throw Error('QA recovery registration failed');
   result.stage='restore-session';
   active=YPAuth.createSession({origin:YPConfig.apiOrigin,store:{load:()=>YPStorageFirefox.read('yp-auth-v1'),save:value=>YPStorageFirefox.write(value,'yp-auth-v1')}});
   const resumed=await active.status();if(resumed.owner!==signed.owner||resumed.epoch!==signed.epoch)throw Error('Restored wrong owner');
@@ -23,6 +24,7 @@ export default async function browserProbe(report,originReport){
   await backend.update({id:card.youtube_video_id,title:card.title},{review:'Проверка сохранения из Firefox.'});
   const current=await backend.current(card.youtube_video_id);
   if(current.videos[card.youtube_video_id].rating!==rating||current.videos[card.youtube_video_id].review!=='Проверка сохранения из Firefox.')throw Error('Server write mismatch');
+  if(options.controlled){await fetch(options.writtenReport,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});await new Promise(()=>{});}
   result.ok=true;result.stage='done';
  }catch(error){result.kind=error.kind??'error';result.status=error.status??0;}
  finally{
