@@ -147,3 +147,7 @@ Profile stats and tabs: server counts across all pages for library videos, video
 
 ### Спорные вопросы — DEC-WEB-REAL-DATA
 Демоданные не используются как fallback при ошибке API. Legacy local records и исходники расширения не импортировать автоматически и не очищать массово; для ещё не готовых API показать недоступность. Главный баннер/правая колонка/теги берутся из текущего серверного каталога, без заявления персональных рекомендаций. В публичную сборку сайта не копировать прототип расширения. Реализация серверной интеграции расширения — отдельная задача.
+
+### EXT-001 — контракт команд и состояний
+- [x] EXT-001: зафиксированы runtimeграницы, независимые auth/transport/sync/operation состояния, videoID/UUID/UC, явные null/false, таблица кнопок→API, idempotency/lease/revision и ownerisolation. Документ extension/docs/protocol.md. Это контракт; вход/outbox/sync не считаются реализованными.
+DEC-EXT-002 — Вопрос поддержкиFirefox: отдельнаяdevсборка/фон поверх общейлогики, ChromeMV3сохраняется; nativeустановка послеworkerграниц иmanifestадаптации, безпубликации. Не ослаблять trustedstorage длясовместимости.
