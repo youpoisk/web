@@ -510,7 +510,7 @@ test('own display name and exact navigation count requests use only own endpoint
  const error=new Error('uncertain');await assert.rejects(changeMyName({request:async()=>{throw error}},'Имя'),e=>e===error);
 });
 
-test('profile tabs select actual ratings and reviews, preserve order and shared entries',async()=>{const{profileRecommendations}=await import('../src/shared/library/lists.ts');const rated={rating:8,review:null},reviewed={rating:null,review:'Text'},both={rating:9,review:'Both'};const items=[rated,reviewed,both];assert.deepEqual(profileRecommendations(items,'all'),items);assert.deepEqual(profileRecommendations(items,'ratings'),[rated,both]);assert.deepEqual(profileRecommendations(items,'reviews'),[reviewed,both]);assert.deepEqual(profileRecommendations([],'reviews'),[]);});
+test('profile tabs select actual ratings and reviews, preserve order and shared entries',async()=>{const{profileRecommendations}=await import('../src/shared/library/lists.ts');const rated={rating:8,review:null},reviewed={rating:null,review:'Text'},both={rating:9,review:'Both'};const items=[rated,reviewed,both];assert.deepEqual(profileRecommendations(items,'all'),items);assert.deepEqual(profileRecommendations(items,'ratings'),[rated,both]);assert.deepEqual(profileRecommendations(items,'reviews'),[reviewed,both]);assert.deepEqual(profileRecommendations([],'reviews'),[]);const marked={rating:null,review:null,mark:'watched'};assert.deepEqual(profileRecommendations([rated,marked,{...both,mark:'not_interested'}],'marks'),[marked,{...both,mark:'not_interested'}]);assert.deepEqual(profileRecommendations([rated,marked],'all'),[rated,marked]);});
 
 test('feed view preference is stored locally and defaults to authors', () => {
   const data = new Map();

@@ -35,18 +35,24 @@
     if(command.type==='OPTIONS') {next.options=options(command.options||{});return next;}
     if(command.type!=='UPDATE') throw Error('Неизвестная команда');
     const v=metadata(command.video); const patch=command.patch||{};
-    // Three functions only (customer decision 2026-11-21): rating, watch-later, review.
-    if(Object.keys(patch).some(k=>!['rating','later','review'].includes(k))) throw Error('Неизвестное поле');
+    // Rating, watch-later, review (customer decision 2026-11-21) and the
+    // «Просмотрено»/«Неинтересно» marks next to the rating (YP-102).
+    if(Object.keys(patch).some(k=>!['rating','later','review','mark'].includes(k))) throw Error('Неизвестное поле');
     if('rating' in patch) rating(patch.rating);
     if('later' in patch && typeof patch.later!=='boolean') throw Error('Некорректное состояние списка');
+    if('mark' in patch && ![null,'watched','not_interested'].includes(patch.mark)) throw Error('Некорректная отметка');
+    if(patch.mark==='not_interested' && patch.later===true) throw Error('«Неинтересно» и «Посмотрю позже» нельзя выбрать вместе');
     const text='review' in patch?review(patch.review):undefined;
     const {added:_a,recommended:_r,...previous}=next.videos[v.id]||{};
-    const record={rating:null,later:false,review:null,createdAt:now,...previous,...v,updatedAt:now};
+    const record={rating:null,later:false,review:null,mark:null,createdAt:now,...previous,...v,updatedAt:now};
     if('rating' in patch) record.rating=patch.rating;
     if('later' in patch) record.later=patch.later;
+    if('mark' in patch) record.mark=patch.mark;
+    if(patch.mark==='not_interested') record.later=false;
+    else if(patch.later===true && record.mark==='not_interested') record.mark=null;
     if(text!==undefined){record.review=text;record.reviewedAt=text===null?null:now;}
-    // No library: a video without rating, watch-later and review is not kept.
-    if(record.rating===null && !record.later && record.review===null) delete next.videos[v.id];
+    // No library: a video without rating, watch-later, review and mark is not kept.
+    if(record.rating===null && !record.later && record.review===null && record.mark===null) delete next.videos[v.id];
     else next.videos[v.id]=record;
     delete next.channels;
     return next;

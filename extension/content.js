@@ -29,6 +29,13 @@
     for(let i=1;i<=10;i++){const b=node('button',String(i),value===i?'yp-active':'');b.type='button';b.setAttribute('aria-label',`Оценка видео: ${i}`);b.setAttribute('aria-pressed',String(value===i));b.onclick=()=>update({rating:i});row.append(b);}
     const clear=node('button','Сбросить');clear.type='button';clear.disabled=value==null;clear.onclick=()=>update({rating:null});row.append(clear);panel.append(row);
   }
+  // «Неинтересно» / «Просмотрено» (YP-102) next to the rating; pressing the
+  // active one again clears it.
+  function marks(panel,value){
+    const row=node('div','', 'yp-marks');row.setAttribute('role','group');row.setAttribute('aria-label','Отметка видео');
+    for(const [mark,label] of [['not_interested','⊖ Неинтересно'],['watched','◉ Просмотрено']]){const b=node('button',label,value===mark?'yp-active':'');b.type='button';b.setAttribute('aria-pressed',String(value===mark));b.onclick=()=>update({mark:value===mark?null:mark});row.append(b);}
+    panel.append(row);
+  }
   function menuHost(){
     const menu=document.querySelector('ytd-watch-metadata #menu, #above-the-fold #menu') || (demo?document.getElementById('menu'):null);
     return menu?.querySelector('#top-level-buttons-computed')||menu;
@@ -59,9 +66,9 @@
     if(state.options.enabled===false){document.getElementById('yp-panel')?.remove();return;}
     const panel=node('div');panel.id='yp-panel';panel.setAttribute('aria-label','Действия YouPoisk');
     const saved=state.videos[current.id]||{};
-    const rate=node('button','','yp-rate-trigger');const star=document.createElementNS('http://www.w3.org/2000/svg','svg');star.setAttribute('viewBox','0 0 24 24');star.setAttribute('aria-hidden','true');star.classList.add('yp-rate-icon');const starPath=document.createElementNS('http://www.w3.org/2000/svg','path');starPath.setAttribute('d','m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2L3.2 9.6l6.3-.9Z');star.append(starPath);rate.replaceChildren(star,node('span',saved.rating?String(saved.rating)+'/10':'Оценить','yp-rate-label'));rate.type='button';rate.title='Оценка YouPoisk от 1 до 10';rate.setAttribute('aria-expanded','false');rate.setAttribute('aria-haspopup','dialog');
+    const rate=node('button','','yp-rate-trigger');const star=document.createElementNS('http://www.w3.org/2000/svg','svg');star.setAttribute('viewBox','0 0 24 24');star.setAttribute('aria-hidden','true');star.classList.add('yp-rate-icon');const starPath=document.createElementNS('http://www.w3.org/2000/svg','path');starPath.setAttribute('d','m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2L3.2 9.6l6.3-.9Z');star.append(starPath);rate.replaceChildren(star,node('span',saved.rating?String(saved.rating)+'/10':'Оценить','yp-rate-label'));if(saved.mark){const m=node('span',saved.mark==='watched'?'Просмотрено':'Неинтересно','yp-mark-chip');rate.append(m);}rate.type='button';rate.title='Оценка YouPoisk от 1 до 10';rate.setAttribute('aria-expanded','false');rate.setAttribute('aria-haspopup','dialog');
     const popover=node('div','', 'yp-rating-popover');popover.id='yp-rating-popover';popover.setAttribute('popover','auto');popover.setAttribute('role','dialog');popover.setAttribute('aria-label','Оценка YouPoisk');
-    popover.append(node('strong','YouPoisk'),node('p','Ваша оценка видео'));scores(popover,saved.rating);
+    popover.append(node('strong','YouPoisk'),node('p','Ваша оценка видео'));scores(popover,saved.rating);marks(popover,saved.mark||null);
     popover.append(node('small','Сохраняется на этом устройстве.'));
     rate.onclick=()=>{
       if(popover.matches(':popover-open')){popover.hidePopover();return;}

@@ -1027,7 +1027,7 @@ export interface paths {
         head?: never;
         /**
          * Patch explicit own video fields
-         * @description Only supplied fields change. rating1..10 or later=true forces added=true; an independent added=false preserves existing rating/later. Null clears rating, null booleans rejected. Expected revision always checked for a new execution, exact receipt replay first.
+         * @description Only supplied fields change. rating1..10 or later=true forces added=true; an independent added=false preserves existing rating/later. Null clears rating, null booleans rejected. Expected revision always checked for a new execution, exact receipt replay first. mark (YP-102): "watched", "not_interested" or null to clear; see VideoPatch.mark.
          */
         patch: operations["patchVideoState"];
         trace?: never;
@@ -1710,6 +1710,11 @@ export interface components {
         Recommendation: {
             /** Format: date-time */
             changed_at: string;
+            /**
+             * @description Own mark (YP-102) shown when the library policy admits the viewer; a mark alone is listed in the profile but never in the feed.
+             * @enum {string|null}
+             */
+            mark: "watched" | "not_interested" | null;
             rating: number | null;
             review: string | null;
             /**
@@ -1886,8 +1891,13 @@ export interface components {
              */
             expected_revision: number;
             later?: boolean;
+            /**
+             * @description YP-102: «Просмотрено» (watched) or «Неинтересно» (not_interested); null clears. A mark forces added=true; not_interested clears later; later=true clears not_interested; not_interested together with later=true is 422.
+             * @enum {string|null}
+             */
+            mark?: "watched" | "not_interested" | null;
             rating?: number | null;
-        } | unknown | unknown | unknown;
+        } | unknown | unknown | unknown | unknown;
         VideoReview: {
             /**
              * Format: int64
@@ -1916,6 +1926,11 @@ export interface components {
         VideoState: {
             added: boolean;
             later: boolean;
+            /**
+             * @description Present only when the video has an own mark (YP-102).
+             * @enum {string}
+             */
+            mark?: "watched" | "not_interested";
             rating: number | null;
             /**
              * Format: int64

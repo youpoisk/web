@@ -93,7 +93,10 @@ export async function loadChannelRating(client: Pick<ApiClient, 'request'>, id: 
 }
 
 export type VideoReview = components['schemas']['VideoReview'];
-type StateBody = { expected_revision: number; rating?: number | null; later?: boolean; added?: boolean };
+/** Own video mark (YP-102). */
+export type VideoMark = 'watched' | 'not_interested';
+export const MARK_LABELS: Record<VideoMark, string> = { watched: 'Просмотрено', not_interested: 'Неинтересно' };
+type StateBody = { expected_revision: number; rating?: number | null; later?: boolean; added?: boolean; mark?: VideoMark | null };
 type ReviewBody = { expected_revision: number; text: string | null };
 type WriteCommand = { operation: 'patchVideoState'; body: StateBody } | { operation: 'putVideoReview'; body: ReviewBody } | { operation: 'putChannelRating'; body: {expected_revision: number; rating: number | null} };
 
@@ -118,7 +121,7 @@ export class StateWriter {
     }
     return this.#lease;
   }
-  patch(videoId: string, expected: number, change: { rating?: number | null; later?: boolean; added?: boolean }): Promise<VideoState> {
+  patch(videoId: string, expected: number, change: { rating?: number | null; later?: boolean; added?: boolean; mark?: VideoMark | null }): Promise<VideoState> {
     return this.#write(videoId, { operation: 'patchVideoState', body: { expected_revision: expected, ...change } });
   }
   review(videoId: string, expected: number, text: string | null): Promise<VideoReview> {
@@ -491,7 +494,7 @@ export async function loadNavigationCounts(client:Pick<ApiClient,'request'>,sign
 }
 
 /** Filter real recommendation records without inventing local ratings/reviews. */
-export function profileRecommendations(items:Recommendation[],filter:'all'|'ratings'|'reviews'):Recommendation[]{return items.filter(item=>filter==='all'||(filter==='ratings'?item.rating!==null:item.review!==null));}
+export function profileRecommendations(items:Recommendation[],filter:'all'|'ratings'|'reviews'|'marks'):Recommendation[]{return items.filter(item=>filter==='all'||(filter==='ratings'?item.rating!==null:filter==='marks'?item.mark!=null:item.review!==null));}
 
 /** Feed view (#/feed «По авторам» / «По видео»): a browser-local UI preference, not personal data, so it survives sign-out. Missing, unknown or unreadable means «По авторам». */
 export const FEED_VIEW_KEY = 'youpoisk.feed-view';

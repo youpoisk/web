@@ -35,3 +35,7 @@ html[dark] #yp-panel{--yp-text:#f1f1f1;--yp-bg:#212121;--yp-chip:#353535;--yp-se
 #yp-panel .yp-actions button{flex:1;padding:9px 10px;border-radius:18px;border:0;font:inherit;cursor:pointer;background:var(--yp-chip);color:var(--yp-text)}
 #yp-panel .yp-actions .yp-primary{background:#1da1f2;color:#fff}
 #yp-panel .yp-counter.yp-over{color:#d93025}
+#yp-panel .yp-marks{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 12px}
+#yp-panel .yp-marks button{padding:9px 8px;border-radius:6px;font:inherit;background:var(--yp-chip);color:var(--yp-text);border:0;cursor:pointer}
+#yp-panel .yp-marks button.yp-active{background:#0a6cb0;color:white}
+#yp-panel .yp-mark-chip{margin-left:6px;font-size:.85em;opacity:.8}

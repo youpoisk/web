@@ -1203,7 +1203,7 @@
       "patch": {
         "operationId": "patchVideoState",
         "summary": "Patch explicit own video fields",
-        "description": "Only supplied fields change. rating1..10 or later=true forces added=true; an independent added=false preserves existing rating/later. Null clears rating, null booleans rejected. Expected revision always checked for a new execution, exact receipt replay first.",
+        "description": "Only supplied fields change. rating1..10 or later=true forces added=true; an independent added=false preserves existing rating/later. Null clears rating, null booleans rejected. Expected revision always checked for a new execution, exact receipt replay first. mark (YP-102): \"watched\", \"not_interested\" or null to clear; see VideoPatch.mark.",
         "tags": [
           "PersonalState"
         ],
@@ -7218,6 +7218,14 @@
           },
           "later": {
             "type": "boolean"
+          },
+          "mark": {
+            "type": "string",
+            "enum": [
+              "watched",
+              "not_interested"
+            ],
+            "description": "Present only when the video has an own mark (YP-102)."
           }
         },
         "required": [
@@ -7250,6 +7258,11 @@
                 "later": {
                   "const": false
                 }
+              },
+              "not": {
+                "required": [
+                  "mark"
+                ]
               }
             }
           }
@@ -7384,6 +7397,18 @@
           },
           "later": {
             "type": "boolean"
+          },
+          "mark": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "watched",
+              "not_interested",
+              null
+            ],
+            "description": "YP-102: «Просмотрено» (watched) or «Неинтересно» (not_interested); null clears. A mark forces added=true; not_interested clears later; later=true clears not_interested; not_interested together with later=true is 422."
           }
         },
         "required": [
@@ -7404,6 +7429,11 @@
           {
             "required": [
               "later"
+            ]
+          },
+          {
+            "required": [
+              "mark"
             ]
           }
         ]
@@ -8535,6 +8565,18 @@
             ],
             "format": "uuid",
             "description": "Id of the visible review (to report it); null when no review text is shown."
+          },
+          "mark": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "watched",
+              "not_interested",
+              null
+            ],
+            "description": "Own mark (YP-102) shown when the library policy admits the viewer; a mark alone is listed in the profile but never in the feed."
           }
         },
         "required": [
@@ -8542,7 +8584,8 @@
           "rating",
           "review",
           "changed_at",
-          "review_id"
+          "review_id",
+          "mark"
         ],
         "additionalProperties": false
       },

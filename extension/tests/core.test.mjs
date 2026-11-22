@@ -67,3 +67,13 @@ test('manifest declares all runtime files and restricts content scripts to YouTu
  assert.equal(manifest.externally_connectable,undefined);
 });
 
+test('marks: watched keeps watch-later, not interested clears it, later clears not interested',()=>{
+ let state=core.apply(core.empty(),update({mark:'watched'}));assert.equal(state.videos[video.id].mark,'watched');assert.equal(state.videos[video.id].later,false);
+ state=core.apply(state,update({later:true}));assert.equal(state.videos[video.id].mark,'watched');assert.equal(state.videos[video.id].later,true);
+ state=core.apply(state,update({mark:'not_interested'}));assert.equal(state.videos[video.id].mark,'not_interested');assert.equal(state.videos[video.id].later,false);
+ state=core.apply(state,update({later:true}));assert.equal(state.videos[video.id].mark,null);assert.equal(state.videos[video.id].later,true);
+ state=core.apply(state,update({later:false}));assert.equal(state.videos[video.id],undefined,'nothing kept without rating, later, review or mark');
+ state=core.apply(core.empty(),update({mark:'not_interested'}));state=core.apply(state,update({mark:null}));assert.equal(state.videos[video.id],undefined);
+ assert.throws(()=>core.apply(core.empty(),update({mark:'liked'})));assert.throws(()=>core.apply(core.empty(),update({mark:'not_interested',later:true})));
+});
+
