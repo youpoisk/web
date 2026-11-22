@@ -14,3 +14,7 @@ test('Firefox open failure rejects and permits a later retry',async()=>{
 test('Firefox build omits storage permission and loads shared background in order',()=>{
  const m=JSON.parse(readFileSync(new URL('../manifest.firefox.json',import.meta.url)));assert.equal(m.manifest_version,3);assert.equal(m.background.service_worker,undefined);assert.equal(m.permissions.includes('storage'),false);assert.deepEqual(m.background.scripts,['core.js','storage-firefox.js','background-common.js','background.firefox.js']);for(const file of m.background.scripts)assert.ok(readFileSync(new URL('../'+file,import.meta.url)).length);assert.deepEqual(m.content_scripts[0].matches,['https://www.youtube.com/*']);assert.equal(m.externally_connectable,undefined);assert.deepEqual(m.host_permissions,['https://www.youtube.com/*']);
 });
+
+test('Firefox named auth records stay separate from legacy library snapshots',async()=>{
+ const s=store(new IDBFactory()),library={version:1,videos:{},options:{enabled:true}};await s.write(library);await s.write({version:1,refresh:'private'},'yp-auth-v1');assert.deepEqual(JSON.parse(JSON.stringify(await s.read())),library);await s.write({...library,videos:{one:{rating:8}}});assert.equal((await s.read('yp-auth-v1')).refresh,'private');await s.write(null,'yp-auth-v1');assert.equal(await s.read('yp-auth-v1'),null);assert.equal((await s.read()).videos.one.rating,8);
+});

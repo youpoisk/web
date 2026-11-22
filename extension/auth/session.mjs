@@ -11,11 +11,11 @@ export function createSession({origin,store,fetch:send=globalThis.fetch,crypto=g
  const snapshot=()=>({state:record?.refresh?'authenticated':record?.owner?'session-expired':'guest',owner:record?.owner??null,epoch:record?.epoch??null,user:user?{id:user.id,login:user.login,name:user.name}:null});
  async function load(){
   if(record!==undefined)return;
-  const value=await store.load();
+  let value;try{value=await store.load();}catch{throw new AuthError('storage');}
   if(value!==null&&(!value||value.version!==1||!UUID.test(value.owner)||!UUID.test(value.epoch)||!UUID.test(value.session)|| (value.refresh!==null&&!REFRESH.test(value.refresh)) ||Object.keys(value).some(k=>!['version','owner','epoch','session','refresh','attempt'].includes(k)) ||(value.attempt&&(!UUID.test(value.attempt.id)||!/^[A-Za-z0-9_-]{43}$/.test(value.attempt.proof)||Object.keys(value.attempt).some(k=>!['id','proof'].includes(k))))))throw new AuthError('storage');
   record=value;
  }
- async function persist(value){await store.save(value);record=value;}
+ async function persist(value){try{await store.save(value);}catch{throw new AuthError('storage');}record=value;}
  async function http(path,body,bearer){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
   try{

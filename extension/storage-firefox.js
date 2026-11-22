@@ -16,10 +16,10 @@ globalThis.YPStorageFirefox=(()=>{
   });
   return opening;
  }
- async function read(){
+ async function read(key=KEY){
   const db=await open();
   return await new Promise((resolve,reject)=>{
-   const transaction=db.transaction(STORE,'readonly'),request=transaction.objectStore(STORE).get(KEY);
+   const transaction=db.transaction(STORE,'readonly'),request=transaction.objectStore(STORE).get(key);
    let result=null;request.onsuccess=()=>{result=request.result??null;};
    transaction.oncomplete=()=>resolve(result);
    transaction.onabort=()=>reject(transaction.error??new Error('Storage read aborted'));
@@ -27,11 +27,11 @@ globalThis.YPStorageFirefox=(()=>{
    request.onerror=()=>reject(request.error);
   });
  }
- async function write(state){
+ async function write(state,key=KEY){
   const db=await open();
   return await new Promise((resolve,reject)=>{
    const transaction=db.transaction(STORE,'readwrite');
-   transaction.objectStore(STORE).put(state,KEY);
+   transaction.objectStore(STORE).put(state,key);
    transaction.oncomplete=()=>resolve();
    transaction.onerror=()=>reject(transaction.error);
    transaction.onabort=()=>reject(transaction.error);
