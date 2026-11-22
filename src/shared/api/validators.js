@@ -7288,8 +7288,8 @@ function validate157(data, { instancePath = "", parentData, parentDataProperty, 
             const _errs2 = errors;
             if (errors === _errs2) {
               if (typeof data0 === "string") {
-                if (func1(data0) > 100) {
-                  validate157.errors = [{ instancePath: instancePath + "/name", schemaPath: "#/properties/name/maxLength", keyword: "maxLength", params: { limit: 100 }, message: "must NOT have more than 100 characters" }];
+                if (func1(data0) > 30) {
+                  validate157.errors = [{ instancePath: instancePath + "/name", schemaPath: "#/properties/name/maxLength", keyword: "maxLength", params: { limit: 30 }, message: "must NOT have more than 30 characters" }];
                   return false;
                 } else {
                   if (func1(data0) < 1) {
@@ -10058,7 +10058,7 @@ function validate189(data, { instancePath = "", parentData, parentDataProperty, 
 }
 validate189.evaluated = { "dynamicProps": true, "dynamicItems": false };
 var schema_Register = validate193;
-var schema103 = { "type": "object", "properties": { "login": { "type": "string", "pattern": "^[A-Za-z0-9_]{3,32}$" }, "email": { "type": "string", "maxLength": 254, "minLength": 3, "pattern": "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$", "description": "Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred." }, "name": { "type": "string", "description": "Server trims and NFC-normalizes; normalized length1..100 code points." }, "password": { "type": "string", "minLength": 8, "maxLength": 128, "writeOnly": true, "description": "8..128 Unicode code points, at most512 UTF8 bytes. Never trimmed/normalized/stored in client storage or an offline queue. Invalid Unicode JSON escapes are rejected." }, "client_type": { "type": "string", "enum": ["web", "extension"] } }, "required": ["login", "email", "name", "password", "client_type"], "additionalProperties": false };
+var schema103 = { "type": "object", "properties": { "login": { "type": "string", "pattern": "^[A-Za-z0-9_]{3,32}$" }, "email": { "type": "string", "maxLength": 254, "minLength": 3, "pattern": "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$", "description": "Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred." }, "name": { "type": "string", "description": "Server trims and NFC-normalizes; normalized length 1..30 code points." }, "password": { "type": "string", "minLength": 8, "maxLength": 128, "writeOnly": true, "description": "8..128 Unicode code points, at most512 UTF8 bytes. Never trimmed/normalized/stored in client storage or an offline queue. Invalid Unicode JSON escapes are rejected." }, "client_type": { "type": "string", "enum": ["web", "extension"] } }, "required": ["login", "email", "name", "password", "client_type"], "additionalProperties": false };
 function validate193(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -38218,8 +38218,8 @@ function validate574(data, { instancePath = "", parentData, parentDataProperty, 
             const _errs2 = errors;
             if (errors === _errs2) {
               if (typeof data0 === "string") {
-                if (func1(data0) > 100) {
-                  validate574.errors = [{ instancePath: instancePath + "/name", schemaPath: "#/properties/name/maxLength", keyword: "maxLength", params: { limit: 100 }, message: "must NOT have more than 100 characters" }];
+                if (func1(data0) > 30) {
+                  validate574.errors = [{ instancePath: instancePath + "/name", schemaPath: "#/properties/name/maxLength", keyword: "maxLength", params: { limit: 30 }, message: "must NOT have more than 30 characters" }];
                   return false;
                 } else {
                   if (func1(data0) < 1) {

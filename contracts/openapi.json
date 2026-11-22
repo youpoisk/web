@@ -6956,7 +6956,7 @@
           },
           "name": {
             "type": "string",
-            "description": "Server trims and NFC-normalizes; normalized length1..100 code points."
+            "description": "Server trims and NFC-normalizes; normalized length 1..30 code points."
           },
           "password": {
             "type": "string",
@@ -9741,10 +9741,10 @@
           "name": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 100
+            "maxLength": 30
           }
         },
-        "description": "NFC trimmed display name, 1..100 Unicode code points, no control characters. Login/email unchanged; concurrent edits serialize with last successful write winning."
+        "description": "NFC trimmed display name, 1..30 Unicode code points (names stored earlier may be up to 100 until changed), no control characters. Login/email unchanged; concurrent edits serialize with last successful write winning."
       },
       "NavigationCounts": {
         "type": "object",

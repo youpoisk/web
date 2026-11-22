@@ -1523,7 +1523,7 @@ export interface components {
             title: string | null;
             youtube_video_id: string;
         };
-        /** @description NFC trimmed display name, 1..100 Unicode code points, no control characters. Login/email unchanged; concurrent edits serialize with last successful write winning. */
+        /** @description NFC trimmed display name, 1..30 Unicode code points (names stored earlier may be up to 100 until changed), no control characters. Login/email unchanged; concurrent edits serialize with last successful write winning. */
         NameChange: {
             name: string;
         };
@@ -1702,7 +1702,7 @@ export interface components {
             /** @description Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred. */
             email: string;
             login: string;
-            /** @description Server trims and NFC-normalizes; normalized length1..100 code points. */
+            /** @description Server trims and NFC-normalizes; normalized length 1..30 code points. */
             name: string;
             /** @description 8..128 Unicode code points, at most512 UTF8 bytes. Never trimmed/normalized/stored in client storage or an offline queue. Invalid Unicode JSON escapes are rejected. */
             password: string;
