@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
-import { loadDevices, revokeDevice, revokeOtherDevices, type Device } from '../shared/auth/devices.ts';
+import { activeDevices, loadDevices, revokeDevice, revokeOtherDevices, type Device } from '../shared/auth/devices.ts';
 
 /** Account-keyed by parent. Current-device exit uses the site's auth coordinator. */
 export function SecuritySessions({ client, onLogout }: { client: Pick<ApiClient, 'request'>; onLogout: () => void }) {
+  const [now, setNow] = useState(() => Date.now());
   const [items, setItems] = useState<Device[]>([]), [next, setNext] = useState<string | null>(null);
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [error, setError] = useState(false);
   const [failedAfter, setFailedAfter] = useState<string | null>(null), [message, setMessage] = useState('');
@@ -21,7 +22,16 @@ export function SecuritySessions({ client, onLogout }: { client: Pick<ApiClient,
   }
   useEffect(() => {
     generation.current++; const ctl = new AbortController(); void load(null, ctl.signal);
-    return () => { generation.current++; ctl.abort(); };
+    const tick = () => setNow(Date.now());
+    const refresh = () => {
+      tick();
+      if (document.visibilityState === 'visible' && !reading.current && !busy.current) {
+        setConfirm(null); void load(null, ctl.signal);
+      }
+    };
+    const timer = setInterval(tick, 15000);
+    document.addEventListener('visibilitychange', refresh); window.addEventListener('focus', refresh);
+    return () => { generation.current++; ctl.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', refresh); window.removeEventListener('focus', refresh); };
   }, [client]);
   function read(after: string | null) { if (!reading.current && !busy.current) { setConfirm(null); void load(after); } }
   async function revoke() {
@@ -38,16 +48,17 @@ export function SecuritySessions({ client, onLogout }: { client: Pick<ApiClient,
       if (stamp === generation.current) setMessage(failure instanceof ApiError && failure.status === 429 ? 'Слишком много действий подряд. Попробуйте позже.' : 'Не удалось подтвердить завершение сессии. Обновите список или повторите попытку.');
     } finally { if (stamp === generation.current) { busy.current = false; setSaving(false); } }
   }
+  const visibleItems = activeDevices(items, now);
   return <section className="panel form-panel" aria-busy={loading || saving}>
     <h2>Активные сессии</h2>
-    <p className="muted">Здесь показаны действующие входы на сайте и в расширении. Завершённой сессии потребуется новый вход.</p>
+    <p className="muted">Только действующие входы на сайте и в расширении. Завершённые и просроченные сессии не показываются. Вход остаётся активным до выхода или окончания срока, даже если окно закрыто.</p>
     <div className="actions"><button className="secondary" disabled={loading || saving} onClick={() => read(null)}>Обновить список</button><button className="secondary" disabled={loading || saving || error} onClick={() => { setMessage(''); setConfirm('others'); }}>Выйти на остальных устройствах</button></div>
     {loading && <p role="status">Загружаем сессии…</p>}
     {error && <p role="alert">Не удалось загрузить сессии. <button disabled={loading || saving} onClick={() => read(failedAfter)}>Повторить</button></p>}
-    {!loading && !error && !items.length && <p className="notice">Нет доступных сессий. Обновите список.</p>}
-    {items.map(it => <article className="review" key={it.id}>
+    {!loading && !error && !visibleItems.length && <p className="notice">Нет доступных сессий. Обновите список.</p>}
+    {visibleItems.map(it => <article className="review" key={it.id}>
       <h3>{it.device_label || (it.client_type === 'web' ? 'Сайт' : 'Расширение')}{it.current ? ' · текущая сессия' : ''}</h3>
-      <p className="small muted">{it.client_type === 'web' ? 'Сайт' : 'Расширение'} · создана {new Date(it.created_at).toLocaleString('ru-RU')} · действует до {new Date(it.expires_at).toLocaleString('ru-RU')}</p>
+      <p className="small muted">Активна · {it.client_type === 'web' ? 'Сайт' : 'Расширение'} · действует до {new Date(it.expires_at).toLocaleString('ru-RU')}</p>
       {it.current ? <button className="secondary" disabled={loading || saving} onClick={onLogout}>Выйти на этом устройстве</button> : <button className="secondary" disabled={loading || saving || error} onClick={() => { setMessage(''); setConfirm({id: it.id, label: it.device_label || (it.client_type === 'web' ? 'Сайт' : 'Расширение')}); }}>Завершить сессию</button>}
     </article>)}
     {next && <button className="secondary" disabled={loading || saving} onClick={() => read(next)}>Показать ещё</button>}

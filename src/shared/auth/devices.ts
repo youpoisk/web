@@ -12,3 +12,8 @@ export async function revokeDevice(client: Pick<ApiClient,'request'>, id: string
 export async function revokeOtherDevices(client: Pick<ApiClient,'request'>): Promise<void> {
  await client.request('logoutOtherSessions',{});
 }
+
+/** UX expiry guard only; revocation and live authentication remain server-owned. */
+export function activeDevices(items:readonly Device[], now:number):Device[]{
+ return items.filter(item=>Date.parse(item.expires_at)>now);
+}

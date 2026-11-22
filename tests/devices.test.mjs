@@ -14,3 +14,17 @@ test('uncertain session commands propagate failure without local success',async(
  const failure=new Error('network'),client={request:async()=>{throw failure}};
  for(const command of [()=>loadDevices(client,null),()=>revokeDevice(client,'id'),()=>revokeOtherDevices(client)])await assert.rejects(command,e=>e===failure);
 });
+
+test('active-device view omits expired and malformed dates but retains old live logins',async()=>{
+ const {activeDevices}=await import('../src/shared/auth/devices.ts');
+ const now=Date.parse('2026-11-22T10:00:00Z');
+ const current={id:'current',current:true,created_at:'2026-11-20T00:00:00Z',expires_at:'2026-11-25T00:00:00Z'};
+ const oldLive={id:'other',current:false,created_at:'2026-11-18T00:00:00Z',expires_at:'2026-11-23T00:00:00Z'};
+ const expired={id:'past',expires_at:'2026-11-21T00:00:00Z'};
+ const edge={id:'edge',expires_at:'2026-11-22T10:00:00Z'};
+ const invalid={id:'invalid',expires_at:'invalid'};
+ const source=Object.freeze([current,oldLive,expired,edge,invalid]);
+ assert.deepEqual(activeDevices(source,now),[current,oldLive]);
+ assert.equal(source.length,5);
+ assert.deepEqual(activeDevices(source,Date.parse('2026-11-26T00:00:00Z')),[]);
+});
