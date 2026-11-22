@@ -78,8 +78,7 @@ export function FriendsList({ client, searchable = false }: { client: Pick<ApiCl
       <Avatar client={client} userId={it.user.id} name={it.user.name || it.user.login} className={`avatar person-avatar color${i % 3 + 1}`}/>
       <h2>{it.user.name || it.user.login}</h2>
       <p className="muted">@{it.user.login} · друзья с {new Date(it.since).toLocaleDateString('ru-RU')}</p>
-      <a href={`#/user/${it.user.id}`}>Открыть профиль</a>
-      <div className="actions"><DeleteButton className="text-button" disabled={busy !== null || loading} onDelete={() => remove(it)}>Удалить из друзей</DeleteButton></div>
+      <div className="actions person-card-actions"><a className="secondary" href={`#/user/${it.user.id}`}>Открыть профиль</a><DeleteButton className="secondary person-remove" disabled={busy !== null || loading} onDelete={() => remove(it)}>Удалить из друзей</DeleteButton></div>
     </div>)}</div>
     {!searchTerm && next && <div className="actions"><button className="secondary" disabled={loading} onClick={() => void loadMore()}>Показать ещё</button></div>}
   </section>;

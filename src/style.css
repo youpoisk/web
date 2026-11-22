@@ -79,3 +79,22 @@
 .avatar.has-image{overflow:hidden;padding:0;flex-shrink:0}.avatar.has-image img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
 
 .avatar-editor-title,.avatar-editor-body,.avatar-crop{display:flex;align-items:center;gap:20px}.avatar-editor-title{gap:10px;margin-bottom:20px}.avatar-editor-title h2{margin:0}.avatar-editor-body>div{flex:1}.avatar-file{display:inline-flex;align-items:center;gap:8px;cursor:pointer}.avatar-file input{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.avatar-file:focus-within{outline:2px solid var(--blue,#159fff);outline-offset:3px}.avatar-crop{padding:24px 0}.avatar-crop canvas{width:128px;height:128px;border-radius:20px;border:1px solid #dbe5ed;flex-shrink:0}.avatar-crop-controls{display:grid;gap:12px;width:min(320px,100%)}.avatar-crop-controls label{display:grid;gap:6px}.avatar-crop-controls input{width:100%}.avatar-editor .actions{margin-top:18px}@media(max-width:540px){.avatar-editor-body,.avatar-crop{align-items:flex-start;flex-direction:column}}
+
+/* Compact people cards keep peer actions on one line. */
+.people-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+.people-grid .person-card{min-width:0;padding:20px 16px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.people-grid .person-card .person-avatar{width:56px;height:56px;margin:0 0 12px}
+.people-grid .person-card h2{font-size:17px;line-height:1.3;margin:0 0 7px;max-width:100%;overflow-wrap:anywhere}
+.people-grid .person-card>p{font-size:11px;line-height:1.5;margin-bottom:18px;overflow-wrap:anywhere;min-height:33px}
+.people-grid .person-card .person-card-actions{display:flex;flex-wrap:nowrap;gap:7px;width:100%;margin-top:auto;align-items:stretch}
+.person-card-actions>.secondary{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;padding:9px 7px;font-size:11px;line-height:1.3;min-height:40px;text-align:center}
+.person-card-actions .person-remove{color:#697d8c;background:#fff}
+.person-card-actions .person-remove:hover{color:#b34747;border-color:#e6b8b8;background:#fff7f7}
+.catalog-extension-promo{margin-top:22px;padding:22px 18px!important;border:1px solid #dceaf3!important;border-radius:16px;background:linear-gradient(145deg,#f0f9ff,#fff 85%)}
+.catalog-extension-icon{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:13px;color:#159fea;background:#e0f2fe;margin-bottom:15px}
+.catalog-extension-promo h2{font-size:18px;line-height:1.3;letter-spacing:-.4px;margin-bottom:10px}
+.catalog-extension-promo p{font-size:12px;color:#738997;line-height:1.65;margin-bottom:18px}
+.catalog-extension-promo .extension-download-placeholder{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;background:#fff;cursor:default}
+.catalog-extension-promo small{display:block;font-size:10px;color:#8d9da8;margin-top:10px;line-height:1.5}
+@media(max-width:1050px){.people-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.people-grid{grid-template-columns:minmax(0,1fr)}}
