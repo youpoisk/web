@@ -16,5 +16,5 @@ export function DeleteButton({onDelete,children,disabled=false,className='second
   return()=>{cancel();clearInterval(tick);};
  },[until]);
  function click(){if(pending.current){pending.current=false;setUntil(null);return;}if(disabled||busy)return;pending.current=true;setError(false);setRemaining(5);setUntil(Date.now()+5000);}
- return <><button type="button" className={className} aria-label={until!==null?'Отменить удаление':label} disabled={busy||(disabled&&until===null)} onClick={click}>{(until!==null||busy)&&<LoaderCircle size={14} className="delete-spinner" aria-hidden="true"/>}{until!==null?`Отменить удаление · ${remaining}`:busy?'Удаляем…':children}</button>{error&&<span role="alert">Не удалось удалить. Повторите попытку.</span>}</>;
+ return <><button type="button" className={className+' deferred-delete'} aria-label={until!==null?'Отменить удаление':label} disabled={busy||(disabled&&until===null)} onClick={click}>{(until!==null||busy)&&<LoaderCircle size={14} className="delete-spinner" aria-hidden="true"/>}{until!==null?`Отменить удаление · ${remaining}`:busy?'Удаляем…':children}</button>{error&&<span role="alert">Не удалось удалить. Повторите попытку.</span>}</>;
 }
