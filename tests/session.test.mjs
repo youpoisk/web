@@ -170,5 +170,8 @@ test('account deletion page: nonce-bound outcomes end the local sign-in; cancel 
  const p=await signed();const ps=new URL(p.session.passwordURL('#/settings')).searchParams.get('state');
  assert.equal(await p.session.completeCallback(callback+'?'+new URLSearchParams({account:'deleted',state:ps}),()=>{}),null,'a password nonce cannot confirm a deletion');
  assert.equal(p.session.businessScope().state,'authenticated');
+ const proto=await signed();const pr=new URL(proto.session.deleteAccountURL('#/settings')).searchParams.get('state');
+ assert.equal(await proto.session.completeCallback(callback+'?'+new URLSearchParams({account:'constructor',state:pr}),()=>{}),null,'inherited names are not outcomes');
+ assert.equal(proto.session.businessScope().state,'authenticated');
 });
 

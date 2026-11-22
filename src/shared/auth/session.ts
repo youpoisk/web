@@ -154,7 +154,8 @@ export class BrowserSession {
       password: { changed: 'password_changed', uncertain: 'password_uncertain', session: 'password_session' },
       delete: { deleted: 'account_deleted', uncertain: 'account_uncertain', session: 'account_session' },
     };
-    const outcome = valid ? outcomes[flow][url.searchParams.get(param)!] ?? null : null;
+    const value = url.searchParams.get(param)!;
+    const outcome = valid && Object.prototype.hasOwnProperty.call(outcomes[flow], value) ? outcomes[flow][value] : null;
     replaceURL(url.origin + url.pathname + (outcome ? '' : hash));
     if (!outcome) return null;
     this.#identity();
