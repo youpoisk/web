@@ -153,4 +153,22 @@ test('password page: nonce-bound outcomes end the local sign-in; cancelled or fo
  const ws=await signed();ws.env.writes=true;assert.throws(()=>ws.session.passwordURL('#/settings'),fail('storage'));
  const cr=await signed();cr.config.crypto.getRandomValues=()=>{throw Error('no crypto')};assert.throws(()=>cr.session.passwordURL('#/settings'),fail('crypto'),'no fixed nonce for a sign-out-gating return');
 });
+test('account deletion page: nonce-bound outcomes end the local sign-in; cancel and forged returns change nothing',async()=>{
+ const signed=async()=>{const f=fixture();await f.session.completeCallback(await start(f.session),()=>{});return f;};
+ const f=await signed();const url=new URL(f.session.deleteAccountURL('#/settings'));
+ assert.equal(url.origin+url.pathname,apiOrigin+'/auth/delete');assert.deepEqual([...url.searchParams.keys()].sort(),['redirect_uri','state']);
+ const st=url.searchParams.get('state');const cleaned=[];
+ assert.deepEqual(await f.session.completeCallback(callback+'?'+new URLSearchParams({account:'deleted',state:st}),v=>cleaned.push(v)),{returnHash:'#/',outcome:'account_deleted'});
+ assert.deepEqual(cleaned,[callback]);assert.deepEqual(f.session.businessScope(),{state:'guest'});
+ for(const [value,outcome] of [['uncertain','account_uncertain'],['session','account_session']]){
+  const g=await signed();const s2=new URL(g.session.deleteAccountURL('#/settings')).searchParams.get('state');
+  assert.deepEqual(await g.session.completeCallback(callback+'?'+new URLSearchParams({account:value,state:s2}),()=>{}),{returnHash:'#/',outcome});
+ }
+ const c=await signed();const cs=new URL(c.session.deleteAccountURL('#/settings')).searchParams.get('state');const back=[];
+ assert.equal(await c.session.completeCallback(callback+'?'+new URLSearchParams({account:'cancelled',state:cs}),v=>back.push(v)),null);
+ assert.deepEqual(back,[callback+'#/settings']);assert.equal(c.session.businessScope().state,'authenticated');
+ const p=await signed();const ps=new URL(p.session.passwordURL('#/settings')).searchParams.get('state');
+ assert.equal(await p.session.completeCallback(callback+'?'+new URLSearchParams({account:'deleted',state:ps}),()=>{}),null,'a password nonce cannot confirm a deletion');
+ assert.equal(p.session.businessScope().state,'authenticated');
+});
 

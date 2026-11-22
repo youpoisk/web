@@ -6,6 +6,8 @@ import type { SessionScope } from '../api/client.ts';
 import type { components } from '../api/schema';
 
 type Scope = { owner: string | null; epoch: string };
+type AccountFlow = 'password' | 'delete';
+export type AccountOutcome = 'password_changed' | 'password_uncertain' | 'password_session' | 'account_deleted' | 'account_uncertain' | 'account_session';
 type Storage = Pick<globalThis.Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type Crypto = Pick<globalThis.Crypto, 'randomUUID' | 'getRandomValues' | 'subtle'>;
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -117,31 +119,42 @@ export class BrowserSession {
   #nonce(): string {
     return btoa(String.fromCharCode(...this.#crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
   }
-  get #passwordKey(): string { return `yp.auth.password.v1:${this.#api}:${encodeURIComponent(this.#callback)}`; }
-  /** URL of the API-origin password page (YP-047). The site never sees the
-   * passwords; the page returns only a nonce-bound outcome. */
-  passwordURL(returnHash: string): string {
+  // Password change (YP-047) and account deletion (YP-084) run on the API
+  // origin; the site never sees the password and accepts only a nonce-bound
+  // outcome for this tab.
+  #flowKey(flow: AccountFlow): string { return `yp.auth.${flow}.v1:${this.#api}:${encodeURIComponent(this.#callback)}`; }
+  #accountFlowURL(flow: AccountFlow, returnHash: string): string {
     this.#identity();
     // Here the nonce gates a local sign-out, so there is no fixed fallback.
     let state: string;
     try { state = this.#nonce(); } catch { throw new FlowError('crypto'); }
-    try { this.#flowStorage.setItem(this.#passwordKey, JSON.stringify({ state, returnHash })); } catch { throw new FlowError('storage'); }
-    return `${this.#api}/auth/password?${new URLSearchParams({ redirect_uri: this.#callback, state })}`;
+    try { this.#flowStorage.setItem(this.#flowKey(flow), JSON.stringify({ state, returnHash })); } catch { throw new FlowError('storage'); }
+    return `${this.#api}/auth/${flow === 'password' ? 'password' : 'delete'}?${new URLSearchParams({ redirect_uri: this.#callback, state })}`;
   }
-  /** Return from the password page. A forged or cancelled return changes
-   * nothing (null: the normal restore runs). changed/uncertain/session end
-   * the local sign-in, because the server revoked (or may have revoked) every
-   * session of the account. undefined: not a password return. */
-  #capturePassword(rawURL: string, replaceURL: (clean: string) => void): { returnHash: string; outcome: 'password_changed' | 'password_uncertain' | 'password_session' } | null | undefined {
+  /** URL of the API-origin password page. */
+  passwordURL(returnHash: string): string { return this.#accountFlowURL('password', returnHash); }
+  /** URL of the API-origin account deletion page. */
+  deleteAccountURL(returnHash: string): string { return this.#accountFlowURL('delete', returnHash); }
+  /** Return from an account page. A forged or cancelled return changes
+   * nothing (null: the normal restore runs). Any other valid outcome ends the
+   * local sign-in, because the server revoked (or may have revoked) every
+   * session of the account. undefined: not such a return. */
+  #captureAccountFlow(rawURL: string, replaceURL: (clean: string) => void): { returnHash: string; outcome: AccountOutcome } | null | undefined {
     let url: URL;
     try { url = new URL(rawURL); } catch { return undefined; }
-    if (!url.searchParams.has('password')) return undefined;
+    const flow: AccountFlow | null = url.searchParams.has('password') ? 'password' : url.searchParams.has('account') ? 'delete' : null;
+    if (!flow) return undefined;
+    const param = flow === 'password' ? 'password' : 'account';
     let saved: { state?: unknown; returnHash?: unknown } | null = null;
-    try { const raw = this.#flowStorage.getItem(this.#passwordKey); this.#flowStorage.removeItem(this.#passwordKey); saved = raw === null ? null : JSON.parse(raw); } catch { saved = null; }
+    try { const raw = this.#flowStorage.getItem(this.#flowKey(flow)); this.#flowStorage.removeItem(this.#flowKey(flow)); saved = raw === null ? null : JSON.parse(raw); } catch { saved = null; }
     const valid = saved !== null && typeof saved.state === 'string' && url.searchParams.getAll('state').length === 1 && url.searchParams.get('state') === saved.state &&
-      url.searchParams.getAll('password').length === 1;
+      url.searchParams.getAll(param).length === 1;
     const hash = valid && typeof saved!.returnHash === 'string' && saved!.returnHash.startsWith('#/') ? saved!.returnHash : '';
-    const outcome = valid ? ({ changed: 'password_changed', uncertain: 'password_uncertain', session: 'password_session' } as const)[url.searchParams.get('password') as 'changed'] ?? null : null;
+    const outcomes: Record<AccountFlow, Record<string, AccountOutcome>> = {
+      password: { changed: 'password_changed', uncertain: 'password_uncertain', session: 'password_session' },
+      delete: { deleted: 'account_deleted', uncertain: 'account_uncertain', session: 'account_session' },
+    };
+    const outcome = valid ? outcomes[flow][url.searchParams.get(param)!] ?? null : null;
     replaceURL(url.origin + url.pathname + (outcome ? '' : hash));
     if (!outcome) return null;
     this.#identity();
@@ -152,11 +165,11 @@ export class BrowserSession {
     this.#scope = next;
     return { returnHash: '#/', outcome };
   }
-  async completeCallback(rawURL: string, replaceURL: (clean: string) => void, signal?: AbortSignal): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' | 'logged_out' | 'password_changed' | 'password_uncertain' | 'password_session' } | null> {
+  async completeCallback(rawURL: string, replaceURL: (clean: string) => void, signal?: AbortSignal): Promise<{ returnHash: string; outcome?: 'login_required' | 'access_denied' | 'logged_out' | AccountOutcome } | null> {
     const logout = this.#captureLogout(rawURL, replaceURL);
     if (logout !== null) return logout ? { returnHash: '#/', outcome: 'logged_out' } : null;
-    const password = this.#capturePassword(rawURL, replaceURL);
-    if (password !== undefined) return password;
+    const account = this.#captureAccountFlow(rawURL, replaceURL);
+    if (account !== undefined) return account;
     this.#identity();
     const denied = this.#flow.captureDenied(rawURL, replaceURL);
     if (denied) {

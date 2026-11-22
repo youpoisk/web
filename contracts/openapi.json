@@ -6532,6 +6532,105 @@
           }
         }
       }
+    },
+    "/v1/me/account/delete": {
+      "post": {
+        "operationId": "deleteAccount",
+        "summary": "Delete my account",
+        "description": "Self-service deletion (YP-084), called from the API-origin page so the site never handles the password. 422 incorrect_current_password keeps the account. Success atomically moves the account to deleting (it can no longer sign in and disappears for others) and revokes every session including the caller; a background purge then deletes personal data, relations, both sides of conversations, notifications, reports the person filed and staff roles, keeping only a UUID tombstone for other people's moderation history. Not reversible. Shares the login/password KDF admission.",
+        "tags": [
+          "Accounts"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Deletion started",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionStarted"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDeletionRequest"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9396,6 +9495,37 @@
         },
         "required": [
           "items"
+        ],
+        "additionalProperties": false
+      },
+      "AccountDeletionRequest": {
+        "type": "object",
+        "properties": {
+          "current_password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "writeOnly": true,
+            "description": "Same rules as PasswordChange.current_password. Never stored or retried by a client."
+          }
+        },
+        "required": [
+          "current_password"
+        ],
+        "additionalProperties": false
+      },
+      "AccountDeletionStarted": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "deleting"
+            ]
+          }
+        },
+        "required": [
+          "status"
         ],
         "additionalProperties": false
       }

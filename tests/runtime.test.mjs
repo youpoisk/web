@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authConfig, bootAuth, changePassword, signIn, signOut, scrubCallback, startupFailure, AuthConfigError } from '../src/shared/auth/runtime.ts';
+import { authConfig, bootAuth, changePassword, deleteAccount, signIn, signOut, scrubCallback, startupFailure, AuthConfigError } from '../src/shared/auth/runtime.ts';
 
 const user = { id: '00000000-0000-4000-8000-000000000001', login: 'anton', name: 'Anton', email: 'a@example.invalid' };
 function port(over = {}) {
@@ -36,9 +36,10 @@ test('scrubCallback removes only callback parameters and keeps the route', () =>
   scrubCallback({ href: 'https://web.example/?code=x&state=y#/feed', replace: (v) => seen.push(v) });
   scrubCallback({ href: 'https://web.example/?logout=done', replace: (v) => seen.push(v) });
   scrubCallback({ href: 'https://web.example/?password=changed&state=s', replace: (v) => seen.push(v) });
+  scrubCallback({ href: 'https://web.example/?account=deleted&state=s', replace: (v) => seen.push(v) });
   scrubCallback({ href: 'https://web.example/#/feed', replace: (v) => seen.push(v) });
   scrubCallback({ href: 'not a url', replace: (v) => seen.push(v) });
-  assert.deepEqual(seen, ['https://web.example/#/feed', 'https://web.example/', 'https://web.example/']);
+  assert.deepEqual(seen, ['https://web.example/#/feed', 'https://web.example/', 'https://web.example/', 'https://web.example/']);
 });
 
 test('startup failures have distinct messages', () => {
@@ -132,6 +133,21 @@ test('password change opens the API page and boot maps its outcomes to notices',
   const broken = port({ passwordURL() { throw kind('storage'); } });
   assert.match(changePassword(broken, browser(), 'bad').message, /смену пароля/);
   for (const [outcome, text] of [['password_changed', /Пароль изменён/], ['password_uncertain', /подтвердить/], ['password_session', /Сессия завершилась/]]) {
+    const view = await bootAuth(port({ done: { returnHash: '#/', outcome } }), browser());
+    assert.equal(view.status, 'guest');
+    assert.match(view.message, text);
+  }
+});
+
+test('account deletion opens the API page and boot maps its outcomes to notices', async () => {
+  const s = port({ deleteAccountURL(hash) { this.calls.push(['delete', hash]); return 'https://api.example/auth/delete?x=1'; } });
+  const b = browser('#/settings');
+  assert.deepEqual(deleteAccount(s, b, '#/settings'), { status: 'redirecting', user: null });
+  assert.deepEqual(b.assigned, ['https://api.example/auth/delete?x=1']);
+  deleteAccount(s, b);
+  assert.deepEqual(s.calls.at(-1), ['delete', '#/settings']);
+  assert.match(deleteAccount(port({ deleteAccountURL() { throw kind('crypto'); } }), browser(), 'bad').message, /удаление аккаунта/);
+  for (const [outcome, text] of [['account_deleted', /Аккаунт удалён/], ['account_uncertain', /подтвердить удаление/], ['account_session', /удалить аккаунт/]]) {
     const view = await bootAuth(port({ done: { returnHash: '#/', outcome } }), browser());
     assert.equal(view.status, 'guest');
     assert.match(view.message, text);

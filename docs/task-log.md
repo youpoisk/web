@@ -128,3 +128,5 @@ YP-083.2 site (DEC-WEB-029): contract import (63 operations); Moderation.tsx Rep
 
 YP-083.2 site follow-up: contract import with review_id; review reports from the feed and profile recommendations; moderation UI review FAIL (M1 no in-progress state on confirm) fixed with busy state, refresh, role-check retry and several LOWs. Frontend gate PASS.
 
+YP-084 site (DEC-WEB-030): contract import (64 operations); «Удалить аккаунт…» opens backend /auth/delete; BrowserSession deleteAccountURL and shared nonce-bound account-flow capture (password/delete keys separate); runtime deleteAccount + boot notices; scrubCallback strips account. test:api with session/runtime lines/functions100; frontend gate PASS.
+
