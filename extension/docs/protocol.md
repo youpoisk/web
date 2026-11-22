@@ -39,7 +39,7 @@ Credentials доступны только worker/trusted storage; UI получ�
 | Просмотрено / Неинтересно / снять | video_state mark watched/not_interested/null | not_interested снимает later; later=true снимает not_interested; несовместимый patch422 |
 | Добавить / удалить из библиотеки (если появится UI) | video_state added true/false | false сохраняется в payload; удаление по серверным правилам, не подразумевается снятием одной оценки |
 | Сохранить / изменить / удалить рецензию | отдельный video_review text/string/null | PUT /v1/me/videos/{UUID}/review, единая video revision; кнопка сохранения, без скрытой публикации |
-| Рекомендовать | открыть composer на сайте | не quick-toggle и не отдельный неявный post; один пост владельца на видео, редактирование текущего review |
+| Рекомендовать (если действие будет показано) | открыть карточку видео на сайте для редактирования оценки/рецензии | Отдельного composer/post нет (YP-099): сохранённые оценки и рецензии автоматически попадают в ленты по privacy. Кнопка не создаёт отдельную публикацию. |
 | Оценка канала | channel_rating integer/null | PUT /v1/me/channels/{UUID}/rating только с подтверждённым UC; provisional alias local-only |
 | Войти / выйти | auth | отдельная extension session, worker login/refresh/logout (EXT-004/005), не изменяет web session |
 | Повторить / конфликт | исходная operation / reconcile | retry сохраняет key/lease/payload;409 GET+явное решение, не last-write-wins |
