@@ -72,7 +72,7 @@ export function UserProfilePage({ client, userId, embedded=false, filter='all' }
     {profile && (!profile.ratings_visible || !profile.reviews_visible) && <p className="notice">
       {!profile.ratings_visible && !profile.reviews_visible ? 'Пользователь скрыл оценки и рецензии от вас.' : !profile.ratings_visible ? 'Пользователь скрыл от вас свои оценки; видны только рецензии.' : 'Пользователь скрыл от вас свои рецензии; видны только оценки.'}
     </p>}
-    <div className="section-head"><h2>{embedded?(filter==='ratings'?'Мои оценки':filter==='reviews'?'Мои отзывы':'Мои видео'):'Рекомендации'}</h2></div>
+    <div className="section-head"><h2>{embedded?(filter==='ratings'?'Мои оценки видео':filter==='reviews'?'Мои отзывы':'Мои видео'):'Рекомендации'}</h2></div>
     {loading && items.length === 0 && !error && <p className="muted" role="status">Загружаем профиль…</p>}
     {error && <p className="notice" role="status">{error} {error.startsWith('Не удалось') && <button className="text-button" onClick={() => void loadPage(failedAfter)}>Повторить</button>}</p>}
     {!loading && !error && profile && visible.length === 0 && !next && <p className="notice">{embedded?(filter==='ratings'?'Вы ещё не оценивали видео.':filter==='reviews'?'Вы ещё не написали рецензий.':'Пока нет оценок и рецензий.'):'Пока нет оценок и рецензий, которые вам видны.'}</p>}
