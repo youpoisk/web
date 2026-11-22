@@ -1,3 +1,4 @@
+import{LoadMore}from'./LoadMore.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
 import { groupFeedByVideo, loadFeed, type FeedItem } from '../shared/library/lists.ts';
@@ -57,6 +58,6 @@ export function FeedList({ client }: { client: Pick<ApiClient, 'request'> }) {
         {group.items.map(it => <FeedAuthor key={it.user.id} item={it} client={client}/>)}
       </div>
     </article>)}
-    {next && <div className="actions"><button className="secondary" disabled={loading} onClick={() => read(next)}>Показать ещё</button></div>}
+    <LoadMore cursor={next} loaded={items.length} busy={loading} error={error} onMore={()=>read(next)}/>
   </section>;
 }

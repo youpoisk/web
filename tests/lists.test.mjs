@@ -25,7 +25,7 @@ test('loadList calls the matching operation with limit and optional cursor', asy
   const end = { async request(op, options) { calls.push([op, options.query]); return { items: [] }; } };
   assert.deepEqual(await loadList(end, 'watchlist', 'c2'), { items: [], next: null });
   await loadList(client, 'ratings', '');
-  assert.deepEqual(calls, [['listLibrary', { limit: 30 }], ['listWatchlist', { limit: 30, after: 'c2' }], ['listRatings', { limit: 30 }]]);
+  assert.deepEqual(calls, [['listLibrary', { limit: 12 }], ['listWatchlist', { limit: 12, after: 'c2' }], ['listRatings', { limit: 12 }]]);
 });
 
 test('toCard keeps real data and never invents titles or durations', () => {
@@ -162,7 +162,7 @@ test('searchCatalog sends trimmed text, multiple tags, match mode, sort and curs
   assert.equal(calls[0][1].q.length, 100);
   assert.deepEqual(calls[0][1].tag, ['обзор', 'игры']);
   assert.equal(calls[0][1].match, 'all');
-  assert.deepEqual(calls[1], ['searchVideos', { limit: 30, sort: 'new', after: 'n1' }]);
+  assert.deepEqual(calls[1], ['searchVideos', { limit: 12, sort: 'new', after: 'n1' }]);
   const bare = toPublicCard({ ...publicItem, title: null, duration_seconds: null, channel: null, hashtags: [], rating: { count: 0, average: null } });
   assert.deepEqual([bare.title, bare.duration, bare.channel, bare.tag, bare.rating, bare.votes], ['Название пока неизвестно', '', '', '', 0, 0]);
 });
@@ -213,7 +213,7 @@ test('searchCatalog preserves multiple tags and ANY mode on subsequent pages', a
   const tags = Object.freeze(['gta6', 'моряк']);
   const client = { async request(operation, options) {
     assert.equal(operation, 'searchVideos');
-    assert.deepEqual(options.query, {limit: 30, sort: 'popular', tag: ['gta6', 'моряк'], match: 'any', after: 'cursor-two'});
+    assert.deepEqual(options.query, {limit: 12, sort: 'popular', tag: ['gta6', 'моряк'], match: 'any', after: 'cursor-two'});
     return {items: [], next_cursor: null};
   }};
   assert.deepEqual(await searchCatalog(client, {text: '', tags, match: 'any', sort: 'popular'}, 'cursor-two'), {items: [], next: null});
@@ -278,7 +278,7 @@ test('loadUserProfile and loadUserRecommendations read another user', async () =
   assert.deepEqual(await loadUserProfile(client, 'u1'), profile);
   assert.deepEqual(await loadUserRecommendations(client, 'u1', null), { items: [{ rating: 9 }], next: 'n1' });
   assert.deepEqual(await loadUserRecommendations(client, 'u1', 'n1'), { items: [], next: null });
-  assert.deepEqual(calls, [['getUserProfile', { id: 'u1' }, undefined], ['listUserRecommendations', { id: 'u1' }, { limit: 30 }], ['listUserRecommendations', { id: 'u1' }, { limit: 30, after: 'n1' }]]);
+  assert.deepEqual(calls, [['getUserProfile', { id: 'u1' }, undefined], ['listUserRecommendations', { id: 'u1' }, { limit: 12 }], ['listUserRecommendations', { id: 'u1' }, { limit: 12, after: 'n1' }]]);
 });
 
 test('loadPrivacy and changePrivacy send one policy at the known revision', async () => {
@@ -297,7 +297,7 @@ test('loadFeed pages friends recommendations', async () => {
   const client = { async request(op, options) { calls.push([op, options.query]); return calls.length === 1 ? { items: [{ rating: 9 }], next_cursor: 'n1' } : { items: [] }; } };
   assert.deepEqual(await loadFeed(client, null), { items: [{ rating: 9 }], next: 'n1' });
   assert.deepEqual(await loadFeed(client, 'n1'), { items: [], next: null });
-  assert.deepEqual(calls, [['listFeed', { limit: 30 }], ['listFeed', { limit: 30, after: 'n1' }]]);
+  assert.deepEqual(calls, [['listFeed', { limit: 12 }], ['listFeed', { limit: 12, after: 'n1' }]]);
 });
 
 test('people search and friend request helpers call the right operations', async () => {

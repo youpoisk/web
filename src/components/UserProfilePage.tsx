@@ -1,3 +1,4 @@
+import{LoadMore}from'./LoadMore.tsx';
 import {BlockControl} from './Blocks.tsx';
 import {FollowControls} from './Subscriptions.tsx';
 import React, { useEffect, useRef, useState } from 'react';
@@ -78,6 +79,6 @@ export function UserProfilePage({ client, userId }: { client: Pick<ApiClient, 'r
         {it.review_id && profile?.relation !== 'self' && <ReportButton client={client} kind="review" targetId={it.review_id} label="Пожаловаться на рецензию"/>}
       </div>
     </article>)}</div>
-    {next && <div className="actions"><button className="secondary" disabled={loading} onClick={() => void loadMore()}>Показать ещё</button></div>}
+    <LoadMore cursor={next} loaded={items.length} busy={loading} error={!!error} onMore={()=>void loadMore()}/>
   </section>;
 }

@@ -23,7 +23,7 @@ export function routeList(route: string): ListKind | null {
 
 /** Loads one page of the viewer's own list (live Bearer via the client scope). */
 export async function loadList(client: Pick<ApiClient, 'request'>, kind: ListKind, after: string | null, signal?: AbortSignal): Promise<ListPage> {
-  const query: { limit: number; after?: string } = { limit: 30 };
+  const query: { limit: number; after?: string } = { limit: 12 };
   if (after) query.after = after;
   const page = await client.request(operations[kind], { query, signal });
   return { items: page.items, next: page.next_cursor ?? null };
@@ -35,7 +35,7 @@ export type SearchPage = { items: PublicCard[]; next: string | null };
 
 /** One page of the public catalog search (no viewer state, no Authorization). */
 export async function searchCatalog(client: Pick<ApiClient, 'request'>, filter: { text: string; tags: readonly string[]; match: 'any' | 'all'; sort: SearchSort }, after: string | null, signal?: AbortSignal): Promise<SearchPage> {
-  const query: { limit: number; sort: SearchSort; q?: string; tag?: string[]; match?: 'any' | 'all'; after?: string } = { limit: 30, sort: filter.sort };
+  const query: { limit: number; sort: SearchSort; q?: string; tag?: string[]; match?: 'any' | 'all'; after?: string } = { limit: 12, sort: filter.sort };
   const text = filter.text.trim().slice(0, 100);
   if (text) query.q = text;
   if (filter.tags.length) { query.tag = [...filter.tags]; query.match = filter.match; }
@@ -200,7 +200,7 @@ export async function loadUserProfile(client: Pick<ApiClient, 'request'>, userId
 }
 /** One page of the user's visible ratings and reviews. */
 export async function loadUserRecommendations(client: Pick<ApiClient, 'request'>, userId: string, after: string | null, signal?: AbortSignal): Promise<{ items: Recommendation[]; next: string | null }> {
-  const query: { limit: number; after?: string } = { limit: 30 };
+  const query: { limit: number; after?: string } = { limit: 12 };
   if (after) query.after = after;
   const page = await client.request('listUserRecommendations', { path: { id: userId }, query, signal });
   return { items: page.items, next: page.next_cursor ?? null };
@@ -221,7 +221,7 @@ export async function changePrivacy(client: Pick<ApiClient, 'request'>, revision
 export type FeedItem = components['schemas']['FeedItem'];
 /** One page of «Рекомендации»: friends' visible ratings and reviews, newest first. */
 export async function loadFeed(client: Pick<ApiClient, 'request'>, after: string | null, signal?: AbortSignal): Promise<{ items: FeedItem[]; next: string | null }> {
-  const query: { limit: number; after?: string } = { limit: 30 };
+  const query: { limit: number; after?: string } = { limit: 12 };
   if (after) query.after = after;
   const page = await client.request('listFeed', { query, signal });
   return { items: page.items, next: page.next_cursor ?? null };
