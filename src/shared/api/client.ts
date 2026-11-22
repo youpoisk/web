@@ -112,6 +112,7 @@ export class ApiClient {
     this.#timeout = config.timeoutMs ?? 15000;
     if (!Number.isSafeInteger(this.#timeout) || this.#timeout < 1 || this.#timeout > 120000) throw new ApiError('configuration');
   }
+  get avatarScope(): string { return scopeKey(this.#session()); }
   /** Avatar image I/O (YP-100): the only non-JSON bodies. A signed-in
    * session is required; the Bearer token is sent like every private call. */
   async #raw(method: 'GET' | 'PUT', path: string, init: { body?: Blob; contentType?: string; accept: string; cache: RequestCache; limit: number; revision: number; signal?: AbortSignal }): Promise<RawReply> {
@@ -146,7 +147,8 @@ export class ApiClient {
     if (!/^application\/json(?:\s*;|$)/i.test(reply.type)) throw new ApiError('protocol');
     let parsed: unknown;
     try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(reply.bytes)); safeWireValues(parsed); } catch { throw new ApiError('protocol'); }
-    const ok = reply.status >= 200 && reply.status < 300;
+    const ok = reply.status === 200;
+    if (reply.status >= 200 && reply.status < 300 && !ok) throw new ApiError('protocol');
     if (!validates(ok ? schema : 'schema_Error', parsed)) throw new ApiError('protocol');
     if (!ok) {
       const code = (parsed as { code?: string }).code ?? '';
@@ -169,7 +171,8 @@ export class ApiClient {
       if (error instanceof ApiError && error.kind === 'http' && error.status === 404) return null;
       throw error;
     }
-    const url = new URL(result.avatar_url, this.#origin);
+    let url: URL;
+    try { url = new URL(result.avatar_url, this.#origin); } catch { throw new ApiError('protocol'); }
     if (url.origin !== this.#origin || url.username || url.password || url.pathname !== `/v1/users/${userId}/avatar` || url.hash ||
         [...url.searchParams.keys()].length !== 1 || !/^[A-Za-z0-9_.-]{1,8192}$/.test(url.searchParams.get('token') ?? '')) throw new ApiError('protocol');
     return url.href;

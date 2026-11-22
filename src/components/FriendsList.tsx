@@ -1,3 +1,4 @@
+import { Avatar } from './Avatar.tsx';
 import{DeleteButton}from'./DeleteButton.tsx';
 import {PeopleListSearch} from './PeopleListSearch.tsx';
 import React, { useEffect, useRef, useState } from 'react';
@@ -74,7 +75,7 @@ export function FriendsList({ client, searchable = false }: { client: Pick<ApiCl
     {!searchTerm && !loading && !error && items.length === 0 && <p className="notice">У вас пока нет друзей в YouPoisk. Найдите людей во вкладке «Все».</p>}
     {message && <p role="status" className="small">{message}</p>}
     <div className="people-grid">{visible.map((it, i) => <div className="panel person-card" key={it.user.id}>
-      <span className={`avatar person-avatar color${i % 3 + 1}`} aria-hidden="true">{[...(it.user.name || it.user.login)][0]}</span>
+      <Avatar client={client} userId={it.user.id} name={it.user.name || it.user.login} className={`avatar person-avatar color${i % 3 + 1}`}/>
       <h2>{it.user.name || it.user.login}</h2>
       <p className="muted">@{it.user.login} · друзья с {new Date(it.since).toLocaleDateString('ru-RU')}</p>
       <a href={`#/user/${it.user.id}`}>Открыть профиль</a>

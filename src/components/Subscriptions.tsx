@@ -1,3 +1,4 @@
+import { Avatar } from './Avatar.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { loadFollowing, loadRelationship, setFollowing, type Friend, type Relationship } from '../shared/library/lists.ts';
@@ -43,7 +44,7 @@ export function SubscriptionsList({ client, direction }: { client: Pick<ApiClien
     {error && <p role="alert">Не удалось загрузить список. <button disabled={loading || saving} onClick={() => void load(failedAfter)}>Повторить</button></p>}
     {!loading && !error && !items.length && <p className="notice">{direction === 'following' ? 'Вы пока ни на кого не подписаны. Откройте профиль интересного автора и нажмите «Подписаться».' : 'У вас пока нет подписчиков.'}</p>}
     <div className="people-grid">{items.map(it => <article className="panel person-card" key={it.user.id}>
-      <span className="avatar person-avatar" aria-hidden="true">{[...(it.user.name || it.user.login)][0]}</span>
+      <Avatar client={client} userId={it.user.id} name={it.user.name || it.user.login} className="avatar person-avatar"/>
       <h2>{it.user.name || it.user.login}</h2><p className="muted">@{it.user.login} · подписка с {new Date(it.since).toLocaleDateString('ru-RU')}</p>
       <div className="actions"><a href={`#/user/${it.user.id}`}>Открыть профиль</a>{direction === 'following' && <button className="secondary" disabled={loading || saving} onClick={() => void remove(it.user.id)}>Отписаться</button>}</div>
     </article>)}</div>

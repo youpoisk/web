@@ -1,3 +1,4 @@
+import { Avatar } from './Avatar.tsx';
 import{ProfileStats}from'./ProfileStats.tsx';
 import{FriendshipControls}from'./FriendshipControls.tsx';
 import{LoadMore}from'./LoadMore.tsx';
@@ -61,7 +62,7 @@ export function UserProfilePage({ client, userId, embedded=false, filter='all' }
   return <section aria-busy={loading}>
     {!embedded&&<><div className="page-head"><div>
       <div className="profile-identity">
-        {profile && <span className="avatar profile-avatar" aria-hidden="true">{[...(name || profile.user.login)][0]}</span>}
+        {profile && <Avatar client={client} userId={profile.user.id} name={profile.user.name || profile.user.login} className="avatar profile-avatar"/>}
         <div className="profile-identity-text">
           <div className="eyebrow">ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ</div>
           <h1>{profile ? name : 'Профиль'}</h1>

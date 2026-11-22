@@ -1,3 +1,4 @@
+import { Avatar } from './Avatar.tsx';
 import{LoadMore}from'./LoadMore.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
@@ -7,7 +8,7 @@ import { ReportButton } from './Moderation.tsx';
 function FeedAuthor({ item: it, client }: { item: FeedItem; client: Pick<ApiClient, 'request'> }) {
   return <div className="feed-contribution">
     <div className="person-line">
-      <span className="avatar small-avatar" aria-hidden="true">{[...(it.user.name || it.user.login)][0]}</span>
+      <Avatar client={client} userId={it.user.id} name={it.user.name || it.user.login} className="avatar small-avatar"/>
       <div><a href={`#/user/${it.user.id}`}><strong><bdi>{it.user.name || it.user.login}</bdi></strong></a><p className="muted small">{it.review !== null && it.rating !== null ? 'оценил и написал рецензию' : it.review !== null ? 'написал рецензию' : 'оценил видео'} · {new Date(it.changed_at).toLocaleDateString('ru-RU')}</p></div>
       {it.rating !== null && <b className="friend-score"><span className="rating-value">{it.rating}</span>/10</b>}
     </div>

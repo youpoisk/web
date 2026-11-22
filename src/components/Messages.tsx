@@ -1,10 +1,10 @@
+import { Avatar } from './Avatar.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { MessageCircle, RefreshCw } from 'lucide-react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { ReportButton } from './Moderation.tsx';
 import { MAX_MESSAGE_LENGTH, loadConversations, loadMessages, markConversationRead, mergeMessages, messageError, messageGap, sendMessage, NOTIFICATIONS_CHANGED, type Conversation, type Message } from '../shared/library/lists.ts';
 
-const initial = (name: string) => [...name][0];
 const when = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const preview = (m: Message) => (m.mine ? 'Вы: ' : '') + (m.body ?? (m.video ? `видео «${m.video.title ?? m.video.youtube_video_id}»` : ''));
 const POLL_MS = 15000;
@@ -44,7 +44,7 @@ export function ConversationsList({ client }: { client: Pick<ApiClient, 'request
       <a className="primary" href="#/friends">Перейти к друзьям</a>
     </div>}
     {items.map(it => <a className={`conversation-line${it.unread_count ? ' unread' : ''}`} key={it.id} href={`#/messages/${it.user.id}`}>
-      <span className="avatar small-avatar" aria-hidden="true">{initial(it.user.name || it.user.login)}</span>
+      <Avatar client={client} userId={it.user.id} name={it.user.name || it.user.login} className="avatar small-avatar"/>
       <span className="conversation-text"><strong>{it.user.name || it.user.login}</strong><span className="small muted"><bdi dir="auto">{preview(it.last_message)}</bdi></span></span>
       <span className="small muted">{when(it.last_message.created_at)}</span>
       {it.unread_count > 0 && <span className="unread-badge"><span className="sr-only">Непрочитанных: </span>{it.unread_count}</span>}

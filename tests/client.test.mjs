@@ -190,3 +190,5 @@ test('avatar links stay on the trusted image endpoint and hide absent images', a
  await assert.rejects(client(async()=>json({})).avatar('invalid'),fail('invalid_input'));
  for(const avatar_url of ['https://evil.invalid'+path,`/v1/users/${id}/other?token=x`,path+'#x',path+'&extra=x',`/v1/users/${id}/avatar?token=`, `https://user:pass@api.example.invalid${path}`,path+'&token=z']) await assert.rejects(client(async()=>json({avatar_url,revision:1})).avatar(id),fail('protocol'));
 });
+
+test('avatar scope changes with account epoch and malformed links/status fail closed',async()=>{let scope=signed;const c=client(async()=>json({}),()=>scope);assert.equal(c.avatarScope,JSON.stringify([signed.owner,signed.epoch]));scope=guest;assert.equal(c.avatarScope,'guest');const png=new Blob(['x'],{type:'image/png'});await assert.rejects(client(async()=>json({revision:1,etag:'ab'.repeat(32)},201)).uploadAvatar(png,0),fail('protocol'));await assert.rejects(client(async()=>json({avatar_url:'http://[',revision:1})).avatar(id),fail('protocol'));});

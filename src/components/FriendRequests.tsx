@@ -1,9 +1,9 @@
+import { Avatar } from './Avatar.tsx';
 import {PeopleListSearch,peopleSearchPlaceholder} from './PeopleListSearch.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { NOTIFICATIONS_CHANGED, filterPeopleList, acceptFriendRequest, deleteFriendRequest, friendLimitMessage, loadFriendRequests, searchPeople, sendFriendRequest, type FriendRequest, type Person } from '../shared/library/lists.ts';
 
-const initial = (name: string) => [...name][0];
 
 /** Pending friend requests in one direction with accept/decline or cancel. Parent keys it by viewer. */
 export function FriendRequestsList({ client, direction }: { client: Pick<ApiClient, 'request'>; direction: 'incoming' | 'outgoing' }) {
@@ -66,7 +66,7 @@ export function FriendRequestsList({ client, direction }: { client: Pick<ApiClie
     {!searchTerm && !loading && !error && items.length === 0 && <p className="notice">{direction === 'incoming' ? 'Новых заявок в друзья нет.' : 'Вы не отправляли заявок, которые ещё ждут ответа.'}</p>}
     {message && <p role="status" className="small">{message}</p>}
     <div className="people-grid">{visible.map((it, i) => <div className="panel person-card" key={it.id}>
-      <span className={`avatar person-avatar color${i % 3 + 1}`} aria-hidden="true">{initial(it.user.name || it.user.login)}</span>
+      <Avatar client={client} userId={it.user.id} name={it.user.name || it.user.login} className={`avatar person-avatar color${i % 3 + 1}`}/>
       <h2>{it.user.name || it.user.login}</h2>
       <p className="muted">@{it.user.login} · {direction === 'incoming' ? 'хочет добавить вас в друзья' : 'заявка отправлена'} {new Date(it.created_at).toLocaleDateString('ru-RU')}</p>
       <a href={`#/user/${it.user.id}`}>Открыть профиль</a>
@@ -125,7 +125,7 @@ export function PeopleSearch({ client }: { client: Pick<ApiClient, 'request'> })
     {error && <p className="small" role="status">{error}</p>}
     {items && !loading && items.length === 0 && <p className="small muted">Никого не нашли.</p>}
     {items && items.map(it => <div className="person-line" key={it.user.id}>
-      <span className="avatar small-avatar" aria-hidden="true">{initial(it.user.name || it.user.login)}</span>
+      <Avatar client={client} userId={it.user.id} name={it.user.name || it.user.login} className="avatar small-avatar"/>
       <div><a href={`#/user/${it.user.id}`}><strong>{it.user.name || it.user.login}</strong></a><p className="small muted">@{it.user.login}{status[it.relation] ? ' · ' + status[it.relation] : ''}</p></div>
       {it.relation === 'none' && <button className="secondary" disabled={busy !== null || loading} onClick={() => void send(it)}>Добавить в друзья</button>}
     </div>)}

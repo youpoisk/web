@@ -1,8 +1,8 @@
+import { Avatar } from './Avatar.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
 import { NOTIFICATIONS_CHANGED, loadNotifications, loadUnreadNotifications, markAllNotificationsRead, markNotificationRead, notificationTarget, notificationText, type NotificationItem } from '../shared/library/lists.ts';
 
-const initial = (name: string) => [...name][0];
 const when = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const BADGE_POLL_MS = 60000;
 const changed = () => window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
@@ -83,7 +83,7 @@ export function NotificationsList({ client, open }: { client: Pick<ApiClient, 'r
     <ul className="notification-list">
       {items.map(n => <li key={n.id} className={n.read ? 'notification' : 'notification unread'}>
         <button className="notification-button" onClick={() => void follow(n)}>
-          <span className="avatar small-avatar" aria-hidden="true">{initial(n.actor.name || n.actor.login)}</span>
+          <Avatar client={client} userId={n.actor.id} name={n.actor.name || n.actor.login} className="avatar small-avatar"/>
           <span className="notification-text"><span>{!n.read && <span className="sr-only">Новое: </span>}<bdi dir="auto">{notificationText(n)}</bdi></span><span className="small muted">{when(n.occurred_at)}</span></span>
         </button>
       </li>)}

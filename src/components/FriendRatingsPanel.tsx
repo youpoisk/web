@@ -1,3 +1,4 @@
+import { Avatar } from './Avatar.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
 import { loadFriendRatings, type FriendRating } from '../shared/library/lists.ts';
@@ -43,7 +44,7 @@ export function FriendRatingsPanel({ client, videoId }: { client: Pick<ApiClient
     {error && <p className="small muted" role="status">Не удалось загрузить оценки друзей. <button className="text-button" onClick={() => void load(failedAfter)}>Повторить</button></p>}
     {!loading && !error && items.length === 0 && <p className="small muted">Никто из друзей не оценил это видео</p>}
     {items.map(it => <div className="person-line" key={it.user.id}>
-      <span className="avatar small-avatar" aria-hidden="true">{[...(it.user.name || it.user.login)][0]}</span>
+      <Avatar client={client} userId={it.user.id} name={it.user.name || it.user.login} className="avatar small-avatar"/>
       <div><a href={`#/user/${it.user.id}`}><strong>{it.user.name || it.user.login}</strong></a><p className="small muted">@{it.user.login} · {new Date(it.rated_at).toLocaleDateString('ru-RU')}</p></div>
       <b className="friend-score"><span className="rating-value">{it.rating}</span>/10</b>
     </div>)}
