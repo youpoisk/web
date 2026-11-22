@@ -204,3 +204,4 @@ CustomerUI: restored right-rail extension promo below Сейчас в катал
 UI65dd861 independent source reviewPASS/noMEDIUM+ (visual browser check not performed). Customer copy correction: remove crop/server-storage sentence from avatar settings help; keep formats and2MiB only.
 EXT-001 contract completed in extension/docs/protocol.md: trusted/content message scopes, ID mapping, null/false and marks/review semantics, orthogonal status model, peroperation revision/idempotency/lease rules, explicitnoautoimport. RuntimeAPI/auth/outbox notimplementedbythisdoc. NextEXT-002 boundary hardening. Reviewpending.
 EXT001reviewP2fixed: removed outdated composer/separatepost semantics; YP099 current model is automaticprivacyfiltered ratings/reviews feed, sitecardediting only. Followupreviewpending.
+EXT001secondreviewP2fixed: state/review revisions are separate; expectedrevision keyedby(kind,target), notsharedvideo counter. Existingcatalogreview writer semantics retained.

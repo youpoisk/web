@@ -38,13 +38,13 @@ Credentials доступны только worker/trusted storage; UI получ�
 | Посмотрю позже / снять | video_state later true/false | тот же PATCH, false отправляется явно |
 | Просмотрено / Неинтересно / снять | video_state mark watched/not_interested/null | not_interested снимает later; later=true снимает not_interested; несовместимый patch422 |
 | Добавить / удалить из библиотеки (если появится UI) | video_state added true/false | false сохраняется в payload; удаление по серверным правилам, не подразумевается снятием одной оценки |
-| Сохранить / изменить / удалить рецензию | отдельный video_review text/string/null | PUT /v1/me/videos/{UUID}/review, единая video revision; кнопка сохранения, без скрытой публикации |
+| Сохранить / изменить / удалить рецензию | отдельный video_review text/string/null | PUT /v1/me/videos/{UUID}/review, собственная video_reviews.revision, отдельно от VideoState.revision; кнопка сохранения, без скрытой публикации |
 | Рекомендовать (если действие будет показано) | открыть карточку видео на сайте для редактирования оценки/рецензии | Отдельного composer/post нет (YP-099): сохранённые оценки и рецензии автоматически попадают в ленты по privacy. Кнопка не создаёт отдельную публикацию. |
 | Оценка канала | channel_rating integer/null | PUT /v1/me/channels/{UUID}/rating только с подтверждённым UC; provisional alias local-only |
 | Войти / выйти | auth | отдельная extension session, worker login/refresh/logout (EXT-004/005), не изменяет web session |
 | Повторить / конфликт | исходная operation / reconcile | retry сохраняет key/lease/payload;409 GET+явное решение, не last-write-wins |
 
-API writes используют expected_revision, Idempotency-Key UUID и X-Offline-Lease. Порядок intents одного видео сохраняется (общая revision для state/review). На новую команду новый key; неопределённый ответ повторяет прежний key. После lease expiry не создаётся новый lease для старой команды автоматически. 401 — единственный bounded refresh retry,403 не refresh;410 — reconcile,429 Retry-After. DELETE UI действует по общему правилу5с отмены перед network request. Ответ старого owner/epoch не меняет новое состояние.
+API writes используют expected_revision, Idempotency-Key UUID и X-Offline-Lease. Порядок intents сохраняется отдельно по (kind,target): video_state и video_review имеют независимые revision, channel_rating — свою. expected_revision берётся из соответствующего GET state/review/channel, а не из соседнего вида операции. Account lock/change_seq не объединяет эти счётчики. На новую команду новый key; неопределённый ответ повторяет прежний key. После lease expiry не создаётся новый lease для старой команды автоматически. 401 — единственный bounded refresh retry,403 не refresh;410 — reconcile,429 Retry-After. DELETE UI действует по общему правилу5с отмены перед network request. Ответ старого owner/epoch не меняет новое состояние.
 
 ## Перенос и приёмка следующих этапов
 
