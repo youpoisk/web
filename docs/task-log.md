@@ -140,3 +140,7 @@ User2026-11-22 encrypted-at-rest DM requirement recorded in backend YP-079.1/904
 - [ ] WEB/EXT review validation (YP-055.1): запрет сохранения ссылок и оскорблений, отображение server422, сохранение черновика, unit/API/E2E проверки после backend-реализации.
 
 95634fd conversation layout independent review PASS (combined report backend QA P2 fixed separately6630f38 and followupPASS). Independent101CSP/typecheck/extension9PASS. New encryption and review-content requirements remain open plans. Report docs/reviews/messages-list-qa-review.md.
+
+Subscriptions All fix: render both direction-labelled sections with independent loaders/cursors/retry and owner+direction keys; dedicated tabs retain their own section. No relationship writes or backend contract changes. Validation/review pending.
+
+Subscriptions All validation: build/typecheck PASS;101CSPtests PASS. Actual CUA QA All displayed4following+4followers in separate labelled regions; followers-only tab removes following region, no data mutated.
