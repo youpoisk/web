@@ -181,3 +181,4 @@ Removed success-action notices across website: read notifications, requests/frie
 Validation:105 CSP/API tests PASS; production build PASS; final copy-only edit removes success prefix from retained rating refresh error. Profile layout source review no MEDIUM+.
 
 Success-notice follow-up: successful logout/password change/account deletion callbacks also silent. Error/uncertain/session-expired outcomes remain visible. Auth runtime regression assertions updated.
+Final independent source reviews PASS (no MEDIUM+) for friendship, layout and silent success notices; see docs/reviews/profile-friendship-silent-actions.md. Validation105/105 API tests, build PASS.
