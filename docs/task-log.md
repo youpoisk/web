@@ -162,3 +162,5 @@ Self-account UI checks PASS:103CSPtests100API/auth/library lines/functions +buil
 User followup: hide zero navigation badges (Messages/Friends/Requests and guest Watchlist); show only>=1. Overrides earlier gray-zero decision. No backend/count semantics changed.
 
 Finalzero policy: hide0 onlysidebarMessages/Friends/Watchlist; Requeststab keeps0 via explicitshowZero. CUA guest sidebar has noWatchlist0; during verification anothernewwebsession caused browserdemotion toguest (expected single-web semantics); do not repeatedly reloginsharedQA and displace user's current browser.
+
+5cf4d26+9258249 independentUIreviewPASS/noMEDIUM+.103CSP/typecheck/sourcecheck/extension9 independentPASS; finaltypecheckafterzeropolicyPASS. Reports docs/reviews/self-account-ui-initial.md and self-account-ui-followup.md. Userlatest: sidebarzero hidden,RequestsTab0retained. Next12itemcursor/infinite task.
