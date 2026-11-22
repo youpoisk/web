@@ -10,7 +10,7 @@ export function AvatarEditor({ client, userId, name }: { client: ApiClient; user
  const [draft,setDraft]=useState<{image:HTMLImageElement;url:string}|null>(null);
  const [zoom,setZoom]=useState(1),[x,setX]=useState(0),[y,setY]=useState(0);
  const canvas=useRef<HTMLCanvasElement>(null),working=useRef(false),generation=useRef(0),pick=useRef(0);
- useEffect(()=>{const ctl=new AbortController(),stamp=++generation.current;void client.request('getMyAvatarState',{signal:ctl.signal}).then(s=>{if(stamp===generation.current)setCurrent(s);}).catch(()=>{if(!ctl.signal.aborted&&stamp===generation.current)setError('Не удалось загрузить аватар. Откройте настройки ещё раз.');});return()=>{generation.current++;pick.current++;ctl.abort();};},[client,userId]);
+ useEffect(()=>{const ctl=new AbortController(),stamp=++generation.current;void client.request('getMyAvatarState',{signal:ctl.signal}).then(s=>{if(stamp===generation.current){setCurrent(s);invalidateAvatar(userId);}}).catch(()=>{if(!ctl.signal.aborted&&stamp===generation.current)setError('Не удалось загрузить аватар. Откройте настройки ещё раз.');});return()=>{generation.current++;pick.current++;ctl.abort();};},[client,userId]);
  useEffect(()=>()=>{if(draft)URL.revokeObjectURL(draft.url);},[draft]);
  useEffect(()=>{
   if(!draft||!canvas.current)return;
@@ -31,14 +31,14 @@ export function AvatarEditor({ client, userId, name }: { client: ApiClient; user
   if(working.current||!current||!draft||!canvas.current)return;
   working.current=true;setBusy(true);setError('');const stamp=generation.current,revision=current.revision;
   try{const blob=await new Promise<Blob>((resolve,reject)=>canvas.current!.toBlob(b=>b?resolve(b):reject(Error('canvas')),'image/png'));const state=await client.uploadAvatar(blob,revision);if(stamp!==generation.current)return;setCurrent(state);setDraft(null);invalidateAvatar(userId);}
-  catch(e){if(stamp===generation.current){if(e instanceof ApiError&&e.status===409){setError('Аватар уже изменён на другом устройстве. Проверьте изображение и сохраните снова.');try{const s=await client.request('getMyAvatarState',{});if(stamp===generation.current)setCurrent(s);}catch{if(stamp===generation.current)setCurrent(null);}}else setError(e instanceof ApiError&&e.status===429?'Слишком частая смена аватара. Попробуйте через час.':'Не удалось сохранить аватар. Повторите попытку.');}}
+  catch(e){if(stamp===generation.current){if(e instanceof ApiError&&e.status===409){setError('Аватар уже изменён на другом устройстве. Проверьте изображение и сохраните снова.');try{const s=await client.request('getMyAvatarState',{});if(stamp===generation.current){setCurrent(s);invalidateAvatar(userId);}}catch{if(stamp===generation.current)setCurrent(null);}}else setError(e instanceof ApiError&&e.status===429?'Слишком частая смена аватара. Попробуйте через час.':'Не удалось сохранить аватар. Повторите попытку.');}}
   finally{working.current=false;if(stamp===generation.current)setBusy(false);}
  }
  async function remove(){
   if(working.current||!current)return;
   working.current=true;setBusy(true);setError('');const stamp=generation.current,revision=current.revision;
   try{await client.request('deleteMyAvatar',{header:{'If-Match':`"${revision}"`}});if(stamp!==generation.current)return;setCurrent({revision:revision+1,etag:''});setDraft(null);invalidateAvatar(userId);}
-  catch(e){if(stamp===generation.current){if(e instanceof ApiError&&e.status===409){setError('Аватар уже изменён. Проверьте его перед повторным удалением.');try{const s=await client.request('getMyAvatarState',{});if(stamp===generation.current)setCurrent(s);}catch{if(stamp===generation.current)setCurrent(null);}}else setError('Не удалось удалить аватар. Повторите попытку.');}throw e;}
+  catch(e){if(stamp===generation.current){if(e instanceof ApiError&&e.status===409){setError('Аватар уже изменён. Проверьте его перед повторным удалением.');try{const s=await client.request('getMyAvatarState',{});if(stamp===generation.current){setCurrent(s);invalidateAvatar(userId);}}catch{if(stamp===generation.current)setCurrent(null);}}else setError('Не удалось удалить аватар. Повторите попытку.');}throw e;}
   finally{working.current=false;if(stamp===generation.current)setBusy(false);}
  }
  return <section className="panel avatar-editor" aria-busy={busy}>
