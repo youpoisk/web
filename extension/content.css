@@ -1,8 +1,8 @@
 /* Fit the native action row without clipping custom controls. */
-ytd-watch-metadata #top-row{flex-wrap:wrap!important;row-gap:12px}
-ytd-watch-metadata #actions{flex:1 1 790px!important;margin-left:0!important;min-width:0;max-width:100%}
-ytd-watch-metadata #menu{max-width:100%;min-width:0}
-ytd-watch-metadata #top-level-buttons-computed{flex-wrap:wrap!important;gap:8px;justify-content:flex-end}
+ytd-watch-metadata:has(#yp-panel) #top-row{flex-wrap:wrap!important;row-gap:12px}
+ytd-watch-metadata:has(#yp-panel) #actions{flex:1 1 790px!important;margin-left:0!important;min-width:0;max-width:100%}
+ytd-watch-metadata:has(#yp-panel) #menu{max-width:100%;min-width:0}
+ytd-watch-metadata:has(#yp-panel) #top-level-buttons-computed{flex-wrap:wrap!important;gap:8px;justify-content:flex-end}
 #yp-panel{--yp-text:#0f0f0f;--yp-bg:#fff;--yp-chip:#f0f0f0;--yp-secondary:#606060;display:inline-flex;align-items:center;gap:8px;flex-shrink:0;margin:0;padding:0;border:0;background:transparent;color:var(--yp-text);font:500 14px Roboto,Arial,sans-serif;position:relative}
 html[dark] #yp-panel{--yp-text:#f1f1f1;--yp-bg:#212121;--yp-chip:#353535;--yp-secondary:#aaa}
 #yp-panel>button{height:36px;border:0;border-radius:18px;background:var(--yp-chip);color:var(--yp-text);padding:0 13px;white-space:nowrap;font:inherit;cursor:pointer}
