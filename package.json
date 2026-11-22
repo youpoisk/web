@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "pnpm demo:check && pnpm api:check && pnpm typecheck:api && tsc -b && vite build",
+    "build": "pnpm api:check && pnpm typecheck:api && tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test:extension": "node --test extension/tests/*.test.mjs",
+    "test:extension": "pnpm demo:check && node --test extension/tests/*.test.mjs",
     "api:import": "node scripts/contract.mjs import",
     "api:generate": "node scripts/contract.mjs generate",
     "api:check": "node scripts/contract.mjs check && node scripts/validators.mjs check",
