@@ -24,7 +24,7 @@ export function VideoReviewPanel({ client, writer, videoId }: {
       if (!keepDraft) setDraft(value.text ?? '');
       return true;
     } catch {
-      if (stamp === generation.current && serial === readSerial.current) { setLoadError(true); setMessage('Не удалось загрузить рецензию. Попробуйте обновить её.'); }
+      if (stamp === generation.current && serial === readSerial.current) { setLoadError(true); setMessage('Не удалось загрузить рецензию. Повторите попытку.'); }
       return false;
     } finally {
       if (stamp === generation.current && serial === readSerial.current) setLoading(false);
@@ -70,7 +70,7 @@ export function VideoReviewPanel({ client, writer, videoId }: {
     <div className="actions">
       <button className="primary" disabled={loading || saving || loadError || !review || length < 1 || length > 1000 || normalized === review.text} onClick={() => void write(normalized)}>{saving ? 'Сохраняем…' : 'Сохранить рецензию'}</button>
       {review?.text != null && <button className="secondary" disabled={loading || saving || loadError} onClick={() => void write(null)}>Удалить рецензию</button>}
-      <button className="text-button" disabled={loading || saving} onClick={() => { setMessage(''); void reload(review !== null); }}>Обновить рецензию</button>
+      {loadError && <button className="text-button" disabled={loading || saving} onClick={() => void reload(review !== null)}>Повторить загрузку</button>}
     </div>
     {message && <p role="status">{message}</p>}
   </section>;

@@ -182,3 +182,5 @@ Validation:105 CSP/API tests PASS; production build PASS; final copy-only edit r
 
 Success-notice follow-up: successful logout/password change/account deletion callbacks also silent. Error/uncertain/session-expired outcomes remain visible. Auth runtime regression assertions updated.
 Final independent source reviews PASS (no MEDIUM+) for friendship, layout and silent success notices; see docs/reviews/profile-friendship-silent-actions.md. Validation105/105 API tests, build PASS.
+
+Video page: Share with friend next to Watch later; real friend picker with cursor pages, video_id message carrier, stable per-recipient idempotency key retained on uncertain errors, opens resulting conversation. Review Save button persists edits; manual Refresh removed, retry only on initial load error.
