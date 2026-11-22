@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YouPoisk",
   "version": "0.4.0",
-  "description": "Оценка видео YouTube 1–10, «Посмотрю позже» и рецензии. Данные хранятся в этом браузере.",
+  "description": "Оценки, рецензии и «Посмотрю позже» YouTube в вашем аккаунте YouPoisk.",
   "permissions": [
     "activeTab"
   ],
@@ -11,6 +11,7 @@
       "config.js",
       "core.js",
       "storage-firefox.js",
+      "auth-worker.js",
       "background-common.js",
       "background.firefox.js"
     ]
@@ -49,13 +50,17 @@
       "strict_min_version": "142.0",
       "data_collection_permissions": {
         "required": [
-          "none"
+          "authenticationInfo",
+          "browsingActivity",
+          "websiteContent",
+          "personalCommunications"
         ]
       }
     }
   },
   "host_permissions": [
-    "https://www.youtube.com/*"
+    "https://www.youtube.com/*",
+    "http://127.0.0.1/*"
   ],
   "icons": {
     "16": "assets/icons/icon-16.png",

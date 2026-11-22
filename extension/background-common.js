@@ -2,17 +2,18 @@
  * Firefox MV3 background event page; the browser API and the state store are
  * injected so the command handler stays identical on both. */
 globalThis.YPWorker=(()=>{
- function start({api,storage}){
+ function start({api,storage,session,backend}){
   let writes=Promise.resolve();
   async function read(){return await storage.read()||YPCore.empty();}
   function fields(value,allowed,required=[]){
    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!allowed.includes(k))||required.some(k=>!Object.hasOwn(value,k)))throw Error('Некорректная команда');
   }
   function validate(command){
-   fields(command,['type','videoId','video','patch','options'],['type']);
-   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch'],GET_ACCOUNT_LIBRARY:['type'],OPTIONS:['type','options']};
+   fields(command,['type','videoId','video','patch','options','login','password','after'],['type']);
+   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch'],GET_ACCOUNT_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type']};
    if(!Object.hasOwn(shapes,command.type))throw Error('Неизвестная команда');
-   fields(command,shapes[command.type],shapes[command.type]);
+   fields(command,shapes[command.type],shapes[command.type].filter(k=>k!=='after'));
+   if(command.after!==undefined&&(typeof command.after!=='string'||command.after.length>512))throw Error('Некорректный курсор');
    if(command.type==='GET_CURRENT_VIDEO_STATE'&&!/^[\w-]{11}$/.test(command.videoId))throw Error('Некорректный ID видео');
    if(command.type==='UPDATE_CURRENT_VIDEO'){
     fields(command.video,['id','title','url','preview','channel','channelUrl'],['id','title']);
@@ -42,7 +43,7 @@ globalThis.YPWorker=(()=>{
     const safe={};for(const field of ['id','title','url','preview','channel','channelUrl','rating','later','review','mark','createdAt','updatedAt','reviewedAt'])if(Object.hasOwn(v,field))safe[field]=v[field];
     videos[id]=safe;
    }
-   return {version:1,options,videos};
+   return {version:1,options,videos,...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null}:{})};
   }
   async function broadcast(){
    const tabs=await api.tabs.query({url:'https://www.youtube.com/*'});
@@ -53,15 +54,33 @@ globalThis.YPWorker=(()=>{
    if(typeof command?.type!=='string'||command.type==='YP_CHANGED'||!command.type.startsWith('YP_'))return;
    const request={...command,type:command.type.slice(3)};
    (async()=>{
-    validate(request);let access=await authorize(request,sender);
-    if(['GET_CURRENT_VIDEO_STATE','GET_ACCOUNT_LIBRARY'].includes(request.type)){await writes;const state=await read();access=await authorize(request,sender);return project(state,access);}
+    validate(request);await authorize(request,sender);
     const operation=writes.then(async()=>{
-     await authorize(request,sender);const state=await read();
-     const next=YPCore.apply(state,request.type==='OPTIONS'?request:{...request,type:'UPDATE'});
-     access=await authorize(request,sender);await storage.write(next);return project(next,access);
+     let access=await authorize(request,sender);
+     if(request.type.startsWith('AUTH_')){
+      if(!session)throw Error('Авторизация недоступна');
+      const result=request.type==='AUTH_LOGIN'?await session.login(request.login,request.password):request.type==='AUTH_LOGOUT'?await session.logout():await session.status();
+      if(request.type!=='AUTH_STATUS')broadcast().catch(()=>{});return result;
+     }
+     let state=await read();const auth=session?await session.status():null;
+     if(request.type==='OPTIONS'){state=YPCore.apply(state,request);await storage.write(state);broadcast().catch(()=>{});return project({...state,auth},access);}
+     if(auth?.state==='authenticated'){
+      let result;
+      if(request.type==='UPDATE_CURRENT_VIDEO'){
+       const validated=YPCore.apply(YPCore.empty(),{type:'UPDATE',video:request.video,patch:request.patch});
+       const patch={...request.patch};if(Object.hasOwn(patch,'review'))patch.review=validated.videos[request.video.id]?.review??null;
+       result=await backend.update(request.video,patch);broadcast().catch(()=>{});
+      }else result=request.type==='GET_CURRENT_VIDEO_STATE'?await backend.current(request.videoId):await backend.library(request.after);
+      access=await authorize(request,sender);return project({...state,...result,auth},access);
+     }
+     if(request.type==='UPDATE_CURRENT_VIDEO'){
+      if(session)throw Object.assign(new Error('Authentication required'),{kind:'authentication'});
+      state=YPCore.apply(state,{...request,type:'UPDATE'});await storage.write(state);broadcast().catch(()=>{});
+     }
+     return project({...state,auth},access);
     });
-    writes=operation.catch(()=>{});const result=await operation;broadcast().catch(()=>{});return result;
-   })().then(data=>respond({ok:true,data}),()=>respond({ok:false,error:'Не удалось выполнить действие. Проверьте текущую страницу и повторите попытку.'}));
+    writes=operation.catch(()=>{});return await operation;
+   })().then(data=>respond({ok:true,data}),error=>respond({ok:false,error:error?.kind==='authentication'?'Войдите в аккаунт расширения.':error?.kind==='reconcile_required'?'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.':'Не удалось выполнить действие. Проверьте текущую страницу, вход и соединение.'}));
    return true;
   });
  }

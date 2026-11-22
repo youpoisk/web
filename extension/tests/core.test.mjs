@@ -42,7 +42,7 @@ test('reject invalid ratings, state and unsafe settings',()=>{
 function worker(){
  let listener,db={},fail=false,currentUrl='https://www.youtube.com/watch?v=aqz-KE-bpKQ';
  const chrome={runtime:{id:'test-extension',getURL:page=>'chrome-extension://test-extension/'+page,onMessage:{addListener(fn){listener=fn}},async sendMessage(){}},storage:{local:{async setAccessLevel(){},async get(key){return structuredClone({[key]:db[key]})},async set(value){await new Promise(r=>setTimeout(r,2));if(fail){fail=false;throw Error('Storage full')}db={...db,...structuredClone(value)}}}},tabs:{async get(){return {url:currentUrl}},async query(){return[]},async sendMessage(){}}};
- const context={chrome,URL,structuredClone,console,importScripts(...files){for(const file of files)vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);}};vm.createContext(context);vm.runInContext(readFileSync(new URL('../background.js',import.meta.url),'utf8'),context);
+ const context={chrome,URL,structuredClone,console,importScripts(...files){for(const file of files)vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);}};vm.createContext(context);for(const file of ['config.js','core.js','storage-chrome.js','background-common.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);vm.runInContext('YPWorker.start({api:chrome,storage:YPStorageChrome})',context);
  const send=(command,sender={id:'test-extension',url:'chrome-extension://test-extension/popup.html'})=>new Promise(resolve=>listener(command,sender,resolve));
  return{send,failNext(){fail=true},navigate(url){currentUrl=url},seed(state){db={'yp-library-v1':structuredClone(state)}}};
 }
@@ -72,7 +72,7 @@ test('firefox manifest uses an event page, no storage permission and the firefox
  assert.equal(manifest.manifest_version,3);
  assert.deepEqual(manifest.permissions,['activeTab'],'storage must not be granted to page/content contexts in Firefox');
  assert.equal(manifest.background.service_worker,undefined);
- assert.deepEqual(manifest.background.scripts,['config.js','core.js','storage-firefox.js','background-common.js','background.firefox.js']);
+ assert.deepEqual(manifest.background.scripts,['config.js','core.js','storage-firefox.js','auth-worker.js','background-common.js','background.firefox.js']);
  assert.equal(manifest.browser_specific_settings.gecko.id,'youpoisk-dev@local.invalid');
  assert.equal(manifest.content_scripts.length,1);assert.deepEqual(manifest.content_scripts[0].matches,['https://www.youtube.com/*']);
  const files=[...manifest.background.scripts,manifest.action.default_popup,manifest.options_page,...manifest.content_scripts[0].js,...manifest.content_scripts[0].css];for(const file of files)assert.ok(readFileSync(new URL('../'+file,import.meta.url)).length>0,file);
@@ -96,7 +96,7 @@ test('firefox background event page serves the same commands through the injecte
  const browser={runtime:{id:'test-extension',getURL:page=>'moz-extension://test-extension/'+page,onMessage:{addListener(fn){listener=fn}},async sendMessage(){}},tabs:{async get(){return{url:currentUrl}},async query(){return[]},async sendMessage(){}}};
  const context={browser,indexedDB:new IDBFactory(),URL,structuredClone,console};
  vm.createContext(context);
- for(const file of ['config.js','core.js','storage-firefox.js','background-common.js','background.firefox.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);
+ for(const file of ['config.js','core.js','storage-firefox.js','background-common.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);vm.runInContext('YPWorker.start({api:browser,storage:YPStorageFirefox})',context);
  const send=(command,sender={id:'test-extension',url:'moz-extension://test-extension/popup.html'})=>new Promise(resolve=>listener(command,sender,resolve));
  const page={id:'test-extension',tab:{id:1},frameId:0,url:'https://www.youtube.com/watch?v='+video.id};
  assert.equal((await send({type:'YP_UPDATE_CURRENT_VIDEO',video,patch:{rating:9}},page)).ok,true);

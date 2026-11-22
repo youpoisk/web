@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YouPoisk",
   "version": "0.4.0",
-  "description": "Оценка видео YouTube 1–10, «Посмотрю позже» и рецензии. Данные хранятся локально.",
+  "description": "Оценки, рецензии и «Посмотрю позже» YouTube в вашем аккаунте YouPoisk.",
   "permissions": [
     "storage",
     "activeTab"
@@ -39,7 +39,8 @@
     }
   ],
   "host_permissions": [
-    "https://www.youtube.com/*"
+    "https://www.youtube.com/*",
+    "http://127.0.0.1/*"
   ],
   "icons": {
     "16": "assets/icons/icon-16.png",
