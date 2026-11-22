@@ -1527,10 +1527,14 @@ export interface components {
         NameChange: {
             name: string;
         };
-        /** @description Own live visible counts across all pages. Unread conversations counts dialogs with any unread incoming message, not messages. Pending incoming requests independent of notification read state; blocked/inactive counterparts excluded. Pending outgoing requests are counted across all pages with the same visibility rules. */
+        /** @description Own live visible counts across all pages. Unread conversations counts dialogs with any unread incoming message, not messages. Pending incoming requests independent of notification read state; blocked/inactive counterparts excluded. Pending outgoing requests are counted across all pages with the same visibility rules. Profile counts: library_videos is own added library entries; ratings_count includes video and channel ratings; friends_count and following_count include active unblocked peers, across all pages. */
         NavigationCounts: {
+            following_count: number;
+            friends_count: number;
             incoming_friend_requests: number;
+            library_videos: number;
             outgoing_friend_requests: number;
+            ratings_count: number;
             unread_conversations: number;
         };
         /** @description One site notification. It grants no rights; open the related page to see current data. */
@@ -1783,6 +1787,14 @@ export interface components {
             name: string;
         };
         UserProfile: {
+            /** @description Exact count across all pages; null when hidden by the relevant audience policy. */
+            following_count: number | null;
+            /** @description Exact count across all pages; null when hidden by the relevant audience policy. */
+            friends_count: number | null;
+            /** @description Exact count across all pages; null when hidden by the relevant audience policy. */
+            library_videos: number | null;
+            /** @description Exact count across all pages; null when hidden by the relevant audience policy. */
+            ratings_count: number | null;
             ratings_visible: boolean;
             /** @enum {string} */
             relation: "self" | "friend" | "none";

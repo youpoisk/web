@@ -489,3 +489,6 @@ export async function changeMyName(client:Pick<ApiClient,'request'>,name:string)
 export async function loadNavigationCounts(client:Pick<ApiClient,'request'>,signal?:AbortSignal):Promise<NavigationCounts>{
  return client.request('getNavigationCounts',{signal});
 }
+
+/** Filter real recommendation records without inventing local ratings/reviews. */
+export function profileRecommendations(items:Recommendation[],filter:'all'|'ratings'|'reviews'):Recommendation[]{return items.filter(item=>filter==='all'||(filter==='ratings'?item.rating!==null:item.review!==null));}

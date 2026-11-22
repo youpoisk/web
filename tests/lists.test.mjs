@@ -273,7 +273,7 @@ test('loadFriends pages the viewer friends', async () => {
 test('loadUserProfile and loadUserRecommendations read another user', async () => {
   const { loadUserProfile, loadUserRecommendations } = await import('../src/shared/library/lists.ts');
   const calls = [];
-  const profile = { user: { id: 'u1', login: 'anna', name: 'Анна' }, relation: 'friend', ratings_visible: true, reviews_visible: false };
+  const profile = { user: { id: 'u1', login: 'anna', name: 'Анна' }, relation: 'friend', ratings_visible: true, reviews_visible: false, library_videos:1,ratings_count:2,friends_count:3,following_count:4 };
   const client = { async request(op, options) { calls.push([op, options.path, options.query]); if (op === 'getUserProfile') return profile; return calls.length === 2 ? { items: [{ rating: 9 }], next_cursor: 'n1' } : { items: [] }; } };
   assert.deepEqual(await loadUserProfile(client, 'u1'), profile);
   assert.deepEqual(await loadUserRecommendations(client, 'u1', null), { items: [{ rating: 9 }], next: 'n1' });
@@ -502,10 +502,12 @@ test('report and moderation helpers call the right operations', async () => {
 
 test('own display name and exact navigation count requests use only own endpoints',async()=>{
  const {changeMyName,loadNavigationCounts}=await import('../src/shared/library/lists.ts');
- const calls=[],signal=new AbortController().signal,user={id:'own',name:'Й',login:'owner',email:'owner@example.invalid'},counts={unread_conversations:2,incoming_friend_requests:3,outgoing_friend_requests:4};
+ const calls=[],signal=new AbortController().signal,user={id:'own',name:'Й',login:'owner',email:'owner@example.invalid'},counts={unread_conversations:2,incoming_friend_requests:3,outgoing_friend_requests:4,library_videos:14,ratings_count:7,friends_count:5,following_count:4};
  const client={async request(op,options){calls.push([op,options]);return op==='changeMyName'?user:counts;}};
  assert.deepEqual(await changeMyName(client,'  И\u0306  '),user);
  assert.deepEqual(await loadNavigationCounts(client,signal),counts);
  assert.deepEqual(calls,[['changeMyName',{body:{name:'Й'}}],['getNavigationCounts',{signal}]]);
  const error=new Error('uncertain');await assert.rejects(changeMyName({request:async()=>{throw error}},'Имя'),e=>e===error);
 });
+
+test('profile tabs select actual ratings and reviews, preserve order and shared entries',async()=>{const{profileRecommendations}=await import('../src/shared/library/lists.ts');const rated={rating:8,review:null},reviewed={rating:null,review:'Text'},both={rating:9,review:'Both'};const items=[rated,reviewed,both];assert.deepEqual(profileRecommendations(items,'all'),items);assert.deepEqual(profileRecommendations(items,'ratings'),[rated,both]);assert.deepEqual(profileRecommendations(items,'reviews'),[reviewed,both]);assert.deepEqual(profileRecommendations([],'reviews'),[]);});

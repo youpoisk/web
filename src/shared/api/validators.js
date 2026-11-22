@@ -7328,13 +7328,13 @@ function validate158(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.unread_conversations === void 0 && (missing0 = "unread_conversations") || data.incoming_friend_requests === void 0 && (missing0 = "incoming_friend_requests") || data.outgoing_friend_requests === void 0 && (missing0 = "outgoing_friend_requests")) {
+      if (data.unread_conversations === void 0 && (missing0 = "unread_conversations") || data.incoming_friend_requests === void 0 && (missing0 = "incoming_friend_requests") || data.outgoing_friend_requests === void 0 && (missing0 = "outgoing_friend_requests") || data.library_videos === void 0 && (missing0 = "library_videos") || data.ratings_count === void 0 && (missing0 = "ratings_count") || data.friends_count === void 0 && (missing0 = "friends_count") || data.following_count === void 0 && (missing0 = "following_count")) {
         validate158.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "unread_conversations" || key0 === "incoming_friend_requests" || key0 === "outgoing_friend_requests")) {
+          if (!(key0 === "unread_conversations" || key0 === "incoming_friend_requests" || key0 === "outgoing_friend_requests" || key0 === "library_videos" || key0 === "ratings_count" || key0 === "friends_count" || key0 === "following_count")) {
             validate158.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -7414,6 +7414,110 @@ function validate158(data, { instancePath = "", parentData, parentDataProperty, 
                 var valid0 = _errs6 === errors;
               } else {
                 var valid0 = true;
+              }
+              if (valid0) {
+                if (data.library_videos !== void 0) {
+                  let data3 = data.library_videos;
+                  const _errs8 = errors;
+                  if (!(typeof data3 == "number" && (!(data3 % 1) && !isNaN(data3)))) {
+                    validate158.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/type", keyword: "type", params: { type: "integer" }, message: "must be integer" }];
+                    return false;
+                  }
+                  if (errors === _errs8) {
+                    if (typeof data3 == "number") {
+                      if (data3 > 9007199254740991 || isNaN(data3)) {
+                        validate158.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                        return false;
+                      } else {
+                        if (data3 < 0 || isNaN(data3)) {
+                          validate158.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                          return false;
+                        }
+                      }
+                    }
+                  }
+                  var valid0 = _errs8 === errors;
+                } else {
+                  var valid0 = true;
+                }
+                if (valid0) {
+                  if (data.ratings_count !== void 0) {
+                    let data4 = data.ratings_count;
+                    const _errs10 = errors;
+                    if (!(typeof data4 == "number" && (!(data4 % 1) && !isNaN(data4)))) {
+                      validate158.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/type", keyword: "type", params: { type: "integer" }, message: "must be integer" }];
+                      return false;
+                    }
+                    if (errors === _errs10) {
+                      if (typeof data4 == "number") {
+                        if (data4 > 9007199254740991 || isNaN(data4)) {
+                          validate158.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                          return false;
+                        } else {
+                          if (data4 < 0 || isNaN(data4)) {
+                            validate158.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                            return false;
+                          }
+                        }
+                      }
+                    }
+                    var valid0 = _errs10 === errors;
+                  } else {
+                    var valid0 = true;
+                  }
+                  if (valid0) {
+                    if (data.friends_count !== void 0) {
+                      let data5 = data.friends_count;
+                      const _errs12 = errors;
+                      if (!(typeof data5 == "number" && (!(data5 % 1) && !isNaN(data5)))) {
+                        validate158.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/type", keyword: "type", params: { type: "integer" }, message: "must be integer" }];
+                        return false;
+                      }
+                      if (errors === _errs12) {
+                        if (typeof data5 == "number") {
+                          if (data5 > 9007199254740991 || isNaN(data5)) {
+                            validate158.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                            return false;
+                          } else {
+                            if (data5 < 0 || isNaN(data5)) {
+                              validate158.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                              return false;
+                            }
+                          }
+                        }
+                      }
+                      var valid0 = _errs12 === errors;
+                    } else {
+                      var valid0 = true;
+                    }
+                    if (valid0) {
+                      if (data.following_count !== void 0) {
+                        let data6 = data.following_count;
+                        const _errs14 = errors;
+                        if (!(typeof data6 == "number" && (!(data6 % 1) && !isNaN(data6)))) {
+                          validate158.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/type", keyword: "type", params: { type: "integer" }, message: "must be integer" }];
+                          return false;
+                        }
+                        if (errors === _errs14) {
+                          if (typeof data6 == "number") {
+                            if (data6 > 9007199254740991 || isNaN(data6)) {
+                              validate158.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                              return false;
+                            } else {
+                              if (data6 < 0 || isNaN(data6)) {
+                                validate158.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                                return false;
+                              }
+                            }
+                          }
+                        }
+                        var valid0 = _errs14 === errors;
+                      } else {
+                        var valid0 = true;
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -11260,7 +11364,7 @@ function validate207(data, { instancePath = "", parentData, parentDataProperty, 
 }
 validate207.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_UserProfile = validate208;
-var schema116 = { "type": "object", "properties": { "user": { "$ref": "#/components/schemas/FriendUser" }, "relation": { "type": "string", "enum": ["self", "friend", "none"] }, "ratings_visible": { "type": "boolean" }, "reviews_visible": { "type": "boolean" } }, "required": ["user", "relation", "ratings_visible", "reviews_visible"], "additionalProperties": false };
+var schema116 = { "type": "object", "properties": { "user": { "$ref": "#/components/schemas/FriendUser" }, "relation": { "type": "string", "enum": ["self", "friend", "none"] }, "ratings_visible": { "type": "boolean" }, "reviews_visible": { "type": "boolean" }, "library_videos": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991, "description": "Exact count across all pages; null when hidden by the relevant audience policy." }, "ratings_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991, "description": "Exact count across all pages; null when hidden by the relevant audience policy." }, "friends_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991, "description": "Exact count across all pages; null when hidden by the relevant audience policy." }, "following_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 9007199254740991, "description": "Exact count across all pages; null when hidden by the relevant audience policy." } }, "required": ["user", "relation", "ratings_visible", "reviews_visible", "library_videos", "ratings_count", "friends_count", "following_count"], "additionalProperties": false };
 function validate208(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -11274,13 +11378,13 @@ function validate208(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.user === void 0 && (missing0 = "user") || data.relation === void 0 && (missing0 = "relation") || data.ratings_visible === void 0 && (missing0 = "ratings_visible") || data.reviews_visible === void 0 && (missing0 = "reviews_visible")) {
+      if (data.user === void 0 && (missing0 = "user") || data.relation === void 0 && (missing0 = "relation") || data.ratings_visible === void 0 && (missing0 = "ratings_visible") || data.reviews_visible === void 0 && (missing0 = "reviews_visible") || data.library_videos === void 0 && (missing0 = "library_videos") || data.ratings_count === void 0 && (missing0 = "ratings_count") || data.friends_count === void 0 && (missing0 = "friends_count") || data.following_count === void 0 && (missing0 = "following_count")) {
         validate208.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "user" || key0 === "relation" || key0 === "ratings_visible" || key0 === "reviews_visible")) {
+          if (!(key0 === "user" || key0 === "relation" || key0 === "ratings_visible" || key0 === "reviews_visible" || key0 === "library_videos" || key0 === "ratings_count" || key0 === "friends_count" || key0 === "following_count")) {
             validate208.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -11334,6 +11438,110 @@ function validate208(data, { instancePath = "", parentData, parentDataProperty, 
                   var valid0 = _errs7 === errors;
                 } else {
                   var valid0 = true;
+                }
+                if (valid0) {
+                  if (data.library_videos !== void 0) {
+                    let data4 = data.library_videos;
+                    const _errs9 = errors;
+                    if (!(typeof data4 == "number" && (!(data4 % 1) && !isNaN(data4))) && data4 !== null) {
+                      validate208.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/type", keyword: "type", params: { type: schema116.properties.library_videos.type }, message: "must be integer,null" }];
+                      return false;
+                    }
+                    if (errors === _errs9) {
+                      if (typeof data4 == "number") {
+                        if (data4 > 9007199254740991 || isNaN(data4)) {
+                          validate208.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                          return false;
+                        } else {
+                          if (data4 < 0 || isNaN(data4)) {
+                            validate208.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                            return false;
+                          }
+                        }
+                      }
+                    }
+                    var valid0 = _errs9 === errors;
+                  } else {
+                    var valid0 = true;
+                  }
+                  if (valid0) {
+                    if (data.ratings_count !== void 0) {
+                      let data5 = data.ratings_count;
+                      const _errs11 = errors;
+                      if (!(typeof data5 == "number" && (!(data5 % 1) && !isNaN(data5))) && data5 !== null) {
+                        validate208.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/type", keyword: "type", params: { type: schema116.properties.ratings_count.type }, message: "must be integer,null" }];
+                        return false;
+                      }
+                      if (errors === _errs11) {
+                        if (typeof data5 == "number") {
+                          if (data5 > 9007199254740991 || isNaN(data5)) {
+                            validate208.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                            return false;
+                          } else {
+                            if (data5 < 0 || isNaN(data5)) {
+                              validate208.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                              return false;
+                            }
+                          }
+                        }
+                      }
+                      var valid0 = _errs11 === errors;
+                    } else {
+                      var valid0 = true;
+                    }
+                    if (valid0) {
+                      if (data.friends_count !== void 0) {
+                        let data6 = data.friends_count;
+                        const _errs13 = errors;
+                        if (!(typeof data6 == "number" && (!(data6 % 1) && !isNaN(data6))) && data6 !== null) {
+                          validate208.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/type", keyword: "type", params: { type: schema116.properties.friends_count.type }, message: "must be integer,null" }];
+                          return false;
+                        }
+                        if (errors === _errs13) {
+                          if (typeof data6 == "number") {
+                            if (data6 > 9007199254740991 || isNaN(data6)) {
+                              validate208.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                              return false;
+                            } else {
+                              if (data6 < 0 || isNaN(data6)) {
+                                validate208.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                                return false;
+                              }
+                            }
+                          }
+                        }
+                        var valid0 = _errs13 === errors;
+                      } else {
+                        var valid0 = true;
+                      }
+                      if (valid0) {
+                        if (data.following_count !== void 0) {
+                          let data7 = data.following_count;
+                          const _errs15 = errors;
+                          if (!(typeof data7 == "number" && (!(data7 % 1) && !isNaN(data7))) && data7 !== null) {
+                            validate208.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/type", keyword: "type", params: { type: schema116.properties.following_count.type }, message: "must be integer,null" }];
+                            return false;
+                          }
+                          if (errors === _errs15) {
+                            if (typeof data7 == "number") {
+                              if (data7 > 9007199254740991 || isNaN(data7)) {
+                                validate208.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                                return false;
+                              } else {
+                                if (data7 < 0 || isNaN(data7)) {
+                                  validate208.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                                  return false;
+                                }
+                              }
+                            }
+                          }
+                          var valid0 = _errs15 === errors;
+                        } else {
+                          var valid0 = true;
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -27058,13 +27266,13 @@ function validate426(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.user === void 0 && (missing0 = "user") || data.relation === void 0 && (missing0 = "relation") || data.ratings_visible === void 0 && (missing0 = "ratings_visible") || data.reviews_visible === void 0 && (missing0 = "reviews_visible")) {
+      if (data.user === void 0 && (missing0 = "user") || data.relation === void 0 && (missing0 = "relation") || data.ratings_visible === void 0 && (missing0 = "ratings_visible") || data.reviews_visible === void 0 && (missing0 = "reviews_visible") || data.library_videos === void 0 && (missing0 = "library_videos") || data.ratings_count === void 0 && (missing0 = "ratings_count") || data.friends_count === void 0 && (missing0 = "friends_count") || data.following_count === void 0 && (missing0 = "following_count")) {
         validate426.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "user" || key0 === "relation" || key0 === "ratings_visible" || key0 === "reviews_visible")) {
+          if (!(key0 === "user" || key0 === "relation" || key0 === "ratings_visible" || key0 === "reviews_visible" || key0 === "library_videos" || key0 === "ratings_count" || key0 === "friends_count" || key0 === "following_count")) {
             validate426.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -27118,6 +27326,110 @@ function validate426(data, { instancePath = "", parentData, parentDataProperty, 
                   var valid0 = _errs7 === errors;
                 } else {
                   var valid0 = true;
+                }
+                if (valid0) {
+                  if (data.library_videos !== void 0) {
+                    let data4 = data.library_videos;
+                    const _errs9 = errors;
+                    if (!(typeof data4 == "number" && (!(data4 % 1) && !isNaN(data4))) && data4 !== null) {
+                      validate426.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/type", keyword: "type", params: { type: schema116.properties.library_videos.type }, message: "must be integer,null" }];
+                      return false;
+                    }
+                    if (errors === _errs9) {
+                      if (typeof data4 == "number") {
+                        if (data4 > 9007199254740991 || isNaN(data4)) {
+                          validate426.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                          return false;
+                        } else {
+                          if (data4 < 0 || isNaN(data4)) {
+                            validate426.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                            return false;
+                          }
+                        }
+                      }
+                    }
+                    var valid0 = _errs9 === errors;
+                  } else {
+                    var valid0 = true;
+                  }
+                  if (valid0) {
+                    if (data.ratings_count !== void 0) {
+                      let data5 = data.ratings_count;
+                      const _errs11 = errors;
+                      if (!(typeof data5 == "number" && (!(data5 % 1) && !isNaN(data5))) && data5 !== null) {
+                        validate426.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/type", keyword: "type", params: { type: schema116.properties.ratings_count.type }, message: "must be integer,null" }];
+                        return false;
+                      }
+                      if (errors === _errs11) {
+                        if (typeof data5 == "number") {
+                          if (data5 > 9007199254740991 || isNaN(data5)) {
+                            validate426.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                            return false;
+                          } else {
+                            if (data5 < 0 || isNaN(data5)) {
+                              validate426.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                              return false;
+                            }
+                          }
+                        }
+                      }
+                      var valid0 = _errs11 === errors;
+                    } else {
+                      var valid0 = true;
+                    }
+                    if (valid0) {
+                      if (data.friends_count !== void 0) {
+                        let data6 = data.friends_count;
+                        const _errs13 = errors;
+                        if (!(typeof data6 == "number" && (!(data6 % 1) && !isNaN(data6))) && data6 !== null) {
+                          validate426.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/type", keyword: "type", params: { type: schema116.properties.friends_count.type }, message: "must be integer,null" }];
+                          return false;
+                        }
+                        if (errors === _errs13) {
+                          if (typeof data6 == "number") {
+                            if (data6 > 9007199254740991 || isNaN(data6)) {
+                              validate426.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                              return false;
+                            } else {
+                              if (data6 < 0 || isNaN(data6)) {
+                                validate426.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                                return false;
+                              }
+                            }
+                          }
+                        }
+                        var valid0 = _errs13 === errors;
+                      } else {
+                        var valid0 = true;
+                      }
+                      if (valid0) {
+                        if (data.following_count !== void 0) {
+                          let data7 = data.following_count;
+                          const _errs15 = errors;
+                          if (!(typeof data7 == "number" && (!(data7 % 1) && !isNaN(data7))) && data7 !== null) {
+                            validate426.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/type", keyword: "type", params: { type: schema116.properties.following_count.type }, message: "must be integer,null" }];
+                            return false;
+                          }
+                          if (errors === _errs15) {
+                            if (typeof data7 == "number") {
+                              if (data7 > 9007199254740991 || isNaN(data7)) {
+                                validate426.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                                return false;
+                              } else {
+                                if (data7 < 0 || isNaN(data7)) {
+                                  validate426.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                                  return false;
+                                }
+                              }
+                            }
+                          }
+                          var valid0 = _errs15 === errors;
+                        } else {
+                          var valid0 = true;
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -37946,13 +38258,13 @@ function validate575(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.unread_conversations === void 0 && (missing0 = "unread_conversations") || data.incoming_friend_requests === void 0 && (missing0 = "incoming_friend_requests") || data.outgoing_friend_requests === void 0 && (missing0 = "outgoing_friend_requests")) {
+      if (data.unread_conversations === void 0 && (missing0 = "unread_conversations") || data.incoming_friend_requests === void 0 && (missing0 = "incoming_friend_requests") || data.outgoing_friend_requests === void 0 && (missing0 = "outgoing_friend_requests") || data.library_videos === void 0 && (missing0 = "library_videos") || data.ratings_count === void 0 && (missing0 = "ratings_count") || data.friends_count === void 0 && (missing0 = "friends_count") || data.following_count === void 0 && (missing0 = "following_count")) {
         validate575.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "unread_conversations" || key0 === "incoming_friend_requests" || key0 === "outgoing_friend_requests")) {
+          if (!(key0 === "unread_conversations" || key0 === "incoming_friend_requests" || key0 === "outgoing_friend_requests" || key0 === "library_videos" || key0 === "ratings_count" || key0 === "friends_count" || key0 === "following_count")) {
             validate575.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -38032,6 +38344,110 @@ function validate575(data, { instancePath = "", parentData, parentDataProperty, 
                 var valid0 = _errs6 === errors;
               } else {
                 var valid0 = true;
+              }
+              if (valid0) {
+                if (data.library_videos !== void 0) {
+                  let data3 = data.library_videos;
+                  const _errs8 = errors;
+                  if (!(typeof data3 == "number" && (!(data3 % 1) && !isNaN(data3)))) {
+                    validate575.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/type", keyword: "type", params: { type: "integer" }, message: "must be integer" }];
+                    return false;
+                  }
+                  if (errors === _errs8) {
+                    if (typeof data3 == "number") {
+                      if (data3 > 9007199254740991 || isNaN(data3)) {
+                        validate575.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                        return false;
+                      } else {
+                        if (data3 < 0 || isNaN(data3)) {
+                          validate575.errors = [{ instancePath: instancePath + "/library_videos", schemaPath: "#/properties/library_videos/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                          return false;
+                        }
+                      }
+                    }
+                  }
+                  var valid0 = _errs8 === errors;
+                } else {
+                  var valid0 = true;
+                }
+                if (valid0) {
+                  if (data.ratings_count !== void 0) {
+                    let data4 = data.ratings_count;
+                    const _errs10 = errors;
+                    if (!(typeof data4 == "number" && (!(data4 % 1) && !isNaN(data4)))) {
+                      validate575.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/type", keyword: "type", params: { type: "integer" }, message: "must be integer" }];
+                      return false;
+                    }
+                    if (errors === _errs10) {
+                      if (typeof data4 == "number") {
+                        if (data4 > 9007199254740991 || isNaN(data4)) {
+                          validate575.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                          return false;
+                        } else {
+                          if (data4 < 0 || isNaN(data4)) {
+                            validate575.errors = [{ instancePath: instancePath + "/ratings_count", schemaPath: "#/properties/ratings_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                            return false;
+                          }
+                        }
+                      }
+                    }
+                    var valid0 = _errs10 === errors;
+                  } else {
+                    var valid0 = true;
+                  }
+                  if (valid0) {
+                    if (data.friends_count !== void 0) {
+                      let data5 = data.friends_count;
+                      const _errs12 = errors;
+                      if (!(typeof data5 == "number" && (!(data5 % 1) && !isNaN(data5)))) {
+                        validate575.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/type", keyword: "type", params: { type: "integer" }, message: "must be integer" }];
+                        return false;
+                      }
+                      if (errors === _errs12) {
+                        if (typeof data5 == "number") {
+                          if (data5 > 9007199254740991 || isNaN(data5)) {
+                            validate575.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                            return false;
+                          } else {
+                            if (data5 < 0 || isNaN(data5)) {
+                              validate575.errors = [{ instancePath: instancePath + "/friends_count", schemaPath: "#/properties/friends_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                              return false;
+                            }
+                          }
+                        }
+                      }
+                      var valid0 = _errs12 === errors;
+                    } else {
+                      var valid0 = true;
+                    }
+                    if (valid0) {
+                      if (data.following_count !== void 0) {
+                        let data6 = data.following_count;
+                        const _errs14 = errors;
+                        if (!(typeof data6 == "number" && (!(data6 % 1) && !isNaN(data6)))) {
+                          validate575.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/type", keyword: "type", params: { type: "integer" }, message: "must be integer" }];
+                          return false;
+                        }
+                        if (errors === _errs14) {
+                          if (typeof data6 == "number") {
+                            if (data6 > 9007199254740991 || isNaN(data6)) {
+                              validate575.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/maximum", keyword: "maximum", params: { comparison: "<=", limit: 9007199254740991 }, message: "must be <= 9007199254740991" }];
+                              return false;
+                            } else {
+                              if (data6 < 0 || isNaN(data6)) {
+                                validate575.errors = [{ instancePath: instancePath + "/following_count", schemaPath: "#/properties/following_count/minimum", keyword: "minimum", params: { comparison: ">=", limit: 0 }, message: "must be >= 0" }];
+                                return false;
+                              }
+                            }
+                          }
+                        }
+                        var valid0 = _errs14 === errors;
+                      } else {
+                        var valid0 = true;
+                      }
+                    }
+                  }
+                }
               }
             }
           }
