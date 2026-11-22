@@ -17,7 +17,9 @@ export function VideoMarkMenu({ mark, disabled = false, onChange }: { mark: Vide
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', escape); };
   }, [open]);
   const choose = async (value: VideoMark) => {
-    setOpen(false); button.current?.focus(); setBusy(true);
+    setOpen(false); setBusy(true);
+    // aria-disabled (not disabled) keeps keyboard focus on the button.
+    button.current?.focus();
     try { await onChange(mark === value ? null : value); } finally { setBusy(false); }
   };
   // Menu keyboard model: arrows/Home/End move between items, Tab leaves and closes.
@@ -32,7 +34,7 @@ export function VideoMarkMenu({ mark, disabled = false, onChange }: { mark: Vide
   const items: [VideoMark, React.ReactNode][] = [['not_interested', <MinusCircle size={18} aria-hidden="true"/>], ['watched', <Eye size={18} aria-hidden="true"/>]];
   return <span className="mark-menu" ref={root}>
     {mark && <span className={`mark-badge mark-pill mark-${mark}`}>{mark === 'watched' ? <Eye size={16} aria-hidden="true"/> : <MinusCircle size={16} aria-hidden="true"/>}{MARK_LABELS[mark]}</span>}
-    <button ref={button} type="button" className="secondary icon-only" aria-haspopup="menu" aria-expanded={open} aria-label="Другие действия с видео" disabled={disabled || busy} onClick={() => setOpen(v => !v)}><MoreHorizontal size={18} aria-hidden="true"/></button>
+    <button ref={button} type="button" className="secondary icon-only" aria-haspopup="menu" aria-expanded={open} aria-label="Другие действия с видео" disabled={disabled} aria-disabled={busy || undefined} onClick={() => { if (!busy) setOpen(v => !v); }}><MoreHorizontal size={18} aria-hidden="true"/></button>
     {open && <span className="mark-popover" role="menu" aria-label="Отметить видео" onKeyDown={keys}>
       {items.map(([value, icon]) => <button key={value} type="button" role="menuitemcheckbox" aria-checked={mark === value} tabIndex={-1} onClick={() => void choose(value)}>
         <span>{MARK_LABELS[value]}</span>{mark === value ? <Check size={18} aria-hidden="true"/> : icon}

@@ -6,9 +6,9 @@ import { LoadMore } from './LoadMore.tsx';
 
 /** «Отметки» of a profile (YP-102): own list, never mixed into recommendations.
  * The parent keys it by viewer, user and profile revision. */
-export function UserMarksList({ client, userId, own }: { client: Pick<ApiClient, 'request'>; userId: string; own: boolean }) {
+export function UserMarksList({ client, userId, own, hidden = false }: { client: Pick<ApiClient, 'request'>; userId: string; own: boolean; hidden?: boolean }) {
   const [items, setItems] = useState<UserMark[]>([]), [next, setNext] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true), [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true), [error, setError] = useState(false), [failedAfter, setFailedAfter] = useState<string | null>(null);
   const generation = useRef(0), more = useRef(false);
   async function load(after: string | null, signal?: AbortSignal) {
     const stamp = generation.current;
@@ -19,7 +19,7 @@ export function UserMarksList({ client, userId, own }: { client: Pick<ApiClient,
       setItems(prev => after ? [...prev, ...page.items.filter(x => !prev.some(y => y.video.id === x.video.id))] : page.items);
       setNext(page.next);
     } catch {
-      if (stamp === generation.current && !signal?.aborted) setError(true);
+      if (stamp === generation.current && !signal?.aborted) { setError(true); setFailedAfter(after); }
     } finally {
       if (stamp === generation.current) setLoading(false);
     }
@@ -37,7 +37,8 @@ export function UserMarksList({ client, userId, own }: { client: Pick<ApiClient,
   }
   return <section aria-busy={loading}>
     {loading && !items.length && <p className="muted" role="status">Загружаем отметки…</p>}
-    {!loading && !error && !items.length && !next && <p className="notice">{own ? 'Вы ещё не отмечали видео как «Просмотрено» или «Неинтересно».' : 'Нет отметок, которые вам видны.'}</p>}
+    {error && <p className="notice" role="alert">Не удалось загрузить отметки. <button className="text-button" onClick={() => void load(failedAfter)}>Повторить</button></p>}
+    {!loading && !error && !items.length && !next && <p className="notice">{own ? 'Вы ещё не отмечали видео как «Просмотрено» или «Неинтересно».' : hidden ? 'Пользователь скрыл свои отметки от вас.' : 'Нет отметок, которые вам видны.'}</p>}
     <div className="recommendation-list">{items.map(it => <article className="panel recommendation" key={it.video.id}>
       <a className="recommendation-poster" href={`#/video/${it.video.youtube_video_id}`}><img src={it.video.preview_url} alt="" loading="lazy" referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = 'none'; }}/></a>
       <div>

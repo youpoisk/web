@@ -77,11 +77,11 @@ export function UserProfilePage({ client, userId, embedded=false, filter='all' }
       {profile.relation !== 'self' && <span className="profile-actions-end"><ReportButton inline client={client} kind="user" targetId={userId} label="Пожаловаться"/><BlockControl inline client={client} userId={userId} onBlocked={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setError('');location.hash='#/settings'}}/></span>}
     </div>}
     </>}
-    {profile && (!profile.ratings_visible || !profile.reviews_visible) && <p className="notice">
+    {profile && !marksView && (!profile.ratings_visible || !profile.reviews_visible) && <p className="notice">
       {!profile.ratings_visible && !profile.reviews_visible ? 'Пользователь скрыл оценки и рецензии от вас.' : !profile.ratings_visible ? 'Пользователь скрыл от вас свои оценки; видны только рецензии.' : 'Пользователь скрыл от вас свои рецензии; видны только оценки.'}
     </p>}
     {!embedded && profile && <div className="tabs" role="tablist" aria-label="Разделы профиля">{([['recommendations','Рекомендации'],['marks','Отметки']] as const).map(([key,label])=><button key={key} role="tab" aria-selected={view===key} className={view===key?'active':''} onClick={()=>setView(key)}>{label}</button>)}</div>}
-    {marksView ? <>{embedded && <div className="section-head"><h2>Мои отметки</h2></div>}{profile && <UserMarksList key={userId+':marks:'+revision} client={client} userId={userId} own={profile.relation==='self'}/>}</> : <>
+    {marksView ? <>{embedded && <div className="section-head"><h2>Мои отметки</h2></div>}{profile && <UserMarksList key={userId+':marks:'+revision} client={client} userId={userId} own={profile.relation==='self'} hidden={profile.library_videos===null}/>}</> : <>
     <div className="section-head"><h2>{embedded?(filter==='ratings'?'Мои оценки видео':filter==='reviews'?'Мои отзывы':'Мои видео'):'Рекомендации'}</h2></div>
     {loading && items.length === 0 && !error && <p className="muted" role="status">Загружаем профиль…</p>}
     {error && <p className="notice" role="status">{error} {error.startsWith('Не удалось') && <button className="text-button" onClick={() => void loadPage(failedAfter)}>Повторить</button>}</p>}
