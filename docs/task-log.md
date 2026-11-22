@@ -179,3 +179,5 @@ Profile action layout: friendship wrapper uses same flex row as subscription/mes
 
 Removed success-action notices across website: read notifications, requests/friendship, subscriptions, blocks, profile name/privacy/sessions, ratings/reviews, reports/moderation and local fallback actions. Errors, conflicts, loading hints, confirmations and actual social notifications remain.
 Validation:105 CSP/API tests PASS; production build PASS; final copy-only edit removes success prefix from retained rating refresh error. Profile layout source review no MEDIUM+.
+
+Success-notice follow-up: successful logout/password change/account deletion callbacks also silent. Error/uncertain/session-expired outcomes remain visible. Auth runtime regression assertions updated.

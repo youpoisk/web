@@ -56,7 +56,7 @@ test('boot completes a callback into an authenticated view', async () => {
 
 test('boot after access_denied keeps the prior state with a notice', async () => {
   const out = port({ done: { returnHash: '#/', outcome: 'logged_out' } });
-  assert.equal((await bootAuth(out, browser())).message, 'Вы вышли из аккаунта.');
+  assert.equal((await bootAuth(out, browser())).message, undefined);
   const s = port({ done: { returnHash: '#/', outcome: 'access_denied' } });
   assert.deepEqual(await bootAuth(s, browser()), { status: 'guest', user: null, message: 'Вход отменён.' });
   const t = port({ done: { returnHash: '#/', outcome: 'login_required' } });
@@ -113,7 +113,7 @@ test('signIn cancels an abandoned flow and navigates to the broker', async () =>
 });
 
 test('signOut reports server logout or hands off to the broker cookie logout', async () => {
-  assert.match((await signOut(port(), browser())).message, /вышли из аккаунта/);
+  assert.equal((await signOut(port(), browser())).message, undefined);
   const b = browser();
   assert.deepEqual(await signOut(port({ async logout() { return { result: 'broker', url: 'https://api.example/auth/logout?x' }; } }), b), { status: 'redirecting', user: null });
   assert.deepEqual(b.assigned, ['https://api.example/auth/logout?x']);
@@ -132,10 +132,10 @@ test('password change opens the API page and boot maps its outcomes to notices',
   assert.deepEqual(s.calls.at(-1), ['password', '#/settings']);
   const broken = port({ passwordURL() { throw kind('storage'); } });
   assert.match(changePassword(broken, browser(), 'bad').message, /смену пароля/);
-  for (const [outcome, text] of [['password_changed', /Пароль изменён/], ['password_uncertain', /подтвердить/], ['password_session', /Сессия завершилась/]]) {
+  for (const [outcome, text] of [['password_changed', null], ['password_uncertain', /подтвердить/], ['password_session', /Сессия завершилась/]]) {
     const view = await bootAuth(port({ done: { returnHash: '#/', outcome } }), browser());
     assert.equal(view.status, 'guest');
-    assert.match(view.message, text);
+    if(text)assert.match(view.message, text);else assert.equal(view.message, undefined);
   }
 });
 
@@ -147,10 +147,10 @@ test('account deletion opens the API page and boot maps its outcomes to notices'
   deleteAccount(s, b);
   assert.deepEqual(s.calls.at(-1), ['delete', '#/settings']);
   assert.match(deleteAccount(port({ deleteAccountURL() { throw kind('crypto'); } }), browser(), 'bad').message, /удаление аккаунта/);
-  for (const [outcome, text] of [['account_deleted', /Аккаунт удалён/], ['account_uncertain', /подтвердить удаление/], ['account_session', /удалить аккаунт/]]) {
+  for (const [outcome, text] of [['account_deleted', null], ['account_uncertain', /подтвердить удаление/], ['account_session', /удалить аккаунт/]]) {
     const view = await bootAuth(port({ done: { returnHash: '#/', outcome } }), browser());
     assert.equal(view.status, 'guest');
-    assert.match(view.message, text);
+    if(text)assert.match(view.message, text);else assert.equal(view.message, undefined);
   }
 });
 

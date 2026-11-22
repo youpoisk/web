@@ -76,11 +76,11 @@ export async function bootAuth(session: SessionPort, browser: Browser): Promise<
     const done = await session.completeCallback(browser.href, browser.replace);
     if (done) {
       if (done.outcome === 'access_denied') return settled(session, 'Вход отменён.');
-      if (done.outcome === 'logged_out') return settled(session, 'Вы вышли из аккаунта.');
-      if (done.outcome === 'password_changed') return settled(session, 'Пароль изменён. Все входы завершены — войдите с новым паролем.');
+      if (done.outcome === 'logged_out') return settled(session);
+      if (done.outcome === 'password_changed') return settled(session);
       if (done.outcome === 'password_uncertain') return settled(session, 'Не удалось подтвердить смену пароля. Войдите снова: если смена прошла, подойдёт новый пароль.');
       if (done.outcome === 'password_session') return settled(session, 'Сессия завершилась. Войдите снова, чтобы сменить пароль.');
-      if (done.outcome === 'account_deleted') return settled(session, 'Аккаунт удалён. Все входы завершены, данные удаляются.');
+      if (done.outcome === 'account_deleted') return settled(session);
       if (done.outcome === 'account_uncertain') return settled(session, 'Не удалось подтвердить удаление аккаунта. Если войти не получается — удаление прошло.');
       if (done.outcome === 'account_session') return settled(session, 'Сессия завершилась. Войдите снова, чтобы удалить аккаунт.');
       return settled(session);
@@ -139,7 +139,7 @@ export async function signOut(session: SessionPort, browser: Browser): Promise<A
       browser.assign(outcome.url);
       return { status: 'redirecting', user: null };
     }
-    return { status: 'guest', user: null, message: 'Вы вышли из аккаунта.' };
+    return { status: 'guest', user: null };
   } catch {
     return { status: 'error', user: null, message: 'Не удалось выйти. Обновите страницу и нажмите «Выйти» ещё раз.' };
   }
