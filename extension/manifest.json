@@ -12,7 +12,13 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "YouPoisk"
+    "default_title": "YouPoisk",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "24": "assets/icons/icon-24.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png"
+    }
   },
   "options_page": "options.html",
   "content_scripts": [
@@ -33,5 +39,12 @@
   ],
   "host_permissions": [
     "https://www.youtube.com/*"
-  ]
+  ],
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "96": "assets/icons/icon-96.png",
+    "128": "assets/icons/icon-128.png"
+  }
 }

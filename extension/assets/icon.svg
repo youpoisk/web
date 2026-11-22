@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Носорог YouPoisk">
+  <rect width="96" height="96" rx="24" fill="#1da1f2"/>
+  <g fill="#fff" transform="translate(0 16)">
+    <path d="M13 35c-1-10 6-18 19-19 10-1 19 2 25 8l8 1 7 7 9 2c3 1 4 4 2 7l-5 4H65l-5-3-4 2-1 8H45l-1-9H32l-2 9H20l-1-12-4-1z"/>
+    <path d="M72 35c5-4 7-9 8-15 4 7 3 14 0 18zM64 29l1-12c5 1 7 5 7 11zM17 26l-6-5-2 2 5 8z"/>
+  </g>
+  <circle cx="71" cy="48" r="1.5" fill="#1da1f2"/>
+</svg>
