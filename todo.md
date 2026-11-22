@@ -151,3 +151,6 @@ Profile stats and tabs: server counts across all pages for library videos, video
 ### EXT-001 — контракт команд и состояний
 - [x] EXT-001: зафиксированы runtimeграницы, независимые auth/transport/sync/operation состояния, videoID/UUID/UC, явные null/false, таблица кнопок→API, idempotency/lease/revision и ownerisolation. Документ extension/docs/protocol.md. Это контракт; вход/outbox/sync не считаются реализованными.
 DEC-EXT-002 — Вопрос поддержкиFirefox: отдельнаяdevсборка/фон поверх общейлогики, ChromeMV3сохраняется; nativeустановка послеworkerграниц иmanifestадаптации, безпубликации. Не ослаблять trustedstorage длясовместимости.
+
+- [x] EXT-002: workerразделяет currentvideo/content и trustedlibrary/options, exactsenderdoc/frame/runtimeid +live tabURL, strictfields и whitelistDTO, signal-onlycontentbroadcast.14extensiontestsPASS. Покаlocalv1, auth/API/outboxещёнеподключены. FirefoxадаптацияследомEXT003.
+DEC-EXT-003 — Доверять sender.id недостаточно: popup/options только точный runtime.getURL безquery/hash; content толькоframe0 watchURL с темжеvideoId иактуальным tabs.get. Повторнаяпроверкапередstoragewrite предотвращаетнакопившиесяstaleкоманды; неизвестныеполяотклоняются. ПолнаябиблиотеканеидётвcontentдажевответенаUPDATE.

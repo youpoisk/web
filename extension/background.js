@@ -3,29 +3,58 @@ const KEY='yp-library-v1';
 let writes=Promise.resolve();
 const ready=chrome.storage.local.setAccessLevel({accessLevel:'TRUSTED_CONTEXTS'});
 async function read(){await ready;return (await chrome.storage.local.get(KEY))[KEY]||YPCore.empty();}
-function authorize(command,sender){
-  if(sender.id!==chrome.runtime.id)throw Error('Недопустимый отправитель');
-  if(!sender.tab)return;
-  if(sender.frameId!==0 || !YPCore.videoId(sender.url))throw Error('Доступно только на странице обычного видео YouTube');
-  if(!['GET','UPDATE'].includes(command.type))throw Error('Команда недоступна странице');
-  if(command.type==='UPDATE' && command.video?.id!==YPCore.videoId(sender.url))throw Error('Видео изменилось, повторите действие');
+function fields(value,allowed,required=[]){
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!allowed.includes(k))||required.some(k=>!Object.hasOwn(value,k)))throw Error('Некорректная команда');
 }
-async function broadcast(){
-  const tabs=await chrome.tabs.query({url:'https://www.youtube.com/*'});
-  await Promise.allSettled(tabs.map(t=>chrome.tabs.sendMessage(t.id,{type:'YP_CHANGED'})));
+function validate(command){
+ fields(command,['type','videoId','video','patch','options'],['type']);
+ const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch'],GET_ACCOUNT_LIBRARY:['type'],OPTIONS:['type','options']};
+ if(!Object.hasOwn(shapes,command.type))throw Error('Неизвестная команда');
+ fields(command,shapes[command.type],shapes[command.type]);
+ if(command.type==='GET_CURRENT_VIDEO_STATE'&&!/^[\w-]{11}$/.test(command.videoId))throw Error('Некорректный ID видео');
+ if(command.type==='UPDATE_CURRENT_VIDEO'){
+  fields(command.video,['id','title','url','preview','channel','channelUrl'],['id','title']);
+  if(typeof command.video.id!=='string'||typeof command.video.title!=='string'||command.video.title.length>250||['url','preview','channel','channelUrl'].some(k=>Object.hasOwn(command.video,k)&&typeof command.video[k]!=='string'))throw Error('Некорректное видео');
+  fields(command.patch,['rating','later','review','mark']);
+  if(!Object.keys(command.patch).length)throw Error('Пустое изменение');
+ }
+ if(command.type==='OPTIONS'){fields(command.options,['enabled','site'],['enabled','site']);if(typeof command.options.enabled!=='boolean'||typeof command.options.site!=='string')throw Error('Некорректные настройки');}
 }
+async function authorize(command,sender){
+ if(sender.id!==chrome.runtime.id)throw Error('Недопустимый отправитель');
+ const trusted=['popup.html','options.html'].find(page=>sender.url===chrome.runtime.getURL(page));
+ if(trusted){if(sender.frameId!==undefined&&sender.frameId!==0)throw Error('Недопустимый frame');if(command.type==='OPTIONS'&&trusted!=='options.html')throw Error('Настройки доступны только со страницы настроек');return {trusted:true};}
+ const id=YPCore.videoId(sender.url);
+ if(!sender.tab||!Number.isInteger(sender.tab.id)||sender.frameId!==0||!id)throw Error('Доступно только на странице обычного видео YouTube');
+ if(!['GET_CURRENT_VIDEO_STATE','UPDATE_CURRENT_VIDEO'].includes(command.type))throw Error('Команда недоступна странице');
+ const target=command.type==='GET_CURRENT_VIDEO_STATE'?command.videoId:command.video.id;
+ const tab=await chrome.tabs.get(sender.tab.id);
+ if(target!==id||YPCore.videoId(tab.url)!==id)throw Error('Видео изменилось, повторите действие');
+ return {trusted:false,id};
+}
+function project(state,access){
+ const options={enabled:state.options.enabled,site:state.options.site};
+ const videos={};
+ for(const id of access.trusted?Object.keys(state.videos):[access.id]){
+  if(!Object.hasOwn(state.videos,id))continue;const v=state.videos[id];if(!v)continue;
+  const safe={};for(const field of ['id','title','url','preview','channel','channelUrl','rating','later','review','mark','createdAt','updatedAt','reviewedAt'])if(Object.hasOwn(v,field))safe[field]=v[field];
+  videos[id]=safe;
+ }
+ return {version:1,options,videos};
+}
+async function broadcast(){const tabs=await chrome.tabs.query({url:'https://www.youtube.com/*'});await Promise.allSettled(tabs.map(t=>chrome.tabs.sendMessage(t.id,{type:'YP_CHANGED'})));}
 chrome.runtime.onMessage.addListener((command,sender,respond)=>{
-  if(!command?.type?.startsWith('YP_'))return;
-  const request={...command,type:command.type.slice(3)};
-  (async()=>{
-    authorize(request,sender);
-    if(request.type==='GET'){await writes;return read();}
-    if(!['UPDATE','OPTIONS'].includes(request.type))throw Error('Неизвестная команда');
-    const operation=writes.then(async()=>{const next=YPCore.apply(await read(),request);await chrome.storage.local.set({[KEY]:next});return next;});
-    writes=operation.catch(()=>{});
-    const result=await operation;
-    broadcast().catch(()=>{});
-    return result;
-  })().then(data=>respond({ok:true,data}),error=>respond({ok:false,error:error.message}));
-  return true;
+ if(typeof command?.type!=='string'||!command.type.startsWith('YP_'))return;
+ const request={...command,type:command.type.slice(3)};
+ (async()=>{
+  validate(request);let access=await authorize(request,sender);
+  if(['GET_CURRENT_VIDEO_STATE','GET_ACCOUNT_LIBRARY'].includes(request.type)){await writes;const state=await read();access=await authorize(request,sender);return project(state,access);}
+  const operation=writes.then(async()=>{
+   await authorize(request,sender);const state=await read();
+   const next=YPCore.apply(state,request.type==='OPTIONS'?request:{...request,type:'UPDATE'});
+   access=await authorize(request,sender);await chrome.storage.local.set({[KEY]:next});return project(next,access);
+  });
+  writes=operation.catch(()=>{});const result=await operation;broadcast().catch(()=>{});return result;
+ })().then(data=>respond({ok:true,data}),()=>respond({ok:false,error:'Не удалось выполнить действие. Проверьте текущую страницу и повторите попытку.'}));
+ return true;
 });
