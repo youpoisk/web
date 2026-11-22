@@ -124,3 +124,5 @@ YP-079 messages UI accepted: follow-up reviews FAIL (M1-R) → fixed 00be1f6 →
 
 YP-062 site (DEC-WEB-028): contract import (58 operations), Notifications.tsx NotificationBadge/NotificationsList, #/notifications for signed-in users, header badge; chat read and request accept refresh the badge. lists.ts notification helpers lines/functions100. Frontend gate PASS.
 
+YP-083.2 site (DEC-WEB-029): contract import (63 operations); Moderation.tsx ReportButton/ModerationPage/ModerationRoute/ModerationLink; reports from profiles and chat messages; #/moderation for staff (role from server), audit tab for admins. lists.ts report/moderation helpers lines/functions100. Frontend gate PASS. Review reporting UI pending review ids in read models.
+

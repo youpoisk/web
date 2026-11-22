@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
+import { ReportButton } from './Moderation.tsx';
 import { MAX_MESSAGE_LENGTH, loadConversations, loadMessages, markConversationRead, mergeMessages, messageError, messageGap, sendMessage, NOTIFICATIONS_CHANGED, type Conversation, type Message } from '../shared/library/lists.ts';
 
 const initial = (name: string) => [...name][0];
@@ -135,6 +136,7 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
         <span className="sr-only">{m.mine ? 'Вы' : title}: </span>
         {m.body && <p><bdi dir="auto">{m.body}</bdi></p>}
         {m.video && <a href={`#/video/${m.video.youtube_video_id}`}>▶ <bdi dir="auto">{m.video.title ?? m.video.youtube_video_id}</bdi></a>}
+        {!m.mine && <ReportButton client={client} kind="message" targetId={m.id}/>}
         <span className="small muted">{when(m.created_at)}{m === lastMine && otherRead >= m.seq ? ' · прочитано' : ''}</span>
       </li>)}
     </ol>

@@ -434,3 +434,49 @@ export function notificationTarget(n: NotificationItem): { route: string; tab?: 
   return { route: `/user/${n.actor.id}` };
 }
 
+// Reports and moderation (YP-083.2). Staff roles come from the operator; the
+// site only shows tools the server confirms.
+export type ReportKind = 'user' | 'review' | 'message';
+export type ReportReason = 'spam' | 'abuse' | 'inappropriate' | 'other';
+export type AdminReport = components['schemas']['AdminReport'];
+export type AuditEntry = components['schemas']['AuditEntry'];
+export const REPORT_REASONS: Array<[ReportReason, string]> = [['spam', 'Спам'], ['abuse', 'Оскорбления или травля'], ['inappropriate', 'Неприемлемый контент'], ['other', 'Другое']];
+export async function createReport(client: Pick<ApiClient, 'request'>, kind: ReportKind, targetId: string, reason: ReportReason, details: string) {
+  const body: { target_kind: ReportKind; target_id: string; reason: ReportReason; details?: string } = { target_kind: kind, target_id: targetId, reason };
+  if (details.trim()) body.details = details;
+  return client.request('createReport', { body });
+}
+export async function loadStaffRole(client: Pick<ApiClient, 'request'>, signal?: AbortSignal): Promise<'admin' | 'moderator' | null> {
+  return (await client.request('getStaffRole', { signal })).role;
+}
+export async function loadReports(client: Pick<ApiClient, 'request'>, status: 'open' | 'dismissed' | 'actioned', after: string | null, signal?: AbortSignal): Promise<{ items: AdminReport[]; next: string | null }> {
+  const query: { status: 'open' | 'dismissed' | 'actioned'; limit: number; after?: string } = { status, limit: 30 };
+  if (after) query.after = after;
+  const page = await client.request('listReports', { query, signal });
+  return { items: page.items, next: page.next_cursor ?? null };
+}
+export async function resolveReport(client: Pick<ApiClient, 'request'>, id: string, action: 'dismiss' | 'hide' | 'suspend'): Promise<AdminReport> {
+  return client.request('resolveReport', { path: { id }, body: { action } });
+}
+export async function loadAudit(client: Pick<ApiClient, 'request'>, after: string | null, signal?: AbortSignal): Promise<{ items: AuditEntry[]; next: string | null }> {
+  const query: { limit: number; after?: string } = { limit: 30 };
+  if (after) query.after = after;
+  const page = await client.request('listModerationAudit', { query, signal });
+  return { items: page.items, next: page.next_cursor ?? null };
+}
+export function reportError(error: unknown): string {
+  const status = error instanceof ApiError && error.kind === 'http' ? error.status : 0;
+  if (status === 404) return 'Пожаловаться на это нельзя: объект недоступен.';
+  if (status === 422) return 'Проверьте причину и комментарий (до 500 символов).';
+  if (status === 429) return 'Слишком много жалоб подряд. Попробуйте через минуту.';
+  return 'Не удалось отправить жалобу. Попробуйте ещё раз.';
+}
+export function moderationError(error: unknown): string {
+  const status = error instanceof ApiError && error.kind === 'http' ? error.status : 0;
+  if (status === 403) return 'Недостаточно прав для этого действия.';
+  if (status === 409) return 'Жалоба уже рассмотрена. Обновите список.';
+  if (status === 422) return 'Это действие не подходит для такой жалобы.';
+  if (status === 429) return 'Слишком много действий подряд. Попробуйте через минуту.';
+  return 'Не удалось выполнить действие. Попробуйте ещё раз.';
+}
+

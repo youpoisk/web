@@ -40,6 +40,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Moderation audit log
+         * @description Reports and minimal moderation (YP-083.2). Admins only (403 otherwise). Append-only staff decisions, newest first.
+         */
+        get: operations["listModerationAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Moderation queue
+         * @description Reports and minimal moderation (YP-083.2). Staff only (admin or moderator role, granted by the operator; no API grants roles): others get 403 forbidden. Newest first, filtered by status (default open). Evidence is only the single reported item.
+         */
+        get: operations["listReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/reports/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve a report
+         * @description Reports and minimal moderation (YP-083.2). Staff only (admin or moderator role, granted by the operator; no API grants roles): others get 403 forbidden. dismiss closes the report; hide (reviews only, else 422) hides the review; suspend disables the reported account and revokes all its sessions (403 for staff accounts and oneself). Atomic with the audit entry; an already resolved report is 409. Rate limited: 60 per account per minute.
+         */
+        post: operations["resolveReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/browser/code": {
         parameters: {
             query?: never;
@@ -744,6 +804,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My staff role
+         * @description Reports and minimal moderation (YP-083.2). null for ordinary users; the site shows moderation tools only for a role.
+         */
+        get: operations["getStaffRole"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/sessions": {
         parameters: {
             query?: never;
@@ -886,6 +966,26 @@ export interface paths {
         get: operations["listWatchlist"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Report a user, review or message
+         * @description Reports and minimal moderation (YP-083.2). Only targets the reporter can see (404 otherwise; own content 422). One report per reporter and target: 201 creates, repeating returns the existing report with 200. Rate limited: 10 per account per minute.
+         */
+        post: operations["createReport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1036,6 +1136,50 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description A report with only the single reported item as evidence (never a whole conversation). */
+        AdminReport: {
+            /** Format: date-time */
+            created_at: string;
+            details: string | null;
+            /** Format: uuid */
+            id: string;
+            message: components["schemas"]["MessageEvidence"] | null;
+            /** @enum {string} */
+            reason: "spam" | "abuse" | "inappropriate" | "other";
+            reporter: components["schemas"]["StaffUser"];
+            review: components["schemas"]["ReviewEvidence"] | null;
+            /** @enum {string} */
+            status: "open" | "dismissed" | "actioned";
+            /** Format: uuid */
+            target_id: string;
+            /** @enum {string} */
+            target_kind: "user" | "review" | "message";
+            target_user: components["schemas"]["StaffUser"];
+        };
+        AdminReportPage: {
+            items: components["schemas"]["AdminReport"][];
+            next_cursor?: string;
+        };
+        AuditEntry: {
+            /** @enum {string} */
+            action: "dismiss" | "hide" | "suspend";
+            actor: components["schemas"]["StaffUser"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            report_id: string | null;
+            /** Format: uuid */
+            target_id: string;
+            /** @enum {string} */
+            target_kind: "user" | "review" | "message";
+            target_user: components["schemas"]["StaffUser"];
+        };
+        AuditPage: {
+            items: components["schemas"]["AuditEntry"][];
+            next_cursor?: string;
+        };
         Block: {
             /** Format: date-time */
             since: string;
@@ -1284,6 +1428,14 @@ export interface components {
             /** Format: uuid */
             video_id?: string | null;
         };
+        MessageEvidence: {
+            body: string | null;
+            /** Format: date-time */
+            created_at: string;
+            has_video: boolean;
+            /** Format: uuid */
+            id: string;
+        };
         MessagePage: {
             can_send: boolean;
             items: components["schemas"]["Message"][];
@@ -1472,6 +1624,36 @@ export interface components {
             /** Format: uuid */
             user_id: string;
         } & unknown;
+        /** @description Report something you can see: an active user, a visible review (same audience rules as the author's profile) or a message sent to you. details are trimmed; empty means none. */
+        ReportCreate: {
+            details?: string | null;
+            /** @enum {string} */
+            reason: "spam" | "abuse" | "inappropriate" | "other";
+            /** Format: uuid */
+            target_id: string;
+            /** @enum {string} */
+            target_kind: "user" | "review" | "message";
+        };
+        ReportResolve: {
+            /** @enum {string} */
+            action: "dismiss" | "hide" | "suspend";
+        };
+        ReportResult: {
+            created: boolean;
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "open" | "dismissed" | "actioned";
+        };
+        ReviewEvidence: {
+            /** @enum {string} */
+            moderation_status: "visible" | "hidden";
+            text: string | null;
+            title: string | null;
+            /** Format: uuid */
+            video_id: string;
+            youtube_video_id: string;
+        };
         ReviewRequest: {
             /**
              * Format: int64
@@ -1489,6 +1671,17 @@ export interface components {
         SentMessage: {
             created: boolean;
             message: components["schemas"]["Message"];
+        };
+        StaffRole: {
+            /** @enum {string|null} */
+            role: "admin" | "moderator" | null;
+        };
+        StaffUser: {
+            /** Format: uuid */
+            id: string;
+            login: string | null;
+            /** @enum {string} */
+            status: "active" | "disabled" | "deleting" | "deleted";
         };
         UnreadNotifications: {
             unread_count: number;
@@ -1718,6 +1911,167 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BootstrapError"];
+                };
+            };
+        };
+    };
+    listModerationAudit: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Moderation audit log */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listReports: {
+        parameters: {
+            query?: {
+                /** @description Opaque previous next_cursor. */
+                after?: string;
+                /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
+                limit?: number;
+                status?: "open" | "dismissed" | "actioned";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Moderation queue */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReportPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    resolveReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportResolve"];
+            };
+        };
+        responses: {
+            /** @description Resolved report */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminReport"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -3801,6 +4155,54 @@ export interface operations {
             };
         };
     };
+    getStaffRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description My staff role */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffRole"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     listSessions: {
         parameters: {
             query?: {
@@ -4255,6 +4657,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportCreate"];
+            };
+        };
+        responses: {
+            /** @description Existing report returned */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportResult"];
+                };
+            };
+            /** @description Report created */
+            201: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportResult"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

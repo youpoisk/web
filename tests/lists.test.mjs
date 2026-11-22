@@ -465,3 +465,37 @@ test('notification helpers call the right operations and describe items', async 
   assert.deepEqual(m.notificationTarget(item({})), { route: '/messages/u1' });
 });
 
+test('report and moderation helpers call the right operations', async () => {
+  const m = await import('../src/shared/library/lists.ts');
+  const { ApiError } = await import('../src/shared/api/client.ts');
+  const calls = [];
+  const client = { async request(op, options) { calls.push([op, options.path, options.query, options.body]);
+    if (op === 'getStaffRole') return { role: 'moderator' };
+    if (op === 'listReports') return calls.length === 4 ? { items: [{ id: 'r1' }], next_cursor: 'c1' } : { items: [] };
+    if (op === 'listModerationAudit') return calls.length === 7 ? { items: [{ id: 'a1' }], next_cursor: 'c2' } : { items: [] };
+    if (op === 'resolveReport') return { id: 'r1', status: 'dismissed' };
+    return { id: 'x', status: 'open', created: true }; } };
+  assert.equal((await m.createReport(client, 'user', 'u1', 'spam', '  ')).created, true);
+  await m.createReport(client, 'message', 'm1', 'abuse', ' угрозы ');
+  assert.equal(await m.loadStaffRole(client), 'moderator');
+  assert.deepEqual(await m.loadReports(client, 'open', null), { items: [{ id: 'r1' }], next: 'c1' });
+  assert.deepEqual(await m.loadReports(client, 'actioned', 'c1'), { items: [], next: null });
+  assert.deepEqual(await m.resolveReport(client, 'r1', 'dismiss'), { id: 'r1', status: 'dismissed' });
+  assert.deepEqual(await m.loadAudit(client, null), { items: [{ id: 'a1' }], next: 'c2' });
+  assert.deepEqual(await m.loadAudit(client, 'c2'), { items: [], next: null });
+  assert.deepEqual(calls.map(c => [c[0], c[1], c[2], c[3]]), [
+    ['createReport', undefined, undefined, { target_kind: 'user', target_id: 'u1', reason: 'spam' }],
+    ['createReport', undefined, undefined, { target_kind: 'message', target_id: 'm1', reason: 'abuse', details: ' угрозы ' }],
+    ['getStaffRole', undefined, undefined, undefined],
+    ['listReports', undefined, { status: 'open', limit: 30 }, undefined],
+    ['listReports', undefined, { status: 'actioned', limit: 30, after: 'c1' }, undefined],
+    ['resolveReport', { id: 'r1' }, undefined, { action: 'dismiss' }],
+    ['listModerationAudit', undefined, { limit: 30 }, undefined],
+    ['listModerationAudit', undefined, { limit: 30, after: 'c2' }, undefined]]);
+  assert.equal(m.REPORT_REASONS.length, 4);
+  for (const [status, text] of [[404, /недоступен/], [422, /500/], [429, /через минуту/], [503, /ещё раз/]]) assert.match(m.reportError(new ApiError('http', status, 'x')), text);
+  assert.match(m.reportError(new Error('x')), /ещё раз/);
+  for (const [status, text] of [[403, /прав/], [409, /рассмотрена/], [422, /не подходит/], [429, /через минуту/], [503, /ещё раз/]]) assert.match(m.moderationError(new ApiError('http', status, 'x')), text);
+  assert.match(m.moderationError(new Error('x')), /ещё раз/);
+});
+

@@ -1,6 +1,7 @@
 import {BlockControl} from './Blocks.tsx';
 import {FollowControls} from './Subscriptions.tsx';
 import React, { useEffect, useRef, useState } from 'react';
+import { ReportButton } from './Moderation.tsx';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { loadUserProfile, loadUserRecommendations, type Recommendation, type UserProfile } from '../shared/library/lists.ts';
 
@@ -57,6 +58,7 @@ export function UserProfilePage({ client, userId }: { client: Pick<ApiClient, 'r
     </div></div>
     {profile && <FollowControls client={client} userId={userId} canFollow={profile.relation!=='self'} onChanged={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setRevision(v=>v+1)}}/>}
     {profile && profile.relation === 'friend' && <p><a className="secondary" href={`#/messages/${userId}`}>Написать сообщение</a></p>}
+    {profile && profile.relation !== 'self' && <p><ReportButton client={client} kind="user" targetId={userId} label="Пожаловаться на пользователя"/></p>}
     {profile && profile.relation !== 'self' && <BlockControl client={client} userId={userId} onBlocked={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setError('');location.hash='#/settings'}}/>}
     {profile && (!profile.ratings_visible || !profile.reviews_visible) && <p className="notice">
       {!profile.ratings_visible && !profile.reviews_visible ? 'Пользователь скрыл оценки и рецензии от вас.' : !profile.ratings_visible ? 'Пользователь скрыл от вас свои оценки; видны только рецензии.' : 'Пользователь скрыл от вас свои рецензии; видны только оценки.'}
