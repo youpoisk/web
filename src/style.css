@@ -98,3 +98,11 @@
 .catalog-extension-promo small{display:block;font-size:10px;color:#8d9da8;margin-top:10px;line-height:1.5}
 @media(max-width:1050px){.people-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.people-grid{grid-template-columns:minmax(0,1fr)}}
+.confirm-dialog{border:1px solid var(--line);border-radius:12px;padding:0;width:min(480px,calc(100vw - 32px));color:inherit;box-shadow:0 24px 80px #10203038}
+.confirm-dialog::backdrop{background:#152b3e66;backdrop-filter:blur(4px)}
+.confirm-dialog-content{padding:24px}
+.confirm-dialog h2{font-size:21px;margin:0 0 10px;letter-spacing:-.4px}
+.confirm-dialog p{font-size:13px;color:#657786;margin:0 0 20px;line-height:1.65}
+.confirm-dialog .actions{justify-content:flex-end}
+.confirm-dialog .actions .primary{min-width:120px}
+@media(max-width:480px){.confirm-dialog-content{padding:18px}.confirm-dialog .actions{flex-direction:column-reverse}.confirm-dialog .actions button{width:100%}}
