@@ -589,7 +589,7 @@ export interface paths {
         };
         /**
          * List my notifications
-         * @description Site notifications (YP-062): friend requests, accepted requests and direct messages, written in the same transaction as the action, one row per event key (a repeat updates it). Actors blocked in either direction or inactive are hidden from lists and counts. Ordered by occurred_at desc, id desc. Accepting a request or reading the conversation marks the related notification read.
+         * @description Site notifications (YP-062): friend requests, accepted requests and direct messages, written in the same transaction as the action, one row per event key (a repeat updates it). Actors blocked in either direction or inactive are hidden from lists and counts. Ordered by occurred_at desc, id desc. Accepting, declining or cancelling a request, reading the conversation or replying in it marks the related notification read. Pages follow occurred_at, which moves when an event repeats: an item bumped while paging appears on the next refresh.
          */
         get: operations["listNotifications"];
         put?: never;
@@ -1323,7 +1323,7 @@ export interface components {
         NotificationsReadAll: {
             /**
              * Format: date-time
-             * @description occurred_at of the newest notification the client has shown; later ones stay unread.
+             * @description occurred_at of the newest notification the client has shown; later ones stay unread. Send the occurred_at string unchanged: it has microsecond precision, and a value rounded to milliseconds leaves the newest item unread.
              */
             through: string;
         };
