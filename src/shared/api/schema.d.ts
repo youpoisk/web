@@ -923,7 +923,7 @@ export interface paths {
         get: operations["getRecommendationPreferences"];
         /**
          * Replace my recommendation preferences at expected revision
-         * @description Replace my recommendation preferences at expected revision; page size1..12, strict inputs, real shared pool only. Personal settings are private, revision checked; favorites use ANY and disabled source returns no cards. Cursor binds owner/settings, no automatic fallback. Source freshness is explicit. No personal ratings or library changes.
+         * @description Private preferences. Up to20 custom hashtags, including names absent from catalog/provider suggestions. NFC+Unicode casefold normalization, optional leading #, letters/numbers/underscore with combining marks after first character,1..100 codepoints after normalization, deduplicated and sorted. New dictionary entries and preferences are saved atomically; no video association/provider evidence is created. No-op preserves revision; stale expected_revision409. Maximum20 writes/minute/account, shared bounded read capacity;429 Retry-After. Unknown valid tags are accepted; only invalid syntax/limits return422.
          */
         put: operations["putRecommendationPreferences"];
         post?: never;

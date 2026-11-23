@@ -1,0 +1,7 @@
+import React from'react';import{Hash,Plus}from'lucide-react';
+import{favoriteTagCandidate}from'../shared/recommendations/tags.ts';
+export function CustomTagInput({value,selected,disabled,onChange,onAdd}:{value:string;selected:string[];disabled:boolean;onChange:(value:string)=>void;onAdd:()=>void}){
+ const candidate=favoriteTagCandidate(value,selected),canAdd=!disabled&&candidate.issue===null;
+ const hints={empty:'Введите свой тег и нажмите Enter или «Добавить».',invalid:'От 1 до 100 символов: буквы, цифры и _, без пробелов.',duplicate:'Этот тег уже добавлен.',limit:'Можно выбрать до 20 тегов. Уберите один, чтобы добавить новый.'};
+ return <div className="custom-tag-entry"><div className="custom-tag-row"><label className="custom-tag-field"><Hash size={17} aria-hidden="true"/><span className="sr-only">Введите свой тег</span><input value={value} disabled={disabled} maxLength={201} placeholder="Например, наука" aria-describedby="custom-tag-hint" aria-invalid={candidate.issue==='invalid'} onChange={event=>onChange(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'&&!event.nativeEvent.isComposing){event.preventDefault();if(canAdd)onAdd();}}}/></label><button className="custom-tag-add" type="button" disabled={!canAdd} onClick={onAdd}><Plus size={16}/>Добавить</button></div><p id="custom-tag-hint" className={'custom-tag-hint'+(candidate.issue==='invalid'?' invalid':'')} role="status">{candidate.issue?hints[candidate.issue]:'Нажмите Enter или «Добавить», затем сохраните интересы.'}</p></div>
+}
