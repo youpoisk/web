@@ -11,7 +11,7 @@ globalThis.YPWorker=(()=>{
   }
   function validate(command){
    fields(command,['type','videoId','video','patch','options','login','password','after','scope','ref','choice','expected'],['type']);
-   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope'],QUEUE_CONFLICTS:['type','after'],QUEUE_RESOLVE:['type','scope','ref','choice','expected']};
+   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],GET_PENDING_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope'],QUEUE_CONFLICTS:['type','after'],QUEUE_RESOLVE:['type','scope','ref','choice','expected']};
    if(!Object.hasOwn(shapes,command.type))throw Error('Неизвестная команда');
    fields(command,shapes[command.type],shapes[command.type].filter(k=>!['after','scope'].includes(k)));
    if(command.after!==undefined&&(typeof command.after!=='string'||command.after.length>512))throw Error('Некорректный курсор');
@@ -41,12 +41,12 @@ globalThis.YPWorker=(()=>{
   function project(state,access){
    const options={enabled:state.options.enabled,site:globalThis.YPConfig.siteOrigin};
    const videos={};
+   const pick=v=>{const safe={};for(const field of ['id','title','url','preview','channel','channelUrl','rating','later','review','mark','createdAt','updatedAt','reviewedAt','pending','conflict','offline','ratingAverage','ratingCount'])if(Object.hasOwn(v,field))safe[field]=v[field];return safe;};
    for(const id of access.trusted?Object.keys(state.videos):[access.id]){
     if(!Object.hasOwn(state.videos,id))continue;const v=state.videos[id];if(!v)continue;
-    const safe={};for(const field of ['id','title','url','preview','channel','channelUrl','rating','later','review','mark','createdAt','updatedAt','reviewedAt','pending','conflict','offline','ratingAverage','ratingCount'])if(Object.hasOwn(v,field))safe[field]=v[field];
-    videos[id]=safe;
+    videos[id]=pick(v);
    }
-   return {version:1,options,videos,...(state.queued?{queued:true}:{}),...(state.offline?{offline:true}:{}),...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,...(state.queue?{queue:state.queue}:{})}:{})};
+   return {version:1,options,videos,...(state.queued?{queued:true}:{}),...(state.offline?{offline:true}:{}),...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,pendingVideos:Object.fromEntries(Object.entries(state.pendingVideos??{}).map(([id,v])=>[id,pick(v)])),pendingNext:state.pendingNext??null,...(state.queue?{queue:state.queue}:{})}:{})};
   }
   async function broadcast(){
    const tabs=await api.tabs.query({url:'https://www.youtube.com/*'});
@@ -105,7 +105,7 @@ globalThis.YPWorker=(()=>{
        const validated=YPCore.apply(YPCore.empty(),{type:'UPDATE',video:request.video,patch:request.patch});
        const patch={...request.patch};if(Object.hasOwn(patch,'review'))patch.review=validated.videos[request.video.id]?.review??null;
        result=await backend.update(request.video,patch);broadcast().catch(()=>{});
-      }else result=request.type==='GET_CURRENT_VIDEO_STATE'?await backend.current(request.videoId):await backend.library(request.after);
+      }else result=request.type==='GET_PENDING_LIBRARY'?await backend.pendingLibrary(request.after):request.type==='GET_CURRENT_VIDEO_STATE'?await backend.current(request.videoId):await backend.library(request.after);
       if(access.trusted&&backend.queueStatus)result.queue=await backend.queueStatus();
       access=await authorize(request,sender);return project({...state,...result,auth},access);
      }

@@ -240,3 +240,6 @@ EXT-010 finalsmoke bcfb9fc independentreviewPASS; backendAPIhealthy,migrations20
 UI separates overall average/count from ownrating; ratings highlighted/+2px. Per-video pending/offline/conflict labels, conflict opens trustedpopup flow. Cached real current/watchlist pages12 available offline with owner isolation; overlays generation/tombstone and ownpending, never sampledata. Review editor remains open/draft retained for queued. Safe local auth.peek contains no credentials and cannot authorize HTTP; writes still use session.authorize.
 Unknown-base deferred intent uses expected_revision0 (instead of silently fetching a freshbase after reconnect), so pre-existing serverstate requires explicit conflict choice. 83extensiontestsPASS, Firefoxbuild/lint0warning; independentreview required before EXT012.
 
+
+EXT011 reviewfix: unknown/uncached pending video restored from validated owner+epoch staged metadata on offline GET (and online404 while queued); no fake aggregate0. Separate trusted pending-watchlist section pages12, deduped against servercards; new offline later survives restart even absent cachedpage. Content cannot read pendinglibrary. 86testsPASS.
+

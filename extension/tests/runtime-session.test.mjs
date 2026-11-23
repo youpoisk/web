@@ -8,7 +8,7 @@ function worker({scheduler=false}={}){let currentUrl=page.url,loginRound=0,liste
  if(scheduler){context.api.alarms={create(name,options){events.created={name,options}},onAlarm:{addListener(fn){events.alarm=fn}}};context.api.runtime.onStartup={addListener(fn){events.startup=fn}};context.api.runtime.onInstalled={addListener(fn){events.installed=fn}};context.api.windows={onFocusChanged:{addListener(fn){events.focus=fn}}};}
  context.storage={async read(){return structuredClone(legacy)},async write(v){legacy=structuredClone(v)}};
  context.session={async status(){return structuredClone(auth)},async login(){calls++;auth={state:'authenticated',owner:'owner',epoch:loginRound++===0?'epoch-a':'epoch-b',user:{id:'owner',login:'qa_owner',name:'QA'}};return auth},async logout(){calls++;auth={state:'guest',owner:null,epoch:null,user:null};return auth}};
- context.backend={async recover(){recoveries++;return {sent:0,blocked:0,next:null}},async queueStatus(){return {pending:2,blocked:1,nextAttemptAt:123,more:false}},
+ context.backend={async pendingLibrary(){return {videos:{},pendingVideos:{[yt]:{id:yt,title:'Pending',url:'https://www.youtube.com/watch?v='+yt,later:true,pending:true}},pendingNext:null}},async recover(){recoveries++;return {sent:0,blocked:0,next:null}},async queueStatus(){return {pending:2,blocked:1,nextAttemptAt:123,more:false}},
   async current(id){return {videos:{[id]:{id,title:'Server',rating:8,later:true,review:'Server review'}}};},
   async library(){return {videos:{[yt]:{id:yt,title:'Server',rating:8,later:true}},next:'next-page'};},
   async update(video,patch){calls++;return {videos:{[video.id]:{...video,...patch}}};}
@@ -46,4 +46,8 @@ test('alarms, startup, install, popup and window focus wake a serialized private
 
 test('unfinished pull continues in bounded batches, allowing durable alarm recovery after interruption',async()=>{
  const w=worker({scheduler:true});let pages=0;w.holdPull(async()=>({changed:false,complete:++pages>=2}));await w.send({type:'YP_AUTH_LOGIN',login:'name',password:'secret'});await new Promise(setImmediate);assert.equal(pages,1);assert.equal(w.timers.length,1);w.timers.shift()();await new Promise(setImmediate);assert.equal(pages,2);assert.equal(w.timers.length,0);assert.equal(w.recoveries(),2);
+});
+
+test('pending library is restricted to trusted UI and never projected to YouTube content',async()=>{
+ const w=worker();await w.send({type:'YP_AUTH_LOGIN',login:'name',password:'secret'});assert.equal((await w.send({type:'YP_GET_PENDING_LIBRARY'},page)).ok,false);const pending=await w.send({type:'YP_GET_PENDING_LIBRARY'});assert.equal(pending.data.pendingVideos[yt].pending,true);const current=await w.send({type:'YP_GET_CURRENT_VIDEO_STATE',videoId:yt},page);assert.equal(current.data.pendingVideos,undefined);assert.equal(current.data.pendingNext,undefined);
 });

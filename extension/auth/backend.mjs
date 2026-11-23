@@ -124,11 +124,24 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   if(ownReview&&ownReview.revision>(review?.revision??-1)){view.review=ownReview.value?.text??null;view.hasReview=view.review!==null;}
   for(const kind of ['state','review']){const staged=await storage.read(`yp-intent-v1:${scope.owner}:${video.youtube_video_id}:${kind}`),pending=await storage.read(`yp-operation-v1:${scope.owner}:${kind==='review'?'putVideoReview':'patchVideoState'}:${video.id}`);
    if(pending&&(pending.state!=='pending'||pending.epoch!==scope.epoch))view.conflict=true;
-   if(staged&&staged.epoch===scope.epoch){Object.assign(view,staged.patch);view.pending=true;}
+   if(staged&&staged.owner===scope.owner&&staged.epoch===scope.epoch&&staged.video?.id===video.youtube_video_id){const valid=kind==='review'?schemas.putVideoReview_request({expected_revision:0,text:staged.patch?.review}):schemas.patchVideoState_request({expected_revision:0,...staged.patch});if(valid){Object.assign(view,staged.patch);view.pending=true;}}
   }
   if(offline)view.offline=true;return view;
  }
+ async function pendingView(youtubeId,scope,offline=false){
+  let view=null;for(const kind of ['state','review']){const row=await storage.read(`yp-intent-v1:${scope.owner}:${youtubeId}:${kind}`);if(!row||row.owner!==scope.owner||row.epoch!==scope.epoch||row.video?.id!==youtubeId)continue;
+   const valid=kind==='review'?schemas.putVideoReview_request({expected_revision:0,text:row.patch?.review}):schemas.patchVideoState_request({expected_revision:0,...row.patch});if(!valid)continue;
+   if(!view){const cached=await storage.read(`yp-snapshot-v1:${scope.owner}:${youtubeId}`);view=cached?await decorated(cached.video,cached.review,scope,offline):{id:youtubeId,title:String(row.video.title??'Видео YouTube').slice(0,250),url:'https://www.youtube.com/watch?v='+youtubeId,preview:'https://i.ytimg.com/vi/'+youtubeId+'/hqdefault.jpg',channel:'',channelUrl:'',rating:null,later:false,mark:null,review:null,createdAt:'',updatedAt:''};}
+   Object.assign(view,row.patch);view.pending=true;if(offline)view.offline=true;
+  }return view;
+ }
+ async function pendingPage(scope,after){
+  const page=await storage.entries(`yp-intent-v1:${scope.owner}:`,{after:after??null,limit:12}),pendingVideos={};
+  for(const [,row]of page.items){if(row?.owner!==scope.owner||row.epoch!==scope.epoch||row.patch?.later!==true||!/^[\w-]{11}$/.test(row.video?.id??''))continue;const view=await pendingView(row.video.id,scope);if(view?.later)pendingVideos[view.id]=view;}
+  await check(scope);return {pendingVideos,pendingNext:page.next};
+ }
  return {
+  pendingLibrary:after=>exclusive(async()=>{const scope=await actor();return {videos:{},...await pendingPage(scope,after)};}),
   pull:()=>exclusive(async()=>{const scope=await actor();return pull.step(scope);}),
   conflicts:after=>exclusive(async()=>{
    const scope=await actor(),page=await storage.entries(`yp-operation-v1:${scope.owner}:`,{after:after??null,limit:12}),items=[];
@@ -179,14 +192,14 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    await check(scope);await storage.write({epoch:scope.epoch,after:page.next},cursorKey);sent+=await flushIntents(scope);return {sent,blocked,...(deferred?{deferred}:{}),next:page.next};
   }),
   current:youtubeId=>exclusive(async()=>{
-   const scope=await actor();try{const video=await card(youtubeId,scope);if(!video){await check(scope);return {videos:{}};}const {review}=await request('getVideoReview',{path:{id:video.id}},scope);await check(scope);await snapshot(video,review,scope);return {videos:{[youtubeId]:await decorated(video,review,scope)}};}
-   catch(error){if(!transient(error))throw error;await check(scope);const cached=await storage.read(`yp-snapshot-v1:${scope.owner}:${youtubeId}`);return {offline:true,videos:cached?{[youtubeId]:await decorated(cached.video,cached.review,scope,true)}:{}};}
+   const scope=await actor();try{const video=await card(youtubeId,scope);if(!video){await check(scope);const pending=await pendingView(youtubeId,scope);return {videos:pending?{[youtubeId]:pending}:{}};}const {review}=await request('getVideoReview',{path:{id:video.id}},scope);await check(scope);await snapshot(video,review,scope);return {videos:{[youtubeId]:await decorated(video,review,scope)}};}
+   catch(error){if(!transient(error))throw error;await check(scope);const cached=await storage.read(`yp-snapshot-v1:${scope.owner}:${youtubeId}`);const view=cached?await decorated(cached.video,cached.review,scope,true):await pendingView(youtubeId,scope,true);return {offline:true,videos:view?{[youtubeId]:view}:{}};}
   }),
   library:after=>exclusive(async()=>{
    const scope=await actor(),slot=`yp-library-page-v2:${scope.owner}:${after??'first'}`;let page,offline=false;
-   try{page=await request('listWatchlist',{query:{limit:12,...(after?{after}:{})}},scope);await check(scope);await storage.write(page,slot);}catch(error){if(!transient(error))throw error;await check(scope);page=await storage.read(slot);offline=true;if(!page)return {videos:{},next:null,offline:true};}
+   try{page=await request('listWatchlist',{query:{limit:12,...(after?{after}:{})}},scope);await check(scope);await storage.write(page,slot);}catch(error){if(!transient(error))throw error;await check(scope);page=await storage.read(slot);offline=true;if(!page)page={items:[],next_cursor:null};}
    const videos={};for(const video of page.items){const view=await decorated(video,null,scope,offline);if(view.later)videos[video.youtube_video_id]=view;}
-   await check(scope);return {videos,next:page.next_cursor??null,...(offline?{offline:true}:{})};
+   await check(scope);return {videos,next:page.next_cursor??null,...await pendingPage(scope),...(offline?{offline:true}:{})};
   }),
   update:(video,patch)=>exclusive(async()=>{
    const scope=await actor(),stage=await stageIntent(video,patch,scope);

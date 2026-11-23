@@ -18,7 +18,7 @@ function fixture(){
   if(path.endsWith('/offline-lease'))return json({lease:'original-signed-lease',valid_for_seconds:604800});
   if(init.method==='GET'&&path.endsWith('/state'))return json(result());
   if(init.method==='GET'&&path.endsWith('/review'))return json({kind:'video_review',target_id:badReviewTarget?owner:id,review,change_seq:null});
-  if(path.endsWith('/watchlist'))return json({items:[{...card(),listed_at:'2026-11-22T00:00:00Z',has_review:true}]});
+  if(path.endsWith('/watchlist'))return json({items:state.later?[{...card(),listed_at:'2026-11-22T00:00:00Z',has_review:true}]:[]});
   const key=init.headers.get('Idempotency-Key');writes.push({key,lease:init.headers.get('X-Offline-Lease'),body:JSON.parse(init.body),path});
   if(failStatus){const response=json({code:'rate_limited',message:'Retry',request_id:'request',field_errors:{}},failStatus);if(retryAfter!==null)response.headers.set('Retry-After',String(retryAfter));return response;}
   if(receipts.has(key))return json(receipts.get(key));
@@ -132,4 +132,12 @@ test('offline current and watchlist use only real cached account data with expli
 });
 test('an offline intent without known base cannot silently overwrite an existing server revision',async()=>{
  const f=fixture();f.serverState({rating:10,revision:3});f.offline();assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.offline(false);await f.create().recover();assert.equal(f.writes[0].body.expected_revision,0);const preview=(await f.create().conflicts()).items[0];assert.equal(preview.server.rating,10);assert.equal(preview.local.rating,8);assert.equal((await f.create().current(yt)).videos[yt].conflict,true);
+});
+
+test('uncached offline intents remain visible after worker restart in current and pending watchlist',async()=>{
+ const f=fixture();f.offline();assert.equal((await f.create().update(f.video,{later:true,rating:8})).queued,true);assert.equal((await f.create().update(f.video,{review:'Offline draft'})).queued,true);const current=await f.create().current(yt);assert.equal(current.videos[yt].rating,8);assert.equal(current.videos[yt].review,'Offline draft');assert.equal(current.videos[yt].pending,true);assert.equal(current.videos[yt].ratingCount,undefined);assert.equal(current.videos[yt].url,'https://www.youtube.com/watch?v='+yt);
+ const list=await f.create().library();assert.equal(list.pendingVideos[yt].later,true);assert.equal(list.pendingVideos[yt].rating,8);assert.equal(Object.keys(list.pendingVideos).length,1);const page=await f.create().pendingLibrary();assert.equal(page.pendingVideos[yt].review,'Offline draft');f.switchOwner();assert.deepEqual((await f.create().pendingLibrary()).pendingVideos,{});
+});
+test('offline later on cached current is shown even when absent from the cached server watchlist',async()=>{
+ const f=fixture();await f.create().current(yt);assert.deepEqual((await f.create().library()).videos,{});f.offline();await f.create().update(f.video,{later:true});const page=await f.create().library();assert.deepEqual(page.videos,{});assert.equal(page.pendingVideos[yt].pending,true);assert.equal(page.pendingVideos[yt].later,true);
 });
