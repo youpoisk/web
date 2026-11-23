@@ -214,3 +214,6 @@ EXT-008 review 4af8c78+36d1ce4+f29e089: PASS, P2 про атомарный429coo
 - Приёмка: 71 unit/regression tests PASS; offline7→8→delete, immutable sent body, restart+receipt, site conflict и keep-server no-resurrection. Real API rating/review smoke +QA restore PASS; Firefox build/lint0warning. Перед EXT-010 требуется независимое ревью коммита.
 - DEC-EXT-009-INTENT: до отправки объединять только unsent successor одного вида (state/review раздельно), исходное отправленное body никогда не править. История исходной команды остаётся в приватном хранилище; в content script не выдаются ref/lease/key/account library.
 
+
+EXT-009 review fix: объединённый unsent intent применяет правила mark/later: not_interested снимает later, later=true снимает not_interested; обе последовательности покрыты regression. 72 теста PASS.
+

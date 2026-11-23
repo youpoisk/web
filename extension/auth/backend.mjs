@@ -62,6 +62,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   const canonical=target?await storage.read(`yp-canonical-v2:${scope.owner}:${review?'video_review':'video_state'}:${target}`):null;
   const revisions=[canonical?.revision,review?cached?.review.revision:cached?.video.my_state.revision].filter(Number.isSafeInteger),revision=revisions.length?Math.max(...revisions):null;
   const row={version:1,owner:scope.owner,epoch:scope.epoch,video,patch:{...(existing?.patch??{}),...patch},baseRevision:existing?.baseRevision??revision,createdAt:existing?.createdAt??now(),...(pending?{predecessor:pending.key}:{})};
+  if(!review){if(patch.mark==='not_interested')row.patch.later=false;else if(patch.later===true&&row.patch.mark==='not_interested')row.patch.mark=null;}
   // A sent command is immutable. Further clicks replace only the unsent successor.
   if(existing?.commandKey){row.predecessor=existing.commandKey;row.predecessorIntent=JSON.stringify(review?{text:existing.patch.review}:existing.patch);}
   else if(existing?.predecessor&&!row.predecessor){row.predecessor=existing.predecessor;row.predecessorIntent=existing.predecessorIntent;}

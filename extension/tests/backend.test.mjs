@@ -117,3 +117,7 @@ test('sent command stays immutable while its successor rebases only after the ex
 test('offline intent cannot silently overwrite a newer website edit and keeping server cannot resurrect it',async()=>{
  const f=fixture();await f.create().current(yt);f.offline();assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.serverState({revision:2,rating:10});f.offline(false);await f.create().recover();const conflict=(await f.create().conflicts()).items[0];assert.equal(conflict.local.rating,8);assert.equal(conflict.server.rating,10);await f.create().resolve(conflict.ref,'server');const writes=f.writes.length;await f.create().recover();assert.equal(f.writes.length,writes);assert.equal((await f.create().current(yt)).videos[yt].rating,10);assert.equal((await f.create().queueStatus()).pending,0);
 });
+
+test('offline coalescing follows mark/later domain rules in both click orders',async()=>{
+ for(const reverse of [false,true]){const f=fixture();await f.create().current(yt);f.offline();for(const patch of reverse?[{mark:'not_interested'},{later:true}]:[{later:true},{mark:'not_interested'}])assert.equal((await f.create().update(f.video,patch)).queued,true);f.offline(false);await f.create().recover();assert.equal(f.writes.length,1);assert.equal(f.writes[0].body.later,reverse);assert.equal(f.writes[0].body.mark,reverse?null:'not_interested');}
+});
