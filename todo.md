@@ -311,3 +311,6 @@ Reviewer P2:30×100 multibyte tags превышают 8192-byte API request boun
 
 ### EXT-018 — review fix: optional metadata 409
 Reviewer P2: metadata-only Add409 не имел conflict UI. Теперь подтверждённый409 такого optional observation архивируется атомарно с очисткой Add и пометкой связанных stages observationSkipped. Основное намерение продолжает работу с исходной personal base revision: review независим, rating показывает обычный разрешаемый patch conflict. Network/unknown outcome и initial Add не отбрасываются. Regression проверяет race именно на Add для review/rating.118tests PASS, auth100%line/functions.
+
+### EXT-018 — review closure
+Follow-up reviewer PASS: оба P2 закрыты в70bfd25/b70eac1, новых MEDIUM+ нет.118tests, 100%строк/функций auth worker; ветви86.52%. Full API/Firefox gate PASS до двух локально проверенных review-fixes; live Chrome/YouTube manual gate остаётся отдельным.
