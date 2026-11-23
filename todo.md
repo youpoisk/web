@@ -2,7 +2,7 @@
 
 Полный исходный scope: frontend-integration-plan.md и backend todo.md. Этот журнал фиксирует выполнение, не заменяет критерии MVP.
 
-Сверено 2026-11-22: открыто — EXT (подключение расширения), WEB-REC-001…003 (после backend YP-090…093), YP-055.1 фильтр рецензий, WEB-AVATAR-001/YP-100, YP-101 похожие видео, YP-102 «Просмотрено/Неинтересно». Сводный приоритет — в начале backend todo.md.
+Сверено 2026-11-23: EXT-008…019 реализованы и reviewed, EXT-020 подготовлен без публикации. Рекомендации сайта YP-089…093 реализуются/проверяются ниже, live provider ждёт ключ заказчика YP-091.U1. Открыты YP-055.1 фильтр рецензий, завершение модерации аватаров YP-100, YP-101 похожие видео и release/capacity gates. YP-102 реализована.
 
 - [x] WEB-001a: зеркало реально реализованного OpenAPI, provenance, генерируемые типы, проверка drift в build/CI и сопоставление текущих экранов с API (docs/api-contract.md).
 - [x] WEB-001: полный контракт всех MVP-модулей и таблица полей/ошибок каждого экрана; существующие22 операции недостаточны для закрытия задачи. ✅ 2026-11-22: контракт импортируется из backend (67 операций), валидаторы и типы генерируются.
@@ -13,7 +13,7 @@
 
 ## Рекомендации сайта — дополнение 2026-11-21
 
-Backend этапы YP-089…094: исследование популярных тем для групп интересов преимущественно15–30лет → Code First/общий пул и private preferences → Docker worker каждые X часов → API → UI →100% core/API tests, E2E и нагрузка10k/500. Канонический план: backend docs/plans/site-recommendations.md. Реализации пока нет.
+Backend этапы YP-089…094: исследование популярных тем для групп интересов преимущественно15–30лет → Code First/общий пул и private preferences → Docker worker каждые X часов → API → UI →100% core/API tests, E2E и нагрузка10k/500. Канонический план: backend docs/plans/site-recommendations.md. Research/CodeFirst/worker/API реализованы и reviewed; frontend подключён ниже, итоговые интеграционные/live/capacity проверки отмечаются отдельно.
 
 - [ ] **WEB-REC-001 · Рекомендации сайта в разделе рекомендаций.** Описание: различимые источники, выключатель «Показывать рекомендации сайта» прямо в разделе, сохранение в аккаунте/между устройствами, optimistic UI только с корректным rollback либо подтверждение сервером; при выключении остаётся текущая личная лента. Loading/empty/error/retry/stale, mobile/desktop. Зависимости YP-092, auth/profile/feed. ⏳ ждёт backend YP-090…093.
 - [ ] **WEB-REC-002 · Любимые теги в профиле.** Описание: private multi-select с поиском/удалением/лимитом, API/revision/409, синхронизация и account isolation. ANY совпадение по выбранным тегам фильтрует общий пул; без тегов общий пул, нет совпадений — честное empty. Не раскрывать в чужом профиле. ⏳ ждёт backend YP-090…093.
@@ -339,3 +339,6 @@ Reviewer PASS d46c398, MEDIUM+ нет. LOW учтён: политика/listing 
 
 ## Задачи заказчика — рекомендации сайта
 - [ ] **YP-091.U1 · Исполнитель: заказчик · Создать ключ YouTube Data API.** В Google Cloud включить YouTube Data API v3, создать API key с ограничением этим API; добавить только в локальный C:\repos\youpoisk-backend\.env как YOUTUBE_API_KEY=... и сообщить агенту о готовности. Ключ не присылать в чат и не коммитить. После подключения агент включает worker и проверяет живой сбор/квоту; до этого collector отключён, API/UI проверяются без ключа.
+
+### YP-093 / WEB-REC-001…003 — подключение сайта
+Добавлены SiteRecommendations и FavoriteTagsEditor: различимый site source на /feed, switch сохраняется сервером с revision (без ложногоoptimisticsuccess), личная лента не меняется. В own/profile private20tag multiselect с поиском/удалением/409reload, отсутствует в чужих профилях. ANY/empty/loading/stale/retry, publicguest source с отдельнымlocalStorage безautoimport.12cards/infinitepages+dedup, ownerkeyed/unmountgeneration+serial/abort guards. Guesttag save preserves latest local switch; oldpage doesn't revert confirmed toggle. Actual backend contract81 importedfromcommittedfc4f8d9; extensionbundle regenerated fromsharedvalidators (newUIextensionnotadded). WebbuildPASS;120sharedAPI/coretests100line/functions (modelbranches96.97%),124extensiontestsPASS. Pendingindependentreview andliveAPIdeployment withoutproviderkey; nofakepool.

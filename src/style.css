@@ -106,3 +106,10 @@
 .confirm-dialog .actions{justify-content:flex-end}
 .confirm-dialog .actions .primary{min-width:120px}
 @media(max-width:480px){.confirm-dialog-content{padding:18px}.confirm-dialog .actions{flex-direction:column-reverse}.confirm-dialog .actions button{width:100%}}
+
+/* Shared recommendations remain visually separate from personal contributions. */
+.site-recommendations{margin:24px 0 40px;padding-bottom:28px;border-bottom:1px solid var(--line,#e3eaf0)}
+.site-recommendations-head{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.site-recommendations-head h2{margin:8px 0}.recommendation-toggle{display:flex;align-items:center;gap:9px;font-size:14px;cursor:pointer}.recommendation-toggle input{width:18px;height:18px;accent-color:#00a6f5}
+.favorite-tags{margin:24px 0}.favorite-tags-selected,.favorite-tags-options{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}.favorite-tags .tag{border:1px solid #d5e1ec;background:white;border-radius:18px;padding:8px 12px;color:#42617c;max-width:100%;overflow-wrap:anywhere}.favorite-tags .tag.selected{background:#e9f7ff;border-color:#8dd7ff;color:#007cb7}.favorite-tags-search{display:grid;gap:7px;font-size:14px;max-width:420px}.favorite-tags-search input{border:1px solid #d5e1ec;border-radius:8px;padding:11px 14px;width:100%;box-sizing:border-box}.favorite-tags .actions{margin-top:18px}.site-recommendation-grid{margin-top:20px}.site-recommendation-grid .poster-button{display:block;position:relative}.site-recommendation-grid img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px}.personal-feed-heading{margin-top:30px}
+@media(max-width:640px){.site-recommendations-head{align-items:flex-start;gap:12px}.recommendation-toggle{font-size:13px}.favorite-tags .actions{flex-wrap:wrap}.favorite-tags .tag{font-size:13px}}
