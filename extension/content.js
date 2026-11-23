@@ -104,7 +104,7 @@
   async function refresh(){
     timer=null;const version=++generation;
     const video=context();if(!video){current=null;document.getElementById('yp-panel')?.remove();return;}
-    try{const next=await YP.request('GET');if(version!==generation || context()?.id!==video.id)return;if(state?.auth?.scope!==next.auth?.scope)drafts.clear();state=next;current=video;render();}
+    try{const next=await YP.request('GET');if(version!==generation || context()?.id!==video.id)return;if(state?.auth?.scope!==next.auth?.scope||state?.auth?.state!==next.auth?.state)drafts.clear();state=next;current=video;render();}
     catch(e){notify(e.message);}
   }
   function schedule(){clearTimeout(timer);timer=setTimeout(refresh,200);}

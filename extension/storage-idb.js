@@ -8,7 +8,7 @@ globalThis.YPStorageIDB=(()=>{
    const request=indexedDB.open(DB,1);let abandoned=false;
    request.onblocked=()=>{abandoned=true;opening=null;reject(new Error('Extension database is blocked'));};
    request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE);};
-   request.onsuccess=()=>{const db=request.result;if(abandoned){db.close();return;}db.onversionchange=()=>{db.close();opening=null;};resolve(db);};
+   request.onsuccess=()=>{const db=request.result;if(abandoned){db.close();return;}db.onversionchange=()=>{db.close();opening=null;};db.onclose=()=>{opening=null;};resolve(db);};
    request.onerror=()=>{opening=null;reject(request.error);};
   });
   return opening;
@@ -45,9 +45,10 @@ globalThis.YPStorageIDB=(()=>{
   });
  }
 
- async function commit(entries){
+ async function commit(entries,removals=[]){
+  if(!Array.isArray(removals)||removals.some(key=>typeof key!=='string'||!/^yp-(?:snapshot-v1|library-page-v2):[a-f0-9-]{36}:/.test(key)))throw new Error('Invalid cache removal');
   const db=await open();return new Promise((resolve,reject)=>{
-   const tx=db.transaction(STORE,'readwrite');try{const store=tx.objectStore(STORE),merged=new Map();for(const [key,value] of entries){if(key.startsWith('yp-canonical-v2:')&&value){if(value.version!==2||!Number.isSafeInteger(value.revision)||value.revision<0)throw new Error('Invalid canonical revision');const earlier=merged.get(key);if(earlier&&earlier.revision>value.revision)continue;}merged.set(key,value);}for(const [key,value] of merged){if(key.startsWith('yp-canonical-v2:')&&value){const old=store.get(key);old.onsuccess=()=>{try{if(old.result&&(old.result.version!==2||!Number.isSafeInteger(old.result.revision)||old.result.revision<0))throw new Error('Invalid cached revision');if(!old.result||old.result.revision<=value.revision)store.put(value,key);}catch(error){tx.abort();reject(error);}};}else store.put(value,key);}}catch(error){tx.abort();reject(error);return;}
+   const tx=db.transaction(STORE,'readwrite');try{const store=tx.objectStore(STORE),merged=new Map();for(const key of removals)store.delete(key);for(const [key,value] of entries){if(key.startsWith('yp-canonical-v2:')&&value){if(value.version!==2||!Number.isSafeInteger(value.revision)||value.revision<0)throw new Error('Invalid canonical revision');const earlier=merged.get(key);if(earlier&&earlier.revision>value.revision)continue;}merged.set(key,value);}for(const [key,value] of merged){if(key.startsWith('yp-canonical-v2:')&&value){const old=store.get(key);old.onsuccess=()=>{try{if(old.result&&(old.result.version!==2||!Number.isSafeInteger(old.result.revision)||old.result.revision<0))throw new Error('Invalid cached revision');if(!old.result||old.result.revision<=value.revision)store.put(value,key);}catch(error){tx.abort();reject(error);}};}else store.put(value,key);}}catch(error){tx.abort();reject(error);return;}
    tx.oncomplete=()=>resolve();tx.onabort=()=>reject(tx.error??new Error('Atomic write aborted'));tx.onerror=()=>reject(tx.error);
   });
  }
@@ -86,7 +87,7 @@ globalThis.YPStorageIDB=(()=>{
  }
  function accountStore(source=async()=>[]){
   const ready=Promise.resolve().then(source).then(migrate);ready.catch(()=>{});
-  return {async mutateQueue(owner,epoch,mode){await ready;return mutateQueue(owner,epoch,mode)},async pruneGenerations(owner,options){await ready;return pruneGenerations(owner,options)},async entries(prefix,options){await ready;return entries(prefix,options)},async read(key){await ready;return read(key)},async write(value,key){await ready;return write(value,key)},async commit(entries){await ready;return commit(entries)}};
+  return {async mutateQueue(owner,epoch,mode){await ready;return mutateQueue(owner,epoch,mode)},async pruneGenerations(owner,options){await ready;return pruneGenerations(owner,options)},async entries(prefix,options){await ready;return entries(prefix,options)},async read(key){await ready;return read(key)},async write(value,key){await ready;return write(value,key)},async commit(entries,removals){await ready;return commit(entries,removals)}};
  }
  return {read,write,entries,commit,migrate,pruneGenerations,mutateQueue,accountStore};
 })();

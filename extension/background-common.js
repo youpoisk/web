@@ -3,8 +3,10 @@
  * injected so the command handler stays identical on both. */
 globalThis.YPWorker=(()=>{
  function start({api,storage,session,backend}){
-  let writes=Promise.resolve();
-  async function authState(){try{return await session.status();}catch(error){if(session.peek&&(['network','timeout'].includes(error.kind)||error.status>=500||error.status===429))return session.peek();throw error;}}
+  let writes=Promise.resolve(),seenIdentity=null;
+  function identity(auth){return JSON.stringify([auth?.state,auth?.owner,auth?.epoch]);}
+  function observeAuth(auth){const next=identity(auth),changed=seenIdentity!==null&&next!==seenIdentity;seenIdentity=next;if(changed)broadcast().catch(()=>{});return auth;}
+  async function authState(){try{return observeAuth(await session.status());}catch(error){if(session.peek&&(['network','timeout'].includes(error.kind)||error.status>=500||error.status===429))return observeAuth(await session.peek());throw error;}}
   async function read(){return await storage.read()||YPCore.empty();}
   function fields(value,allowed,required=[]){
    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!allowed.includes(k))||required.some(k=>!Object.hasOwn(value,k)))throw Error('Некорректная команда');
@@ -49,10 +51,10 @@ globalThis.YPWorker=(()=>{
     if(!Object.hasOwn(state.videos,id))continue;const v=state.videos[id];if(!v)continue;
     videos[id]=pick(v);
    }
-   return {version:1,options,videos,...(state.queued?{queued:true}:{}),...(state.offline?{offline:true}:{}),...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,pendingVideos:Object.fromEntries(Object.entries(state.pendingVideos??{}).map(([id,v])=>[id,pick(v)])),pendingNext:state.pendingNext??null,...(state.queue?{queue:state.queue}:{})}:{})};
+   return {version:1,options,videos,...(state.queued?{queued:true}:{}),...(state.offline?{offline:true}:{}),...(state.cacheMiss?{cacheMiss:true}:{}),...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,pendingVideos:Object.fromEntries(Object.entries(state.pendingVideos??{}).map(([id,v])=>[id,pick(v)])),pendingNext:state.pendingNext??null,...(state.queue?{queue:state.queue}:{})}:{})};
   }
   async function broadcast(){
-   const tabs=await api.tabs.query({url:'https://www.youtube.com/*'});
+   let tabs=[];try{tabs=await api.tabs.query({url:'https://www.youtube.com/*'});}catch{/* closed browser surface */}
    await Promise.allSettled(tabs.map(t=>api.tabs.sendMessage(t.id,{type:'YP_CHANGED'})));
    try{await api.runtime.sendMessage({type:'YP_CHANGED'});}catch{/* no open extension page */}
   }
@@ -87,7 +89,7 @@ globalThis.YPWorker=(()=>{
       if(!session)throw Error('Авторизация недоступна');
       if(request.type==='AUTH_LOGOUT'&&backend?.queueStatus){const auth=await authState();if(request.scope!==undefined&&request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});if(auth.state==='authenticated'){let queue=await backend.queueStatus();if(queue.pending+queue.blocked>0){if(request.scope!==auth.epoch||!['sync','keep','discard'].includes(request.pendingAction))throw Object.assign(new Error('Choose pending action'),{kind:'pending_choice_required'});if(request.pendingAction==='discard')await backend.discardPending();if(request.pendingAction==='sync'){for(let page=0;page<10;page++){const result=await backend.recover();if(!result.next)break;}queue=await backend.queueStatus();if(queue.pending+queue.blocked>0)throw Object.assign(new Error('Queue not sent'),{kind:'pending_choice_required'});}}}}
       const result=request.type==='AUTH_LOGIN'?await session.login(request.login,request.password):request.type==='AUTH_LOGOUT'?await session.logout():await authState();
-      if(request.type!=='AUTH_STATUS')broadcast().catch(()=>{});return result;
+      observeAuth(result);if(request.type!=='AUTH_STATUS')broadcast().catch(()=>{});return result;
      }
      let state=await read();const auth=session?await authState():null;
      if(request.type==='QUEUE_RESUME'||request.type==='QUEUE_DISCARD'){
@@ -133,7 +135,12 @@ globalThis.YPWorker=(()=>{
      return project({...state,auth},access);
     });
     writes=operation.catch(()=>{});if(request.type==='GET_ACCOUNT_LIBRARY'||request.type==='AUTH_LOGIN')operation.finally(wake).catch(()=>{});return await operation;
-   })().then(data=>respond({ok:true,data}),error=>respond({ok:false,error:error?.kind==='pending_choice_required'?'В очереди есть изменения. Выберите отправку, сохранение на устройстве или удаление очереди.':error?.kind==='retry_later'?'Команда ожидает повторной отправки.':error?.kind==='authentication'?'Войдите в аккаунт расширения.':error?.kind==='reconcile_required'?'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.':'Не удалось выполнить действие. Проверьте текущую страницу, вход и соединение.'}));
+   })().then(data=>{try{respond({ok:true,data})}catch{/* UI closed */}},async error=>{
+    if(session?.peek){try{observeAuth(await session.peek());}catch{}}
+    const code=error?.name==='QuotaExceededError'?'quota':error?.kind??'unavailable';
+    const messages={quota:'Не удалось сохранить на устройстве: недостаточно места. Освободите место и повторите.',storage:'Хранилище расширения недоступно. Сохраните черновик и повторите после восстановления доступа.',protocol:'Сервер вернул некорректный ответ. Сохранение не подтверждено.',stale:'Видео или аккаунт изменились. Повторите действие в текущем контексте.',pending_choice_required:'В очереди есть изменения. Выберите отправку, сохранение на устройстве или удаление очереди.',retry_later:'Команда ожидает повторной отправки.',authentication:'Войдите в аккаунт расширения.',reconcile_required:'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.'};
+    try{respond({ok:false,code,error:messages[code]??'Не удалось выполнить действие. Проверьте текущую страницу, вход и соединение.'})}catch{/* UI closed */}
+   });
    return true;
   });
  }

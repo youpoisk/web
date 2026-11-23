@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-function bridge(url){
- const sent=[],events={};const context={URL,structuredClone,location:{href:url},chrome:{runtime:{id:'test',getURL:p=>'chrome-extension://test/'+p,async sendMessage(message){sent.push(message);return {ok:true,data:{version:1}}},onMessage:{addListener(fn){events.runtime=fn},removeListener(){delete events.runtime}}},storage:{onChanged:{addListener(fn){events.storage=fn},removeListener(){delete events.storage}}}}};vm.createContext(context);for(const file of ['config.js','core.js','bridge.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);return {api:context.YP,sent,events};
+function bridge(url,send=async()=>({ok:true,data:{version:1}})){
+ const sent=[],events={};const context={URL,structuredClone,location:{href:url},chrome:{runtime:{id:'test',getURL:p=>'chrome-extension://test/'+p,async sendMessage(message){sent.push(message);return send(message)},onMessage:{addListener(fn){events.runtime=fn},removeListener(){delete events.runtime}}},storage:{onChanged:{addListener(fn){events.storage=fn},removeListener(){delete events.storage}}}}};vm.createContext(context);for(const file of ['config.js','core.js','bridge.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);return {api:context.YP,sent,events};
 }
 test('content bridge sends current-video commands and subscribes to signal-only broadcasts',async()=>{
  const b=bridge('https://www.youtube.com/watch?v=aqz-KE-bpKQ');await b.api.request('GET');assert.equal(b.sent[0].type,'YP_GET_CURRENT_VIDEO_STATE');assert.equal(b.sent[0].videoId,'aqz-KE-bpKQ');
@@ -12,4 +12,9 @@ test('content bridge sends current-video commands and subscribes to signal-only 
 });
 test('trusted UI bridge gets library and keeps options updates on explicit command',async()=>{
  const b=bridge('chrome-extension://test/options.html');await b.api.request('GET');assert.equal(b.sent[0].type,'YP_GET_ACCOUNT_LIBRARY');await b.api.request('OPTIONS',{options:{enabled:false,site:'https://example.com/'}});assert.equal(b.sent[1].type,'YP_OPTIONS');let n=0;const stop=b.api.subscribe(()=>n++);assert.equal(b.events.storage,undefined);b.events.runtime({type:'YP_CHANGED'});assert.equal(n,1);stop();
+});
+
+test('worker loss is reported without local fallback or native detail, then a later request recovers',async()=>{
+ let failed=true;const b=bridge('chrome-extension://test/popup.html',async()=>{if(failed)throw Error('private native detail');return {ok:true,data:{version:1}}});await assert.rejects(b.api.request('GET'),error=>error.kind==='worker_unavailable'&&!error.message.includes('private native'));failed=false;assert.equal((await b.api.request('GET')).version,1);
+ const quota=bridge('chrome-extension://test/popup.html',async()=>({ok:false,code:'quota',error:'Недостаточно места'}));await assert.rejects(quota.api.request('GET'),error=>error.kind==='quota'&&error.message==='Недостаточно места');
 });

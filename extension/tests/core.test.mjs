@@ -142,3 +142,7 @@ test('saved library records become metadata-only popup commands and preserve nul
 test('deferred deletion sends nothing before five seconds and cancellation suppresses the callback',()=>{
  let task,delay,cleared=0,effects=0;const schedule=(callback,ms)=>{task=callback;delay=ms;return 1};const cancel=core.deferDelete(()=>effects++,schedule,()=>cleared++);assert.equal(delay,5000);assert.equal(effects,0);cancel();task();assert.equal(effects,0);assert.equal(cleared,1);const late=core.deferDelete(()=>effects++,schedule,()=>cleared++);task();assert.equal(effects,1);late();task();assert.equal(effects,1);
 });
+
+test('late UI pages cannot merge across account change or expiry even if an old epoch remains present',()=>{
+ const a={state:'authenticated',owner:'A',epoch:'epoch-a'},b={state:'authenticated',owner:'B',epoch:'epoch-b'};assert.equal(core.sameAuth(a,{...a},'epoch-a'),true);assert.equal(core.sameAuth(b,a,'epoch-a'),false);assert.equal(core.sameAuth({...a,state:'session-expired'},a,'epoch-a'),false);assert.equal(core.sameAuth(a,{...a,state:'session-expired'},'epoch-a'),false);assert.equal(core.sameAuth(a,{...a,owner:'B'},'epoch-a'),false);
+});

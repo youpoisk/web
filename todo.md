@@ -258,3 +258,10 @@ Preview12/sourcepage, scoped targetaccount, keep-server default for existing row
 Удаления popup/YouTube (оценка/рецензия/later/queue) имеют spinner, countdown и отмену до отправки. Приведено к прямому требованию пользователя5секунд (старые3секунды исправлены также в общем helper сайта). Навигация/сменаscope/новое редактирование отменяют ожидающее удаление.
 95extensiontestsPASS incloldscopeblocked→explicitresume→samekeyreplay, own-onlydiscard, quota rollback anddelayedcancel; sharedAPI/core100PASS, MozillaLint0warnings. Review pending beforeEXT014.
 
+
+- [x] EXT-013 027d486 independentreviewPASS,95tests. Выборpending/owner-onlyresume/discard, отменяемоеудаление5сек.
+### EXT-014 — invalidation and storage resilience
+Signal-only broadcasts tolerate failedtab/query/closedUIport; errorcode quota/storage/protocol/stale sanitized, rawnative details not exposed. Revoked auth identity signals invalidation; drafts clear on state as well as epoch changes. UI sameAuth(owner+epoch+authenticated) rejects late A page afterBlogin/expiry, including loadmore/currentdetails; options clears importpreview on expiry.
+UnexpectedIDBclose reopens nextevent. SnapshotmetadataLRU200, watchlistpageLRU10 (pages12); index/cacheevictions oneTX, protected namespaces not removable. Cachemiss shown as unavailableoffline, not emptyserverlist; pending/source/receipts unaffected. GenerationGC fromEXT010 remainsactive.
+102extensiontestsPASS, sharedAPI/core100 previouslyPASS, webbuildPASS, actualFirefoxauth/IDB/snapshot/delta/write/readback+hostQArestore/sessionrevokePASS. Review beforeEXT015.
+

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {IDBFactory,IDBObjectStore,IDBKeyRange,IDBCursor} from 'fake-indexeddb';
-function idb(){const context={indexedDB:new IDBFactory(),IDBKeyRange};vm.createContext(context);vm.runInContext(readFileSync(new URL('../storage-idb.js',import.meta.url),'utf8'),context);return context.YPStorageIDB;}
+import {IDBFactory,IDBObjectStore,IDBKeyRange,IDBCursor,forceCloseDatabase} from 'fake-indexeddb';
+function idb(onOpen){const factory=new IDBFactory(),original=factory.open.bind(factory);factory.open=(...args)=>{const request=original(...args);request.addEventListener('success',()=>onOpen?.(request.result));return request;};const context={indexedDB:factory,IDBKeyRange};vm.createContext(context);vm.runInContext(readFileSync(new URL('../storage-idb.js',import.meta.url),'utf8'),context);return context.YPStorageIDB;}
 test('v2 migration is atomic, repeatable and never overwrites newer IDB values or legacy data',async()=>{
  const s=idb();const legacy={version:1,videos:{old:{rating:7}}};await s.write(legacy,'yp-library-v1');await s.write({key:'new'},'yp-operation-v1:existing');await s.migrate([['yp-operation-v1:existing',{key:'old'}],['yp-operation-v1:copy',{key:'copy'}]]);assert.equal((await s.read('yp-layout-v2')).version,2);assert.equal((await s.read('yp-operation-v1:existing')).key,'new');assert.equal((await s.read('yp-operation-v1:copy')).key,'copy');assert.equal(JSON.stringify(await s.read('yp-library-v1')),JSON.stringify(legacy));await s.migrate([['yp-operation-v1:copy',{key:'do not repeat'}]]);assert.equal((await s.read('yp-operation-v1:copy')).key,'copy');
 });
@@ -64,4 +64,11 @@ test('explicit queue resume changes only own epoch; discard leaves source, recei
 
 test('resume quota failure rolls back all epoch changes and preserves original command bodies',async()=>{
  const s=idb(),owner='11111111-1111-4111-8111-111111111111',epoch='33333333-3333-4333-8333-333333333333',keys=['yp-operation-v1:'+owner+':state:one','yp-intent-v1:'+owner+':video:state'];for(const key of keys)await s.write({version:1,owner,epoch:'old',body:{rating:8}},key);const update=IDBCursor.prototype.update;let writes=0;IDBCursor.prototype.update=function(...args){if(++writes===2)throw new DOMException('quota','QuotaExceededError');return update.apply(this,args)};try{await assert.rejects(s.mutateQueue(owner,epoch,'resume'));}finally{IDBCursor.prototype.update=update;}for(const key of keys){assert.equal((await s.read(key)).epoch,'old');assert.equal((await s.read(key)).body.rating,8);}
+});
+
+test('unexpected IDB connection close reopens on next event without losing stored data',async()=>{
+ let db,opens=0;const s=idb(value=>{db=value;opens++});await s.write({original:true},'record');forceCloseDatabase(db);await new Promise(setImmediate);assert.equal((await s.read('record')).original,true);assert.equal(opens,2);
+});
+test('cache eviction and index update roll back together; protected namespaces cannot be evicted',async()=>{
+ const s=idb(),owner='11111111-1111-4111-8111-111111111111',old='yp-snapshot-v1:'+owner+':old',next='yp-snapshot-v1:'+owner+':next',index='yp-snapshot-index-v2:'+owner;await s.write({review:'keep'},old);await s.write([old],index);const original=IDBObjectStore.prototype.put;let writes=0;IDBObjectStore.prototype.put=function(...args){if(++writes===2)throw new DOMException('quota','QuotaExceededError');return original.apply(this,args)};try{await assert.rejects(s.commit([[index,[next]],[next,{review:'new'}]],[old]));}finally{IDBObjectStore.prototype.put=original;}assert.equal((await s.read(old)).review,'keep');assert.equal(await s.read(next),null);assert.equal((await s.read(index))[0],old);await assert.rejects(s.commit([],['yp-auth-v1']));await s.commit([[index,[next]],[next,{review:'new'}]],[old]);assert.equal(await s.read(old),null);assert.equal((await s.read(next)).review,'new');
 });

@@ -55,7 +55,11 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
 
 
  function transient(error){return ['network','timeout','retry_later'].includes(error.kind)||error.status>=500||error.status===429;}
- async function snapshot(video,review,scope){await storage.write({video,review},`yp-snapshot-v1:${scope.owner}:${video.youtube_video_id}`);}
+ async function cacheRecord(prefix,indexKey,id,value,limit){
+  const slot=prefix+id,stored=await storage.read(indexKey),index=stored??[];if(!Array.isArray(index)||index.some(key=>typeof key!=='string'||!key.startsWith(prefix)))throw new BackendError('storage');
+  const keys=[...new Set([slot,...index])],evicted=keys.slice(limit);await storage.commit([[slot,value],[indexKey,keys.slice(0,limit)]],evicted);
+ }
+ async function snapshot(video,review,scope){await cacheRecord(`yp-snapshot-v1:${scope.owner}:`,`yp-snapshot-index-v2:${scope.owner}`,video.youtube_video_id,{video,review},200);}
  async function stageIntent(video,patch,scope){
   const review=Object.hasOwn(patch,'review');if(review&&Object.keys(patch).length!==1)throw new BackendError('separate_operations_required');
   const slot=`yp-intent-v1:${scope.owner}:${video.id}:${review?'review':'state'}`,existing=await storage.read(slot);
@@ -229,10 +233,10 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    catch(error){if(!transient(error))throw error;await check(scope);const cached=await storage.read(`yp-snapshot-v1:${scope.owner}:${youtubeId}`);const view=cached?await decorated(cached.video,cached.review,scope,true):await pendingView(youtubeId,scope,true);return {offline:true,videos:view?{[youtubeId]:view}:{}};}
   }),
   library:after=>exclusive(async()=>{
-   const scope=await actor(),slot=`yp-library-page-v2:${scope.owner}:${after??'first'}`;let page,offline=false;
-   try{page=await request('listWatchlist',{query:{limit:12,...(after?{after}:{})}},scope);await check(scope);await storage.write(page,slot);}catch(error){if(!transient(error))throw error;await check(scope);page=await storage.read(slot);offline=true;if(!page)page={items:[],next_cursor:null};}
+   const scope=await actor(),slot=`yp-library-page-v2:${scope.owner}:${after??'first'}`;let page,offline=false,cacheMiss=false;
+   try{page=await request('listWatchlist',{query:{limit:12,...(after?{after}:{})}},scope);await check(scope);await cacheRecord(`yp-library-page-v2:${scope.owner}:`,`yp-library-index-v2:${scope.owner}`,after??'first',page,10);}catch(error){if(!transient(error))throw error;await check(scope);page=await storage.read(slot);offline=true;if(!page){page={items:[],next_cursor:null};cacheMiss=true;}}
    const videos={};for(const video of page.items){const view=await decorated(video,null,scope,offline);if(view.later)videos[video.youtube_video_id]=view;}
-   await check(scope);return {videos,next:page.next_cursor??null,...await pendingPage(scope),...(offline?{offline:true}:{})};
+   await check(scope);return {videos,next:page.next_cursor??null,...await pendingPage(scope),...(offline?{offline:true}:{}),...(cacheMiss?{cacheMiss:true}:{})};
   }),
   update:(video,patch)=>exclusive(async()=>{
    const scope=await actor(),stage=await stageIntent(video,patch,scope);

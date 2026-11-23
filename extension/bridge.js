@@ -10,7 +10,7 @@
       if(!Object.hasOwn(commands,type)||Object.keys(payload).some(key=>!['video','patch','options','videoId','after','login','password','scope','ref','choice','expected','id','choices','pendingAction'].includes(key)))throw Error('Неизвестная команда');
       const request={...payload,type:'YP_'+commands[type]};
       if(type==='GET'&&!trusted)request.videoId=YPCore.videoId(location.href);
-      const result=await api.runtime.sendMessage(request);if(!result?.ok)throw Error(result?.error||'Расширение обновилось. Обновите вкладку YouTube.');return result.data;}
+      let result;try{result=await api.runtime.sendMessage(request);}catch{throw Object.assign(Error('Расширение недоступно или обновилось. Обновите вкладку YouTube и повторите.'),{kind:'worker_unavailable'});}if(!result?.ok)throw Object.assign(Error(result?.error||'Расширение обновилось. Обновите вкладку YouTube.'),{kind:result?.code??'worker_unavailable'});return result.data;}
     throw Error('Откройте установленное расширение YouPoisk.');
   }
   function subscribe(callback){
