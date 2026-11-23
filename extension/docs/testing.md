@@ -29,7 +29,7 @@
 | accidental QA/demo/credential packaging | normal-package whitelist regression |
 | interrupted Firefox fixture restoration | controlled-stop + independent host repair |
 
-Последний полный gate:110tests; auth/transport/sync100% lines/functions, branches86.12%. Shared API/core100% lines/functions. Mozilla lint0errors/0warnings. Real API/Firefox/controlled-stop PASS, QA restored.
+Последний полный gate:112tests; auth/transport/sync100% lines/functions, branches86.24%. Shared API/core100% lines/functions. Mozilla lint0errors/0warnings. Real API/Firefox/controlled-stop PASS, QA restored.
 
 ## Открытые внешние проверки
 

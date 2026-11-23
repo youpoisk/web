@@ -275,3 +275,6 @@ Gate scripts/extension-verify.mjs [--api], per-run immutable reportdirs withcomm
 New regressionfound/fixed unknownvideo addACKloss: stage.addKey persisted atomically and originaladdreceipt anchors nextstateversion; no self-conflict/freshLWW. Importmissingvideo path covered too. Native API probes restore QA and revoke nativesessions.
 EXT015 automatedFirefox acceptance complete; installedChrome andmanualcurrentYouTube layout remain explicit releasegates (see extension/docs/testing.md), not falsely closed. User2026-11-23 confirmed productionaddressesnotready: EXT020 preparationonly, nopublication. Fullbackend10k/500loadTST007 notclaimedbytheseprobes.
 
+
+EXT015 reviewfix: unknown-video state/review peer intents link the same exact addKey before observationHTTP; flush reloads the latest staged row so materialized pagination cannot miss the new link. Add receipt (not fresh serverversion) anchors state, both offline clickorders succeed; website edit afteradd stillconflicts.112testsPASS, auth/backend/sync100%lines/functions, branch86.24%. ReviewfollowupbeforeEXT016.
+

@@ -78,15 +78,20 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   await storage.write(row,slot);return {slot,row};
  }
  async function flushIntent(stage,scope){
-  const {row,slot}=stage;const isReview=Object.hasOwn(row.patch??{},'review');
+  const slot=stage.slot,row=await storage.read(slot);if(!row)throw new BackendError('storage');stage.row=row;const isReview=Object.hasOwn(row.patch??{},'review');
   const validPatch=isReview?schemas.putVideoReview_request({expected_revision:0,text:row.patch.review}):schemas.patchVideoState_request({expected_revision:0,...row.patch});
   if(!row.video||!/^[\w-]{11}$/.test(row.video.id)||typeof row.video.title!=='string'||!validPatch||slot!==`yp-intent-v1:${scope.owner}:${row.video.id}:${isReview?'review':'state'}`)throw new BackendError('reconcile_required');
   if(row.owner!==scope.owner||row.epoch!==scope.epoch)throw new BackendError('reconcile_required');
   if(row.commandKey&&await storage.read(`yp-receipt-v1:${scope.owner}:${row.commandKey}`)){await storage.write(null,slot);return false;}
   let resolved=await card(row.video.id,scope);
   const addSlot=`yp-operation-v1:${scope.owner}:addObservedVideo:${row.video.id}`;
-  const priorAdd=await storage.read(addSlot);if(priorAdd&&!row.addKey){row.addKey=priorAdd.key;await storage.write(row,slot);}
-  if(priorAdd||!resolved){await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>({youtube_video_id:row.video.id,title:row.video.title,expected_revision:0}),{...stage,field:'addKey'});resolved=await card(row.video.id,scope);}
+  const priorAdd=await storage.read(addSlot);
+  if(priorAdd||!resolved){
+   row.addKey=priorAdd?.key??row.addKey??crypto.randomUUID();const peerSlot=`yp-intent-v1:${scope.owner}:${row.video.id}:${isReview?'state':'review'}`,peer=await storage.read(peerSlot),links=[[slot,row]];
+   if(peer?.version===1&&peer.owner===scope.owner&&peer.epoch===scope.epoch&&peer.video?.id===row.video.id)links.push([peerSlot,{...peer,addKey:row.addKey}]);
+   await storage.commit(links);
+   await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>({youtube_video_id:row.video.id,title:row.video.title,expected_revision:0}),{...stage,field:'addKey'},row.addKey);resolved=await card(row.video.id,scope);
+  }
   if(!resolved)throw new BackendError('protocol');
   const review=Object.hasOwn(row.patch,'review');if(!review&&row.addKey){const added=await storage.read(`yp-receipt-v1:${scope.owner}:${row.addKey}`);if(added?.kind==='video_state'&&added.target===resolved.id)row.baseRevision=added.revision;}
   const operation=review?'putVideoReview':'patchVideoState',pendingSlot=`yp-operation-v1:${scope.owner}:${operation}:${resolved.id}`;
