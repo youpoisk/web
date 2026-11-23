@@ -278,3 +278,12 @@ EXT015 automatedFirefox acceptance complete; installedChrome andmanualcurrentYou
 
 EXT015 reviewfix: unknown-video state/review peer intents link the same exact addKey before observationHTTP; flush reloads the latest staged row so materialized pagination cannot miss the new link. Add receipt (not fresh serverversion) anchors state, both offline clickorders succeed; website edit afteradd stillconflicts.112testsPASS, auth/backend/sync100%lines/functions, branch86.24%. ReviewfollowupbeforeEXT016.
 
+
+### EXT-015 — review closure
+Commit 1b3e005: reviewer follow-up PASS, P2 closed; shared exact Add receipt for offline review/state in both orders, website-change fence retained.
+
+### EXT-016 — документация и чистые сборки
+Реализовано: manifests 0.5.0, общий whitelist-сборщик Firefox/Chrome, отдельные каталоги и SHA-256 каждого файла; строгие аргументы и dev/prod origins; README описывает реальные auth/sync/offline/import и последствия очистки/отзыва/отката. Сборка не трогает библиотеку. Повторная сборка даёт одинаковые хеши файлов. Production origins пока не предоставлены: по ответу заказчика готовим пакет без публикации. Проверки: extension coverage gate PASS, clean package tests PASS. Ручной Chrome/live YouTube smoke остаётся выпускным gate.
+
+### Спорные вопросы — DEC-EXT-016-PACKAGE
+Вопрос: как отделить production Firefox от временного dev дополнения без готового домена? Выбрано стабильное GUID {84d4b863-7681-4de6-9c80-980cb5944462}, dev ID сохранён. Причина: не выдумывать домен и не смешивать хранилища dev/prod. Подпись и публикация отдельно. Воспроизводимость определяется составом/байтами и SHA-256, не временем создания каталога.
