@@ -206,3 +206,11 @@ EXT-008 review fix follow-up: UUID key, bounded nonempty lease, safe revision; i
 
 EXT-008 review fix: deadline команды при429 и общий cooldown сохраняются одним storage.commit, без crash-gap между двумя записями. 65 тестов PASS.
 
+
+EXT-008 review 4af8c78+36d1ce4+f29e089: PASS, P2 про атомарный429cooldown закрыт, 66 тестов.
+### EXT-009 — порядок offline и явные конфликты
+- [x] EXT-009: новые намерения сохраняются до сети отдельно от неизменяемых отправленных команд; unsent successor объединяет нажатия. Exact receipt применяется атомарно с ACK; successor получает baseRevision только после receipt предшественника. Кэш последнего снимка задаёт исходную revision, изменение сайта вызывает409, автоматического LWW нет.
+- Trusted popup показывает видео, моё действие и серверное состояние; оставить серверную или применить локальную версию. Локальная версия создаёт новый key/current revision, исходная команда и staged intent архивируются. Выбор серверной версии атомарно убирает связанный staged intent и не воскрешает его при recovery. Черновик рецензии сохраняется при queued.
+- Приёмка: 71 unit/regression tests PASS; offline7→8→delete, immutable sent body, restart+receipt, site conflict и keep-server no-resurrection. Real API rating/review smoke +QA restore PASS; Firefox build/lint0warning. Перед EXT-010 требуется независимое ревью коммита.
+- DEC-EXT-009-INTENT: до отправки объединять только unsent successor одного вида (state/review раздельно), исходное отправленное body никогда не править. История исходной команды остаётся в приватном хранилище; в content script не выдаются ref/lease/key/account library.
+

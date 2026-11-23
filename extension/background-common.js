@@ -9,12 +9,13 @@ globalThis.YPWorker=(()=>{
    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!allowed.includes(k))||required.some(k=>!Object.hasOwn(value,k)))throw Error('Некорректная команда');
   }
   function validate(command){
-   fields(command,['type','videoId','video','patch','options','login','password','after','scope'],['type']);
-   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope']};
+   fields(command,['type','videoId','video','patch','options','login','password','after','scope','ref','choice'],['type']);
+   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope'],QUEUE_CONFLICTS:['type','after'],QUEUE_RESOLVE:['type','scope','ref','choice']};
    if(!Object.hasOwn(shapes,command.type))throw Error('Неизвестная команда');
    fields(command,shapes[command.type],shapes[command.type].filter(k=>!['after','scope'].includes(k)));
    if(command.after!==undefined&&(typeof command.after!=='string'||command.after.length>512))throw Error('Некорректный курсор');
    if(command.type==='GET_CURRENT_VIDEO_STATE'&&!/^[\w-]{11}$/.test(command.videoId))throw Error('Некорректный ID видео');
+   if(command.type==='QUEUE_RESOLVE'&&(typeof command.ref!=='string'||command.ref.length>256||!['server','local'].includes(command.choice)))throw Error('Некорректное решение конфликта');
    if(command.type==='UPDATE_CURRENT_VIDEO'){
     fields(command.video,['id','title','url','preview','channel','channelUrl'],['id','title']);
     if(typeof command.video.id!=='string'||typeof command.video.title!=='string'||command.video.title.length>250||['url','preview','channel','channelUrl'].some(k=>Object.hasOwn(command.video,k)&&typeof command.video[k]!=='string'))throw Error('Некорректное видео');
@@ -40,10 +41,10 @@ globalThis.YPWorker=(()=>{
    const videos={};
    for(const id of access.trusted?Object.keys(state.videos):[access.id]){
     if(!Object.hasOwn(state.videos,id))continue;const v=state.videos[id];if(!v)continue;
-    const safe={};for(const field of ['id','title','url','preview','channel','channelUrl','rating','later','review','mark','createdAt','updatedAt','reviewedAt'])if(Object.hasOwn(v,field))safe[field]=v[field];
+    const safe={};for(const field of ['id','title','url','preview','channel','channelUrl','rating','later','review','mark','createdAt','updatedAt','reviewedAt','pending'])if(Object.hasOwn(v,field))safe[field]=v[field];
     videos[id]=safe;
    }
-   return {version:1,options,videos,...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,...(state.queue?{queue:state.queue}:{})}:{})};
+   return {version:1,options,videos,...(state.queued?{queued:true}:{}),...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,...(state.queue?{queue:state.queue}:{})}:{})};
   }
   async function broadcast(){
    const tabs=await api.tabs.query({url:'https://www.youtube.com/*'});
@@ -82,6 +83,12 @@ globalThis.YPWorker=(()=>{
       if(request.type!=='AUTH_STATUS')broadcast().catch(()=>{});return result;
      }
      let state=await read();const auth=session?await session.status():null;
+     if(request.type==='QUEUE_CONFLICTS'||request.type==='QUEUE_RESOLVE'){
+      if(auth?.state!=='authenticated')throw Object.assign(new Error('Authentication required'),{kind:'authentication'});
+      if(request.type==='QUEUE_CONFLICTS')return {...await backend.conflicts(request.after),scope:auth.epoch};
+      if(request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});
+      await backend.resolve(request.ref,request.choice);broadcast().catch(()=>{});return {scope:auth.epoch};
+     }
      if(request.type==='SYNC_STATUS'||request.type==='SYNC_NOW'){
       if(auth?.state!=='authenticated')throw Object.assign(new Error('Authentication required'),{kind:'authentication'});
       if(request.type==='SYNC_NOW'){if(request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});await backend.recover();broadcast().catch(()=>{});}

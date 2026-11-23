@@ -25,7 +25,7 @@ globalThis.YPStorageIDB=(()=>{
   });
  }
  async function entries(prefix,{after=null,limit=12}={}){
-  if(typeof prefix!=='string'||!/^yp-operation-v1:[^:]+:$/.test(prefix)||!Number.isInteger(limit)||limit<1||limit>100||after!==null&&(typeof after!=='string'||!after.startsWith(prefix)))throw new Error('Invalid queue page');
+  if(typeof prefix!=='string'||!/^yp-(?:operation|intent)-v1:[^:]+:$/.test(prefix)||!Number.isInteger(limit)||limit<1||limit>100||after!==null&&(typeof after!=='string'||!after.startsWith(prefix)))throw new Error('Invalid queue page');
   const db=await open();return new Promise((resolve,reject)=>{
    const tx=db.transaction(STORE,'readonly'),items=[];let next=null;
    const range=IDBKeyRange.bound(after??prefix,prefix+'\uffff',after!==null,false);

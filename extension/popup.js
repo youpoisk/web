@@ -1,5 +1,5 @@
 let state,video=null,tab='video',busy=false,loadGeneration=0,renderedScope=null;
-let authBusy=false;
+let authBusy=false,conflictScope=null;
 const signed=()=>state?.auth?.state==='authenticated';
 // Unsaved review text per video: kept across re-renders and failed saves.
 const drafts=new Map();
@@ -10,11 +10,12 @@ function scoreButtons(id,key,value){const root=$(id);root.replaceChildren();for(
 function renderQueue(queue){
  const pending=queue?.pending??0,blocked=queue?.blocked??0;
  $('queue-status').textContent=pending||blocked?`Ожидают отправки: ${pending}${queue.more?'+':''}. Требуют сверки: ${blocked}. Изменения ещё не подтверждены сервером.`:'';
- $('queue-retry').hidden=!signed()||!pending;
+ $('queue-retry').hidden=!signed()||!pending;$('conflicts-open').hidden=!signed()||!blocked;
 }
 async function refreshQueue(){if(!signed())return;const scope=state.auth.epoch;try{const queue=await YP.request('SYNC_STATUS');if(state?.auth?.epoch===scope&&queue.scope===scope){state.queue=queue;renderQueue(queue);}}catch{}}
 function render(){
   if(!state)return;
+  if(!signed()||conflictScope!==state.auth?.epoch){$('conflicts-list').replaceChildren();$('conflicts-more').hidden=true;}
   renderQueue(signed()?state.queue:null);
   $('login-form').hidden=signed();$('signed-account').hidden=!signed();$('account-name').textContent=state.auth?.user?state.auth.user.name+' · @'+state.auth.user.login:'';$('mode').textContent=signed()?'Данные аккаунта · сохранение на сервере':'Войдите для сохранения на сервере. Старые локальные данные не импортируются автоматически.';$('list-more').hidden=!state.next||!signed();
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
@@ -28,7 +29,7 @@ function render(){
   renderedScope=state.auth?.epoch??null;
   if(!signed())document.querySelectorAll('#video-view button,#list-view button').forEach(b=>b.disabled=true);
 }
-async function mutate(patch,target=video){if(busy||!target||!signed()||renderedScope!==state.auth?.epoch)return;busy=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);try{const previous=state,scope=renderedScope;const result=await YP.request('UPDATE',{video:YPCore.metadata(target),patch,scope});if(state?.auth?.epoch!==scope||result.auth?.epoch!==scope)return;state={...previous,...result,next:previous.next,videos:{...previous.videos,...result.videos}};if('review' in patch)drafts.delete(target.id);message('Сохранено на сервере');}catch(e){message(e.message,true);await refreshQueue();}finally{busy=false;document.querySelectorAll('button').forEach(b=>b.disabled=false);render();}}
+async function mutate(patch,target=video){if(busy||!target||!signed()||renderedScope!==state.auth?.epoch)return;busy=true;document.querySelectorAll('button').forEach(b=>b.disabled=true);try{const previous=state,scope=renderedScope;const result=await YP.request('UPDATE',{video:YPCore.metadata(target),patch,scope});if(state?.auth?.epoch!==scope||result.auth?.epoch!==scope)return;state={...previous,...result,next:previous.next,videos:{...previous.videos,...result.videos}};if(!result.queued&&'review' in patch)drafts.delete(target.id);message(result.queued?'Изменение сохранено на устройстве и ожидает отправки.':'Сохранено на сервере');}catch(e){message(e.message,true);await refreshQueue();}finally{busy=false;document.querySelectorAll('button').forEach(b=>b.disabled=false);render();}}
 async function load(){const generation=++loadGeneration;try{const previous=state?.auth?.epoch;const loaded=await YP.request('GET');if(generation!==loadGeneration)return;if(previous!==loaded.auth?.epoch)drafts.clear();state=loaded;if(YP.installed){const [active]=await YPAPI.tabs.query({active:true,currentWindow:true});const id=YPCore.videoId(active?.url);video=null;if(id){try{const result=await YPAPI.tabs.sendMessage(active.id,{type:'YP_CONTEXT'});if(result?.video?.id===id)video=YPCore.metadata(result.video);}catch{$('empty-text').textContent='Обновите вкладку YouTube после установки расширения и дождитесь загрузки названия видео.';}}}if(video&&signed()){const detail=await YP.request('CURRENT',{videoId:video.id});if(generation!==loadGeneration||detail.auth?.epoch!==state.auth?.epoch)return;state={...state,videos:{...state.videos,...detail.videos}};}render();}catch(e){if(generation===loadGeneration)message(e.message,true);}}
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();});$('retry').onclick=load;$('clear').onclick=()=>mutate({rating:null});$('save').onclick=()=>mutate({later:!state.videos[video.id]?.later});$('review').oninput=()=>{const saved=state.videos[video.id]?.review||'';if($('review').value===saved)drafts.delete(video.id);else drafts.set(video.id,$('review').value);countReview();};$('review-save').onclick=()=>{if(!$('review').value.trim()){message('Рецензия не может быть пустой',true);return;}mutate({review:$('review').value});};$('review-delete').onclick=()=>mutate({review:null});$('preview').onerror=()=>{$('preview').removeAttribute('src');$('preview').alt='Превью недоступно';};YP.subscribe(()=>void load());load();
 
@@ -38,3 +39,19 @@ $('list-more').onclick=async()=>{if(busy||!state?.next)return;busy=true;const sc
 
 $('queue-retry').onclick=async()=>{if(busy||!signed())return;busy=true;const scope=renderedScope;try{await YP.request('SYNC_NOW',{scope});await load();}catch{await refreshQueue();message('Повторная отправка пока недоступна. Команды сохранены; повтор соблюдает срок ожидания сервера.',true);}finally{busy=false;render();}};
 window.addEventListener('focus',()=>void refreshQueue());
+
+let conflictsCursor=null;
+function describeChange(value){
+ if(Object.hasOwn(value,'text'))return value.text===null?'Рецензия удалена':value.text;
+ const parts=[];if(Object.hasOwn(value,'rating'))parts.push(value.rating===null?'Без оценки':'Оценка: '+value.rating);if(Object.hasOwn(value,'later'))parts.push(value.later?'В «Посмотрю позже»':'Без «Посмотрю позже»');if(Object.hasOwn(value,'mark'))parts.push(value.mark==='watched'?'Просмотрено':value.mark==='not_interested'?'Неинтересно':'Без отметки');return parts.join(' · ');
+}
+async function showConflicts(after){
+ if(!signed()||busy)return;busy=true;const scope=renderedScope;
+ try{const page=await YP.request('QUEUE_CONFLICTS',after?{after}:{});if(state?.auth?.epoch!==scope||page.scope!==scope)return;const root=$('conflicts-list');root.replaceChildren();conflictScope=scope;conflictsCursor=page.next;$('conflicts-more').hidden=!page.next;
+  if(!page.items.length){const text=document.createElement('p');text.className='hint';text.textContent='На этой странице нет доступных конфликтов оценок и рецензий.';root.append(text);}
+  for(const item of page.items){const card=document.createElement('article');card.className='queue-conflict';const title=document.createElement('h2');title.textContent=item.title||'Видео';const local=document.createElement('p');local.textContent='Ваше действие: '+describeChange(item.local);const server=document.createElement('p');server.textContent='На сервере: '+describeChange(item.server);card.append(title,local,server);
+   for(const [choice,label]of [['server','Оставить серверную версию'],['local','Применить мою версию']]){const button=document.createElement('button');button.className='secondary full';button.textContent=label;button.onclick=async()=>{if(busy||state?.auth?.epoch!==scope)return;busy=true;button.disabled=true;try{await YP.request('QUEUE_RESOLVE',{ref:item.ref,choice,scope});card.remove();await load();}catch{message('Не удалось завершить сверку. Данные сохранены; проверьте соединение и повторите.',true);}finally{busy=false;button.disabled=false;await refreshQueue();}};card.append(button);}root.append(card);
+  }
+ }catch{message('Не удалось получить серверную версию для сверки.',true);}finally{busy=false;}
+}
+$('conflicts-open').onclick=()=>showConflicts();$('conflicts-more').onclick=()=>showConflicts(conflictsCursor);
