@@ -53,7 +53,14 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
     const validTarget=typeof target==='string'&&(operation==='addObservedVideo'?/^[\w-]{11}$/.test(target):/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(target));
     if(!supported||!validTarget||slot!==prefix+operation+':'+target||pending.version!==1||pending.owner!==scope.owner||pending.epoch!==scope.epoch||pending.state!=='pending'){blocked++;continue;}
     let intent;try{intent=JSON.parse(pending.fingerprint);}catch{blocked++;continue;}
-    if(JSON.stringify(intent)!==pending.fingerprint){blocked++;continue;}
+    if(JSON.stringify(intent)!==pending.fingerprint||!intent||typeof intent!=='object'||Array.isArray(intent)){blocked++;continue;}
+    const body=pending.body;
+    const revisionOK=body&&Number.isSafeInteger(body.expected_revision)&&body.expected_revision>=0;
+    const intentKeys=Object.keys(intent),allowed=operation==='patchVideoState'?['rating','later','mark']:operation==='putVideoReview'?['text']:['id'];
+    let bound=revisionOK&&intentKeys.length>0&&intentKeys.every(key=>allowed.includes(key));
+    if(operation==='addObservedVideo')bound=bound&&intentKeys.length===1&&intent.id===target&&body.youtube_video_id===target&&body.expected_revision===0&&typeof body.title==='string'&&Object.keys(body).every(key=>['youtube_video_id','title','expected_revision'].includes(key));
+    else bound=bound&&Object.keys(body).length===intentKeys.length+1&&intentKeys.every(key=>Object.hasOwn(body,key)&&body[key]===intent[key]);
+    if(!bound){blocked++;continue;}
     await durable(operation,target,intent,scope,async()=>{throw new BackendError('reconcile_required');});sent++;
    }
    await check(scope);return {sent,blocked,next:page.next};

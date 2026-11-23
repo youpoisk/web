@@ -61,3 +61,12 @@ test('recovery retains other accounts, old epochs and corrupt records without se
 test('recovery acknowledgement failure retains original command and a second recovery uses its receipt',async()=>{
  const f=fixture();f.lose();await assert.rejects(f.create().update(f.video,{review:'Recover me'}));f.failClear();await assert.rejects(f.create().recover());assert.equal((await f.create().recover()).sent,1);assert.deepEqual(f.writes[0],f.writes[2]);
 });
+
+test('recovery blocks schema-valid body that no longer matches saved intent or YouTube target',async()=>{
+ for(const scenario of ['state','review','add']){
+  const f=fixture();if(scenario==='add')f.missing();f.lose();await assert.rejects(f.create().update(f.video,scenario==='review'?{review:'Original'}:{rating:8}));
+  const [key,pending]=[...f.db].find(([k,v])=>k.startsWith('yp-operation-v1:')&&v);
+  if(scenario==='add')pending.body.youtube_video_id='abcdefghijk';else if(scenario==='review')pending.body.text='Different';else pending.body.rating=1;
+  f.db.set(key,pending);const count=f.writes.length;assert.deepEqual(await f.create().recover(),{sent:0,blocked:1,next:null});assert.equal(f.writes.length,count);assert.ok(f.db.get(key));
+ }
+});

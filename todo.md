@@ -190,3 +190,6 @@ EXT-008 storage step: приватная очередь читается по т
 EXT-008 storage review c2dc2d2: PASS, MEDIUM+ нет.
 EXT-008 recovery primitive: backend.recover читает не более 12 сохранённых команд аккаунта, использует исходные body/key/lease, ACK атомарный. Чужой owner, старый epoch, conflict и повреждённые записи не отправляются. Потеря ответа и ошибка ACK покрыты, 58 тестов PASS. UI, планировщик и backoff ещё не подключены; полный EXT-008 остаётся открытым.
 
+
+EXT-008 review fix: перед replay сверять body с сохранённым intent и target (включая YouTube ID add), несовпадение оставлять blocked без HTTP. Замечание P2 закрыто regression-тестом для state/review/add; 59 тестов PASS.
+
