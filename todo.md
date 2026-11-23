@@ -342,3 +342,6 @@ Reviewer PASS d46c398, MEDIUM+ нет. LOW учтён: политика/listing 
 
 ### YP-093 / WEB-REC-001…003 — подключение сайта
 Добавлены SiteRecommendations и FavoriteTagsEditor: различимый site source на /feed, switch сохраняется сервером с revision (без ложногоoptimisticsuccess), личная лента не меняется. В own/profile private20tag multiselect с поиском/удалением/409reload, отсутствует в чужих профилях. ANY/empty/loading/stale/retry, publicguest source с отдельнымlocalStorage безautoimport.12cards/infinitepages+dedup, ownerkeyed/unmountgeneration+serial/abort guards. Guesttag save preserves latest local switch; oldpage doesn't revert confirmed toggle. Actual backend contract81 importedfromcommittedfc4f8d9; extensionbundle regenerated fromsharedvalidators (newUIextensionnotadded). WebbuildPASS;120sharedAPI/coretests100line/functions (modelbranches96.97%),124extensiontestsPASS. Pendingindependentreview andliveAPIdeployment withoutproviderkey; nofakepool.
+
+### Обновление локальной версии сайта/расширения
+По просьбе заказчика: production build сайта обновлён, extension manifests0.5.1 с актуальным runtime/API81.124extensiontestsPASS; webtype/buildPASS. Отдельно готовится clean devpackage изамена старого0.4 sourceкаталогаFirefox сbackup. Это не означает автоматическойперезагрузки/публикации установленногоaddon.

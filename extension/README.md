@@ -1,4 +1,4 @@
-# YouPoisk для Firefox и Chrome — 0.5.0
+# YouPoisk для Firefox и Chrome — 0.5.1
 
 ## Возможности и аккаунт
 
