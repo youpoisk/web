@@ -228,3 +228,6 @@ EXT-009 review152320e+5ea1895+09cc77d: PASS, обаP2 закрыты, 73testsPAS
 - 79 extensiontestsPASS, sharedAPI116tests/core100PASS, productionwebbuildPASS, Firefoxbuild+lint0warnings. Awaitindependentreview+localbackendmigration20+realAPIpullsmoke before closing EXT010. Backendreview077f86f+47d53d0 PASS.
 - DEC-EXT-010-CACHE: active generation pointer prevents exposing partial snapshot. Old generations are retained pending bounded cleanup inEXT014/016; account keyspaces remain isolated. Snapshot empty fields do not turn into write commands. Foreign profile/feed not synchronized.
 
+
+EXT010 client reviewfix: bounded transactional IDB generationGC (128keys/pass, durable cursor), keeps active+staging IDs read in sameTX, touches no ACK/outbox/intents/otheraccounts; wake continuation finishes cleanup. Regression repeatedgeneration/activation, inactive reviewdata removed, finalpagequota leaves activecache intact. 80testsPASS. Oldgeneration cleanup no longer deferred.
+

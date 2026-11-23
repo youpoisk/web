@@ -62,9 +62,20 @@ globalThis.YPStorageIDB=(()=>{
    tx.oncomplete=()=>resolve();tx.onabort=()=>reject(tx.error??new Error('Migration aborted'));tx.onerror=()=>reject(tx.error);
   });
  }
+ async function pruneGenerations(owner,{limit=128}={}){
+  if(typeof owner!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(owner)||!Number.isInteger(limit)||limit<1||limit>512)throw new Error('Invalid cache cleanup');
+  const db=await open();return new Promise((resolve,reject)=>{
+   const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE),prefix=`yp-generation-v2:${owner}:`,gcKey=`yp-gc-v2:${owner}`;let active,staging,after,left=3,scanned=0,removed=0,done=true;
+   const start=()=>{if(--left)return;const keep=new Set([active?.generation,staging?.id].filter(Boolean));const lower=typeof after==='string'&&after.startsWith(prefix)?after:null;const request=store.openCursor(IDBKeyRange.bound(lower??prefix,prefix+'\uffff',lower!==null,false));
+    request.onsuccess=()=>{const row=request.result;if(!row){store.put(null,gcKey);return;}if(scanned>=limit){done=false;store.put(after,gcKey);return;}scanned++;after=row.key;const generation=row.key.slice(prefix.length).split(':',1)[0];if(!keep.has(generation)){row.delete();removed++;}row.continue();};
+   };
+   for(const [name,assign]of [[`yp-sync-v2:${owner}`,value=>{active=value}],[`yp-sync-progress-v2:${owner}`,value=>{staging=value}],[gcKey,value=>{after=value}]]){const read=store.get(name);read.onsuccess=()=>{assign(read.result);start();};}
+   tx.oncomplete=()=>resolve({done,removed});tx.onabort=()=>reject(tx.error??new Error('Cache cleanup aborted'));tx.onerror=()=>reject(tx.error);
+  });
+ }
  function accountStore(source=async()=>[]){
   const ready=Promise.resolve().then(source).then(migrate);ready.catch(()=>{});
-  return {async entries(prefix,options){await ready;return entries(prefix,options)},async read(key){await ready;return read(key)},async write(value,key){await ready;return write(value,key)},async commit(entries){await ready;return commit(entries)}};
+  return {async pruneGenerations(owner,options){await ready;return pruneGenerations(owner,options)},async entries(prefix,options){await ready;return entries(prefix,options)},async read(key){await ready;return read(key)},async write(value,key){await ready;return write(value,key)},async commit(entries){await ready;return commit(entries)}};
  }
- return {read,write,entries,commit,migrate,accountStore};
+ return {read,write,entries,commit,migrate,pruneGenerations,accountStore};
 })();

@@ -47,3 +47,12 @@ test('quota abort cannot commit only one half of a 429 command/account deadline'
  try{await assert.rejects(s.commit([[slot,{nextAttemptAt:120000}],[key,{until:120000}]]));}finally{IDBObjectStore.prototype.put=original;}
  assert.equal((await s.read(slot)).nextAttemptAt,5000);assert.equal(await s.read(key),null);await s.commit([[slot,{nextAttemptAt:120000}],[key,{until:120000}]]);assert.equal((await s.read(slot)).nextAttemptAt,(await s.read(key)).until);
 });
+
+test('bounded resumable generation GC keeps active/staging, other owners and all outbox data',async()=>{
+ const s=idb(),owner='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222',prefix='yp-generation-v2:'+owner+':';await s.write({generation:'active'},'yp-sync-v2:'+owner);await s.write({id:'staging'},'yp-sync-progress-v2:'+owner);
+ for(const generation of ['abandoned','active','staging','old'])for(let i=0;i<5;i++)await s.write({text:generation},prefix+generation+':video_review:'+i);
+ const pending='yp-operation-v1:'+owner+':pending',foreign='yp-generation-v2:'+other+':old:video_review:1';await s.write({key:'original'},pending);await s.write({text:'other'},foreign);
+ let passes=0,result;do{result=await s.accountStore().pruneGenerations(owner,{limit:3});passes++;assert.ok(passes<20)}while(!result.done);
+ assert.ok(passes>1);for(let i=0;i<5;i++){assert.equal(await s.read(prefix+'old:video_review:'+i),null);assert.equal(await s.read(prefix+'abandoned:video_review:'+i),null);assert.equal((await s.read(prefix+'active:video_review:'+i)).text,'active');assert.equal((await s.read(prefix+'staging:video_review:'+i)).text,'staging');}
+ assert.equal((await s.read(pending)).key,'original');assert.equal((await s.read(foreign)).text,'other');await s.commit([['yp-sync-v2:'+owner,{generation:'staging'}],['yp-sync-progress-v2:'+owner,null]]);do{result=await s.pruneGenerations(owner,{limit:3})}while(!result.done);assert.equal(await s.read(prefix+'active:video_review:0'),null);assert.equal((await s.read(prefix+'staging:video_review:0')).text,'staging');
+});
