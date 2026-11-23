@@ -314,3 +314,9 @@ Reviewer P2: metadata-only Add409 не имел conflict UI. Теперь под
 
 ### EXT-018 — review closure
 Follow-up reviewer PASS: оба P2 закрыты в70bfd25/b70eac1, новых MEDIUM+ нет.118tests, 100%строк/функций auth worker; ветви86.52%. Full API/Firefox gate PASS до двух локально проверенных review-fixes; live Chrome/YouTube manual gate остаётся отдельным.
+
+### EXT-019 — локальная оценка канала и явный перенос
+Реализовано в trusted popup: отдельный local-only score, guest/account namespaces, alias привязан к конкретному video ID+canonical channel URL (имя не ключ). Значение не включено в video PATCH/import и не влияет на средний рейтинг. Канал проверяется через актуальную server video card: identity_verified+association_verified+UC, затем отдельную channel card; DOM handle/UC ничего не подтверждает. Preview показывает local/server score. Только явный выбор переносит значение через versioned putChannelRating; перед записью сравнение перечитывается, изменившийся preview отклоняется. Exact-key/lease/body retry и per-item conflict resolution поддерживают channel_state. Keep-server очищает локальный draft без записи API. Guest draft автоматически не импортируется.121+ unit tests, auth worker100line/function; реальные API/Firefox gates повторяются отдельно.
+
+### Спорные вопросы — DEC-EXT-019-ALIAS
+Вопрос: как не смешать pending при reuse handle/одинаковых именах? Выбран консервативный ключ owner+videoID+каноническая ссылка канала, не глобальный handle. Причина: без provider proof разные видео не доказывают одного автора. После подтверждения перенос возможен только к текущему authoritative publisher; гостевые drafts не перескакивают в аккаунт. Server-side provider verification не подменяется DOM claim.

@@ -164,3 +164,9 @@ test('description hashtags are bounded Unicode observations, not complete when t
  assert.throws(()=>core.observation({source:'comments',status:'complete',tags:['x']}));assert.throws(()=>core.observation({source:'youtube-description-dom',status:'unknown',tags:['x']}));
  assert.equal([...core.metadata({...video,title:'😀'.repeat(251)}).title].length,250);
 });
+
+test('channel alias identity never uses display names or merges different video contexts',()=>{
+ const a={...video,channelUrl:'https://www.youtube.com/@author'};
+ assert.equal(core.channelDraftKey(a,'A'),core.channelDraftKey({...a,channel:'Renamed'},'A'));
+ assert.notEqual(core.channelDraftKey(a,'A'),core.channelDraftKey(a,'B'));assert.notEqual(core.channelDraftKey(a),core.channelDraftKey({...a,id:'q-gZ6dppLT0'}));assert.throws(()=>core.channelDraftKey({...a,channelUrl:''}));
+});

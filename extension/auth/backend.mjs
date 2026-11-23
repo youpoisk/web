@@ -16,6 +16,12 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   if(options.path?.id&&result.data?.target_id!==undefined&&result.data.target_id!==options.path.id)throw new BackendError('protocol');
   return result.data;
  }
+ async function channelSnapshot(videoId,scope){
+  const video=await card(videoId,scope),channel=video?.channel;
+  if(!channel?.identity_verified||!channel.association_verified||!/^UC[\w-]{22}$/.test(channel.youtube_channel_id??''))throw new BackendError('channel_unconfirmed');
+  const confirmed=await request('getChannelCard',{path:{id:channel.id}},scope);if(confirmed.id!==channel.id||!confirmed.identity_verified||confirmed.youtube_channel_id!==channel.youtube_channel_id)throw new BackendError('channel_unconfirmed');
+  const {state}=await request('getChannelRating',{path:{id:channel.id}},scope);await check(scope);return {channelId:channel.id,uc:channel.youtube_channel_id,revision:state.revision,rating:state.rating};
+ }
  async function actor(){let state;try{state=await session.status();}catch(error){if(!session.peek||!transient(error))throw error;state=await session.peek();}if(state.state!=='authenticated')throw new BackendError('authentication');return state;}
  async function durable(operation,target,intent,scope,bodyFactory,stage=null,fixedKey=null){
   const cooldown=await storage.read(`yp-rate-limit-v1:${scope.owner}`);if(cooldown?.until>now())throw new BackendError('retry_later');
@@ -121,11 +127,12 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
  }
  async function conflictRecord(ref,scope){
   const prefix=`yp-operation-v1:${scope.owner}:`;if(typeof ref!=='string'||!ref.startsWith(prefix))throw new BackendError('invalid_reference');
-  const row=await storage.read(ref);if(!row||row.owner!==scope.owner||!['patchVideoState','putVideoReview'].includes(row.operation)||ref!==prefix+row.operation+':'+row.target||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(row.target))throw new BackendError('invalid_reference');
+  const row=await storage.read(ref);if(!row||row.owner!==scope.owner||!['patchVideoState','putVideoReview','putChannelRating'].includes(row.operation)||ref!==prefix+row.operation+':'+row.target||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(row.target))throw new BackendError('invalid_reference');
   if(row.state==='pending'&&row.epoch===scope.epoch)throw new BackendError('pending');
-  let local=JSON.parse(row.fingerprint);const keys=Object.keys(local),allowed=row.operation==='patchVideoState'?['rating','later','mark']:['text'];
+  let local=JSON.parse(row.fingerprint);const keys=Object.keys(local),allowed=row.operation==='patchVideoState'?['rating','later','mark']:row.operation==='putChannelRating'?['rating']:['text'];
   if(!schemas[schemas.contract[row.operation].request](row.body)||!keys.length||keys.some(key=>!allowed.includes(key))||keys.some(key=>row.body?.[key]!==local[key]))throw new BackendError('invalid_reference');
-  const result=await request(row.operation==='patchVideoState'?'getVideoState':'getVideoReview',{path:{id:row.target}},scope);
+  const result=await request(row.operation==='patchVideoState'?'getVideoState':row.operation==='putChannelRating'?'getChannelRating':'getVideoReview',{path:{id:row.target}},scope);
+  if(row.operation==='putChannelRating'){const channel=await request('getChannelCard',{path:{id:row.target}},scope);if(channel.id!==row.target)throw new BackendError('protocol');return {row,local,result,value:result.state,video:{title:channel.name??'Канал YouTube'},stageSlot:`yp-channel-transfer-v1:${scope.owner}:${row.target}`,staged:null};}
   const video=await request('getVideoCard',{path:{id:row.target}},scope);if(video.id!==row.target)throw new BackendError('protocol');
   const stageSlot=`yp-intent-v1:${scope.owner}:${video.youtube_video_id}:${row.operation==='putVideoReview'?'review':'state'}`,staged=await storage.read(stageSlot);
   if(staged&&staged.owner===scope.owner&&staged.epoch===scope.epoch){const desired=row.operation==='putVideoReview'?{text:staged.patch.review}:staged.patch;if(schemas[schemas.contract[row.operation].request]({expected_revision:0,...desired}))local=desired;}
@@ -167,6 +174,8 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   if(row.review!==null){if(!await marker(row.keys.review))await durable('putVideoReview',target,{text:row.review},scope,async()=>({expected_revision:row.reviewRevision,text:row.review}),null,row.keys.review);row.reviewDone=true;}
  }
  return {
+  channelPreview:videoId=>exclusive(async()=>channelSnapshot(videoId,await actor())),
+  channelConfirm:(videoId,expected,rating)=>exclusive(async()=>{const scope=await actor(),current=await channelSnapshot(videoId,scope);if(!expected||JSON.stringify(current)!==JSON.stringify(expected))throw new BackendError('preview_changed');await durable('putChannelRating',current.channelId,{rating},scope,async()=>({expected_revision:current.revision,rating}));}),
   resumePending:()=>exclusive(async()=>{const scope=await actor();return storage.mutateQueue(scope.owner,scope.epoch,'resume');}),
   discardPending:()=>exclusive(async()=>{const scope=await actor();return storage.mutateQueue(scope.owner,scope.epoch,'discard');}),
   pendingLibrary:after=>exclusive(async()=>{const scope=await actor();return {videos:{},...await pendingPage(scope,after)};}),
@@ -224,14 +233,14 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    for(const [slot,pending] of page.items){
     await check(scope);
     const operation=pending?.operation,target=pending?.target;
-    const supported=['addObservedVideo','patchVideoState','putVideoReview'].includes(operation);
+    const supported=['addObservedVideo','patchVideoState','putVideoReview','putChannelRating'].includes(operation);
     const validTarget=typeof target==='string'&&(operation==='addObservedVideo'?/^[\w-]{11}$/.test(target):/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(target));
     if(!supported||!validTarget||slot!==prefix+operation+':'+target||pending.version!==1||pending.owner!==scope.owner||pending.epoch!==scope.epoch||pending.state!=='pending'){blocked++;continue;}
     let intent;try{intent=JSON.parse(pending.fingerprint);}catch{blocked++;continue;}
     if(JSON.stringify(intent)!==pending.fingerprint||!intent||typeof intent!=='object'||Array.isArray(intent)){blocked++;continue;}
     const body=pending.body;
     const revisionOK=body&&Number.isSafeInteger(body.expected_revision)&&body.expected_revision>=0;
-    const intentKeys=Object.keys(intent),allowed=operation==='patchVideoState'?['rating','later','mark']:operation==='putVideoReview'?['text']:['id'];
+    const intentKeys=Object.keys(intent),allowed=operation==='patchVideoState'?['rating','later','mark']:operation==='putVideoReview'?['text']:operation==='putChannelRating'?['rating']:['id'];
     let bound=revisionOK&&intentKeys.length>0&&intentKeys.every(key=>allowed.includes(key));
     if(operation==='addObservedVideo')bound=bound&&intentKeys.length===1&&intent.id===target&&body.youtube_video_id===target&&typeof body.title==='string'&&Object.keys(body).every(key=>['youtube_video_id','title','expected_revision','hashtags','hashtags_observation_status'].includes(key));
     else bound=bound&&Object.keys(body).length===intentKeys.length+1&&intentKeys.every(key=>Object.hasOwn(body,key)&&body[key]===intent[key]);

@@ -13,7 +13,7 @@ globalThis.YPWorker=(()=>{
   }
   function validate(command){
    fields(command,['type','videoId','video','patch','options','login','password','after','scope','ref','choice','expected','id','choices','pendingAction'],['type']);
-   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],GET_PENDING_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type','scope','pendingAction'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope'],QUEUE_CONFLICTS:['type','after'],QUEUE_RESOLVE:['type','scope','ref','choice','expected'],IMPORT_PREVIEW:['type','after','scope'],IMPORT_STATUS:['type','id'],IMPORT_COMMIT:['type','id','choices','scope'],QUEUE_RESUME:['type','scope'],QUEUE_DISCARD:['type','scope']};
+   const shapes={CHANNEL_GET:['type','video','scope'],CHANNEL_SET:['type','video','patch','scope'],CHANNEL_PREVIEW:['type','video','scope'],CHANNEL_CONFIRM:['type','video','scope','expected','choice'],GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],GET_PENDING_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type','scope','pendingAction'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope'],QUEUE_CONFLICTS:['type','after'],QUEUE_RESOLVE:['type','scope','ref','choice','expected'],IMPORT_PREVIEW:['type','after','scope'],IMPORT_STATUS:['type','id'],IMPORT_COMMIT:['type','id','choices','scope'],QUEUE_RESUME:['type','scope'],QUEUE_DISCARD:['type','scope']};
    if(!Object.hasOwn(shapes,command.type))throw Error('Неизвестная команда');
    fields(command,shapes[command.type],shapes[command.type].filter(k=>!['after','scope','pendingAction'].includes(k)&&!(command.type==='IMPORT_STATUS'&&k==='id')));
    if(command.pendingAction!==undefined&&!['sync','keep','discard'].includes(command.pendingAction))throw Error('Некорректное действие с очередью');
@@ -23,6 +23,7 @@ globalThis.YPWorker=(()=>{
    if(command.id!==undefined&&(typeof command.id!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(command.id)))throw Error('Некорректный импорт');
    if(command.type==='QUEUE_RESOLVE'){fields(command.expected,['revision','key','intent'],['revision','key','intent']);if(!Number.isSafeInteger(command.expected.revision)||command.expected.revision<0||typeof command.expected.key!=='string'||command.expected.key.length>64||typeof command.expected.intent!=='string'||command.expected.intent.length>10000)throw Error('Некорректная версия сверки');}
    if(command.type==='QUEUE_RESOLVE'&&(typeof command.ref!=='string'||command.ref.length>256||!['server','local'].includes(command.choice)))throw Error('Некорректное решение конфликта');
+   if(command.type.startsWith('CHANNEL_')){YPCore.metadata(command.video);YPCore.channelDraftKey(command.video);if(command.type==='CHANNEL_SET'){fields(command.patch,['rating'],['rating']);YPCore.apply(YPCore.empty(),{type:'UPDATE',video:command.video,patch:command.patch});}if(command.type==='CHANNEL_CONFIRM'&&!['server','local'].includes(command.choice))throw Error('Некорректный выбор');}
    if(command.type==='UPDATE_CURRENT_VIDEO'){
     fields(command.video,['id','title','url','preview','channel','channelUrl','observation'],['id','title']);
     if(typeof command.video.id!=='string'||typeof command.video.title!=='string'||[...command.video.title.normalize('NFC')].length>250||['url','preview','channel','channelUrl'].some(k=>Object.hasOwn(command.video,k)&&typeof command.video[k]!=='string'))throw Error('Некорректное видео');
@@ -93,6 +94,19 @@ globalThis.YPWorker=(()=>{
       observeAuth(result);if(request.type!=='AUTH_STATUS')broadcast().catch(()=>{});return result;
      }
      let state=await read();const auth=session?await authState():null;
+     if(request.type.startsWith('CHANNEL_')){
+      if(auth?.state==='session-expired'||request.scope!==(auth?.epoch??null))throw Object.assign(Error('Stale scope'),{kind:'stale'});
+      const key=YPCore.channelDraftKey(request.video,auth?.owner??'guest');let draft=await storage.read(key);
+      if(request.type==='CHANNEL_SET'){draft={rating:request.patch.rating,version:(draft?.version??0)+1};await storage.write(draft,key);}
+      if(request.type==='CHANNEL_PREVIEW'||request.type==='CHANNEL_CONFIRM'){
+       if(auth?.state!=='authenticated')throw Object.assign(Error('Authentication'),{kind:'authentication'});
+       if(request.type==='CHANNEL_PREVIEW')return {draft,server:await backend.channelPreview(request.video.id),scope:auth.epoch};
+       if(!draft||request.expected?.draftVersion!==draft.version)throw Object.assign(Error('Draft changed'),{kind:'preview_changed'});
+       if(request.choice==='local')await backend.channelConfirm(request.video.id,request.expected.server,draft.rating);
+       if((await authState()).epoch!==auth.epoch)throw Object.assign(Error('Stale scope'),{kind:'stale'});await storage.write(null,key);draft=null;
+      }
+      return {draft,scope:auth?.epoch??null};
+     }
      if(request.type==='QUEUE_RESUME'||request.type==='QUEUE_DISCARD'){
       if(auth?.state!=='authenticated'||request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});
       if(request.type==='QUEUE_RESUME'){await backend.resumePending();wake();}else await backend.discardPending();broadcast().catch(()=>{});return {...await backend.queueStatus(),scope:auth.epoch};
@@ -139,7 +153,7 @@ globalThis.YPWorker=(()=>{
    })().then(data=>{try{respond({ok:true,data})}catch{/* UI closed */}},async error=>{
     if(session?.peek){try{observeAuth(await session.peek());}catch{}}
     const code=error?.name==='QuotaExceededError'?'quota':error?.kind??'unavailable';
-    const messages={quota:'Не удалось сохранить на устройстве: недостаточно места. Освободите место и повторите.',storage:'Хранилище расширения недоступно. Сохраните черновик и повторите после восстановления доступа.',protocol:'Сервер вернул некорректный ответ. Сохранение не подтверждено.',stale:'Видео или аккаунт изменились. Повторите действие в текущем контексте.',pending_choice_required:'В очереди есть изменения. Выберите отправку, сохранение на устройстве или удаление очереди.',retry_later:'Команда ожидает повторной отправки.',authentication:'Войдите в аккаунт расширения.',reconcile_required:'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.'};
+    const messages={quota:'Не удалось сохранить на устройстве: недостаточно места. Освободите место и повторите.',storage:'Хранилище расширения недоступно. Сохраните черновик и повторите после восстановления доступа.',protocol:'Сервер вернул некорректный ответ. Сохранение не подтверждено.',channel_unconfirmed:'Канал ещё не подтверждён сервером. Оценка остаётся только на устройстве.',preview_changed:'Данные изменились. Откройте сравнение заново.',stale:'Видео или аккаунт изменились. Повторите действие в текущем контексте.',pending_choice_required:'В очереди есть изменения. Выберите отправку, сохранение на устройстве или удаление очереди.',retry_later:'Команда ожидает повторной отправки.',authentication:'Войдите в аккаунт расширения.',reconcile_required:'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.'};
     try{respond({ok:false,code,error:messages[code]??'Не удалось выполнить действие. Проверьте текущую страницу, вход и соединение.'})}catch{/* UI closed */}
    });
    return true;
