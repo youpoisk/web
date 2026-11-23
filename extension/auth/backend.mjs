@@ -10,6 +10,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    const client=new ApiClient({baseUrl:origin,fetch,session:()=>({state:'authenticated',owner:scope.owner,epoch:scope.epoch,accessToken:token})});
    try{return {status:200,data:await client.request(operation,options)};}catch(error){if(error instanceof ApiError&&error.status===401)return {status:401};throw error;}
   });
+  if(options.path?.id&&result.data?.target_id!==undefined&&result.data.target_id!==options.path.id)throw new BackendError('protocol');
   return result.data;
  }
  async function actor(){const state=await session.status();if(state.state!=='authenticated')throw new BackendError('authentication');return state;}
@@ -34,7 +35,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    throw error;
   }
  }
- async function card(youtubeId,scope){try{return await request('getVideoCardByYoutube',{path:{youtube_id:youtubeId}},scope);}catch(error){if(error instanceof ApiError&&error.status===404)return null;throw error;}}
+ async function card(youtubeId,scope){try{const video=await request('getVideoCardByYoutube',{path:{youtube_id:youtubeId}},scope);if(video.youtube_video_id!==youtubeId)throw new BackendError('protocol');return video;}catch(error){if(error instanceof ApiError&&error.status===404)return null;throw error;}}
  async function check(scope){await session.authorize(async(_,live)=>{if(live.owner!==scope.owner||live.epoch!==scope.epoch)throw new BackendError('stale');});}
  function dto(video,review=null){
   if(!video.my_state)throw new BackendError('protocol');

@@ -4,7 +4,7 @@ import {createBackend} from '../auth/backend.mjs';
 const owner='00000000-0000-4000-8000-000000000001',id='00000000-0000-4000-8000-000000000002',epoch='00000000-0000-4000-8000-000000000003',yt='p0iTgHMEoi4';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
 function fixture(){
- let state={revision:1,rating:null,added:true,later:false},review={revision:4,text:'Existing review'},exists=true,lose=false,failClear=false,who=owner,scope=epoch,seq=1,switchAt=0,authorizations=0;
+ let state={revision:1,rating:null,added:true,later:false},review={revision:4,text:'Existing review'},exists=true,lose=false,failClear=false,who=owner,scope=epoch,seq=1,switchAt=0,authorizations=0,badReviewTarget=false;
  const db=new Map(),receipts=new Map(),writes=[];
  const storage={async commit(entries){if(failClear){failClear=false;throw Error('disk');}for(const [key,value]of entries)db.set(key,structuredClone(value));},async read(key){return structuredClone(db.get(key)??null)},async write(value,key){if(value===null&&failClear){failClear=false;throw Error('disk');}db.set(key,structuredClone(value));}};
  const session={async status(){return {state:'authenticated',owner:who,epoch:scope}},async authorize(fn){if(++authorizations===switchAt)who='00000000-0000-4000-8000-000000000005';return fn('opaque',{owner:who,epoch:scope})}};
@@ -15,7 +15,7 @@ function fixture(){
   if(path.includes('/by-youtube/'))return exists?json(card()):json({code:'not_found',message:'Missing',request_id:'request',field_errors:{}},404);
   if(path.endsWith('/offline-lease'))return json({lease:'original-signed-lease',valid_for_seconds:604800});
   if(init.method==='GET'&&path.endsWith('/state'))return json(result());
-  if(init.method==='GET'&&path.endsWith('/review'))return json({kind:'video_review',target_id:id,review,change_seq:null});
+  if(init.method==='GET'&&path.endsWith('/review'))return json({kind:'video_review',target_id:badReviewTarget?owner:id,review,change_seq:null});
   if(path.endsWith('/watchlist'))return json({items:[{...card(),listed_at:'2026-11-22T00:00:00Z',has_review:true}]});
   const key=init.headers.get('Idempotency-Key');writes.push({key,lease:init.headers.get('X-Offline-Lease'),body:JSON.parse(init.body),path});
   if(receipts.has(key))return json(receipts.get(key));
@@ -26,7 +26,7 @@ function fixture(){
   receipts.set(key,structuredClone(response));if(lose){lose=false;throw Error('lost response');}return json(response);
  }
  const create=()=>createBackend({origin:'http://127.0.0.1:18080',session,storage,fetch});
- return {create,storage,db,writes,switchOnAuthorize(n){switchAt=n},video:{id:yt,title:'Real video'},missing(){exists=false},lose(){lose=true},failClear(){failClear=true},switchEpoch(){scope='00000000-0000-4000-8000-000000000004'},switchOwner(){who='00000000-0000-4000-8000-000000000005'}};
+ return {create,storage,db,writes,badReview(){badReviewTarget=true},switchOnAuthorize(n){switchAt=n},video:{id:yt,title:'Real video'},missing(){exists=false},lose(){lose=true},failClear(){failClear=true},switchEpoch(){scope='00000000-0000-4000-8000-000000000004'},switchOwner(){who='00000000-0000-4000-8000-000000000005'}};
 }
 test('server state and review use independent revisions, preserve null/false and never expose auth',async()=>{
  const f=fixture(),b=f.create();assert.equal((await b.current(yt)).videos[yt].review,'Existing review');await b.update(f.video,{rating:8});await b.update(f.video,{later:false});const saved=await b.update(f.video,{review:'Edited review'});assert.equal(saved.videos[yt].rating,8);assert.equal(saved.videos[yt].review,'Edited review');assert.equal(f.writes[0].body.expected_revision,1);assert.equal(f.writes[2].body.expected_revision,4);await b.update(f.video,{rating:null});assert.equal(f.writes.at(-1).body.rating,null);assert.equal((await b.library()).videos[yt].hasReview,true);assert.equal(JSON.stringify(saved).includes('opaque'),false);
@@ -48,3 +48,5 @@ test('scope switch between card and review or before final DTO cannot leak mixed
  for(const point of [2,3]){const f=fixture();f.switchOnAuthorize(point);await assert.rejects(f.create().current(f.video.id),e=>e.kind==='stale');}
  const f=fixture();f.switchOnAuthorize(2);await assert.rejects(f.create().library(),e=>e.kind==='stale');
 });
+
+test('schema-valid response for another review target is rejected before producing a DTO',async()=>{const f=fixture();f.badReview();await assert.rejects(f.create().current(f.video.id),e=>e.kind==='protocol');assert.equal(f.writes.length,0);});

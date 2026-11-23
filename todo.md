@@ -178,3 +178,7 @@ EXT004/005 onlinevertical: popupформавхода/выхода,worker-onlyacc
 EXT006/008/009далее: fullversionedaccountcache/durablequeueenumeration, offlinepull/reconcileUI. СейчасonlineкомандыужеидутнаAPI,ноofflineMVPещёнезакрыт.
 
 EXT006implemented: markerlayoutv2+sharedextensionoriginIDB,oldChromeoutboxcopiedatomicallyonce,legacy/authnevercopiedintocontent. Cachecanonicalstate/review+pendingackoneTX;quotaabort/retry/idempotentmigration/versionguards52testsPASS;realFirefoxsmokePASS. No silentlegacyimport/accountnamespacechange. Awaitindependentreviewbeforeclosing.
+
+- [x] EXT-006: независимое ревью коммита 385d264 — PASS, замечаний MEDIUM+ нет. Миграция и атомарный ACK проверены, 52 теста и реальный Firefox-smoke прошли.
+EXT-007: проверка соответствия target_id ответа запрошенному видео и YouTube ID карточки; запоздавший snapshot после SPA-перехода отклоняется. 54 теста PASS. Полный pull/offline остаётся EXT-008/010, эта проверка не объявляет их завершёнными.
+
