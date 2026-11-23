@@ -70,7 +70,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   const operation=review?'putVideoReview':'patchVideoState',pending=target?await storage.read(`yp-operation-v1:${scope.owner}:${operation}:${target}`):null;
   const canonical=target?await pull.read(scope,review?'video_review':'video_state',target):null;
   const revisions=[canonical?.revision,review?cached?.review.revision:cached?.video.my_state.revision].filter(Number.isSafeInteger),revision=revisions.length?Math.max(...revisions):null;
-  const row={version:1,owner:scope.owner,epoch:scope.epoch,video,patch:{...(existing?.patch??{}),...patch},baseRevision:existing?.baseRevision??revision,createdAt:existing?.createdAt??now(),...(existing?.deferred?{deferred:true}:{}),...(existing?.addKey?{addKey:existing.addKey}:{}),...(existing?.observationOnly?{observationOnly:true,observationRevision:existing.observationRevision}:{}),...(pending?{predecessor:pending.key}:{})};
+  const row={version:1,owner:scope.owner,epoch:scope.epoch,video,patch:{...(existing?.patch??{}),...patch},baseRevision:existing?.baseRevision??revision,createdAt:existing?.createdAt??now(),...(existing?.deferred?{deferred:true}:{}),...(existing?.addKey?{addKey:existing.addKey}:{}),...(existing?.observationOnly?{observationOnly:true,observationRevision:existing.observationRevision}:{}),...(existing?.observationSkipped?{observationSkipped:true}:{}),...(pending?{predecessor:pending.key}:{})};
   if(!review){if(patch.mark==='not_interested')row.patch.later=false;else if(patch.later===true&&row.patch.mark==='not_interested')row.patch.mark=null;}
   // A sent command is immutable. Further clicks replace only the unsent successor.
   if(existing?.commandKey){row.predecessor=existing.commandKey;row.predecessorIntent=JSON.stringify(review?{text:existing.patch.review}:existing.patch);}
@@ -88,12 +88,14 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   const addSlot=`yp-operation-v1:${scope.owner}:addObservedVideo:${row.video.id}`;
   const priorAdd=await storage.read(addSlot);
   const observeExisting=resolved?.my_state?.added===true&&row.video.observation&&row.video.observation.status!=='unknown';
-  if(priorAdd||!resolved||(!row.addKey&&observeExisting)){
+  if(priorAdd||!resolved||(!row.addKey&&!row.observationSkipped&&observeExisting)){
    if(!row.addKey&&!priorAdd&&resolved){row.observationOnly=true;row.observationRevision=resolved.my_state.revision;}
    row.addKey=priorAdd?.key??row.addKey??crypto.randomUUID();const peerSlot=`yp-intent-v1:${scope.owner}:${row.video.id}:${isReview?'state':'review'}`,peer=await storage.read(peerSlot),links=[[slot,row]];
    if(peer?.version===1&&peer.owner===scope.owner&&peer.epoch===scope.epoch&&peer.video?.id===row.video.id)links.push([peerSlot,{...peer,addKey:row.addKey,...(row.observationOnly?{observationOnly:true,observationRevision:row.observationRevision}:{})}]);
    await storage.commit(links);
-   await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>observedBody(row.video,row.observationRevision??0),{...stage,field:'addKey'},row.addKey);resolved=await card(row.video.id,scope);
+   try{await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>observedBody(row.video,row.observationRevision??0),{...stage,field:'addKey'},row.addKey);}
+   catch(error){const pending=await storage.read(addSlot);if(!row.observationOnly||error.kind!=='reconcile_required'||pending?.errorStatus!==409)throw error;for(const [,linked]of links){delete linked.addKey;linked.observationSkipped=true;}await storage.commit([...links,[addSlot,null],[`yp-history-v1:${scope.owner}:${crypto.randomUUID()}`,{...pending,resolution:'optional_metadata_conflict'}]]);}
+   resolved=await card(row.video.id,scope);
   }
   if(!resolved)throw new BackendError('protocol');
   const review=Object.hasOwn(row.patch,'review');if(!review&&row.addKey&&!row.observationOnly){const added=await storage.read(`yp-receipt-v1:${scope.owner}:${row.addKey}`);if(added?.kind==='video_state'&&added.target===resolved.id)row.baseRevision=added.revision;}

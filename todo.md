@@ -308,3 +308,6 @@ Commit 1b3e005: reviewer follow-up PASS, P2 closed; shared exact Add receipt for
 
 ### EXT-018 — review fix: serialized byte budget
 Reviewer P2:30×100 multibyte tags превышают 8192-byte API request bound и блокируют personal write. Исправлено до сохранения immutable body: с конца удаляются дополнительные tags до полного JSON<=8192UTF8bytes, status становится partial. Exact retry сохраняет уже ограниченный body. Regression CJK30×100 подтверждает успешную отправку rating. Coverage100line/function PASS. До byte-fix full gate --api PASS: .artifacts/extension-verification/e5c5d341-a80e-4085-91bb-8c24ea90cc75.
+
+### EXT-018 — review fix: optional metadata 409
+Reviewer P2: metadata-only Add409 не имел conflict UI. Теперь подтверждённый409 такого optional observation архивируется атомарно с очисткой Add и пометкой связанных stages observationSkipped. Основное намерение продолжает работу с исходной personal base revision: review независим, rating показывает обычный разрешаемый patch conflict. Network/unknown outcome и initial Add не отбрасываются. Regression проверяет race именно на Add для review/rating.118tests PASS, auth100%line/functions.
