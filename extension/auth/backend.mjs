@@ -43,6 +43,21 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   return {id:video.youtube_video_id,title:video.title??'Видео YouTube',url:video.url,preview:video.preview_url,channel:video.channel?.name??'',channelUrl:video.channel?.url??'',rating:own.rating,later:own.later,mark:own.mark??null,review:review?.text??null,hasReview:video.has_review??(review?.text!==null&&review?.text!==undefined),createdAt:video.listed_at??new Date(0).toISOString(),updatedAt:video.listed_at??new Date(0).toISOString()};
  }
  return {
+  recover:after=>exclusive(async()=>{
+   const scope=await actor(),prefix=`yp-operation-v1:${scope.owner}:`;
+   const page=await storage.entries(prefix,{after:after??null,limit:12});let sent=0,blocked=0;
+   for(const [slot,pending] of page.items){
+    await check(scope);
+    const operation=pending?.operation,target=pending?.target;
+    const supported=['addObservedVideo','patchVideoState','putVideoReview'].includes(operation);
+    const validTarget=typeof target==='string'&&(operation==='addObservedVideo'?/^[\w-]{11}$/.test(target):/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(target));
+    if(!supported||!validTarget||slot!==prefix+operation+':'+target||pending.version!==1||pending.owner!==scope.owner||pending.epoch!==scope.epoch||pending.state!=='pending'){blocked++;continue;}
+    let intent;try{intent=JSON.parse(pending.fingerprint);}catch{blocked++;continue;}
+    if(JSON.stringify(intent)!==pending.fingerprint){blocked++;continue;}
+    await durable(operation,target,intent,scope,async()=>{throw new BackendError('reconcile_required');});sent++;
+   }
+   await check(scope);return {sent,blocked,next:page.next};
+  }),
   current:youtubeId=>exclusive(async()=>{const scope=await actor(),video=await card(youtubeId,scope);if(!video){await check(scope);return {videos:{}};}const {review}=await request('getVideoReview',{path:{id:video.id}},scope);await check(scope);return {videos:{[youtubeId]:dto(video,review)}};}),
   library:after=>exclusive(async()=>{const scope=await actor(),page=await request('listWatchlist',{query:{limit:12,...(after?{after}:{})}},scope);await check(scope);return {videos:Object.fromEntries(page.items.map(video=>[video.youtube_video_id,dto(video)])),next:page.next_cursor??null};}),
   update:(video,patch)=>exclusive(async()=>{

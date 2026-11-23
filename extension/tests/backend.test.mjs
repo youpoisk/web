@@ -6,7 +6,7 @@ const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:
 function fixture(){
  let state={revision:1,rating:null,added:true,later:false},review={revision:4,text:'Existing review'},exists=true,lose=false,failClear=false,who=owner,scope=epoch,seq=1,switchAt=0,authorizations=0,badReviewTarget=false;
  const db=new Map(),receipts=new Map(),writes=[];
- const storage={async commit(entries){if(failClear){failClear=false;throw Error('disk');}for(const [key,value]of entries)db.set(key,structuredClone(value));},async read(key){return structuredClone(db.get(key)??null)},async write(value,key){if(value===null&&failClear){failClear=false;throw Error('disk');}db.set(key,structuredClone(value));}};
+ const storage={async entries(prefix,{after=null,limit=12}={}){const rows=[...db].filter(([k,v])=>k.startsWith(prefix)&&v&&(!after||k>after)).sort(([a],[b])=>a.localeCompare(b));return {items:structuredClone(rows.slice(0,limit)),next:rows.length>limit?rows[limit-1][0]:null};},async commit(entries){if(failClear){failClear=false;throw Error('disk');}for(const [key,value]of entries)db.set(key,structuredClone(value));},async read(key){return structuredClone(db.get(key)??null)},async write(value,key){if(value===null&&failClear){failClear=false;throw Error('disk');}db.set(key,structuredClone(value));}};
  const session={async status(){return {state:'authenticated',owner:who,epoch:scope}},async authorize(fn){if(++authorizations===switchAt)who='00000000-0000-4000-8000-000000000005';return fn('opaque',{owner:who,epoch:scope})}};
  const card=()=>({id,youtube_video_id:yt,title:'Real video',duration_seconds:null,availability:'unknown',url:'https://www.youtube.com/watch?v='+yt,preview_url:'https://i.ytimg.com/vi/'+yt+'/hqdefault.jpg',hashtags:[],hashtags_observation_status:'unknown',channel:null,rating:{count:0,average:null},my_state:state});
  const result=()=>({kind:'video_state',target_id:id,state,change_seq:seq});
@@ -50,3 +50,14 @@ test('scope switch between card and review or before final DTO cannot leak mixed
 });
 
 test('schema-valid response for another review target is rejected before producing a DTO',async()=>{const f=fixture();f.badReview();await assert.rejects(f.create().current(f.video.id),e=>e.kind==='protocol');assert.equal(f.writes.length,0);});
+
+test('restart recovery enumerates and replays the exact durable command without another user click',async()=>{
+ const f=fixture();f.lose();await assert.rejects(f.create().update(f.video,{rating:9}));const result=await f.create().recover();assert.deepEqual(result,{sent:1,blocked:0,next:null});assert.deepEqual(f.writes[0],f.writes[1]);assert.equal((await f.create().current(yt)).videos[yt].rating,9);assert.equal((await f.create().recover()).sent,0);
+});
+test('recovery retains other accounts, old epochs and corrupt records without sending them',async()=>{
+ const f=fixture();f.lose();await assert.rejects(f.create().update(f.video,{later:true}));f.switchEpoch();assert.equal((await f.create().recover()).blocked,1);assert.equal(f.writes.length,1);f.switchOwner();assert.deepEqual(await f.create().recover(),{sent:0,blocked:0,next:null});assert.equal(f.writes.length,1);assert.ok([...f.db].some(([k,v])=>k.startsWith('yp-operation-v1:')&&v));
+ const g=fixture();g.db.set('yp-operation-v1:'+owner+':patchVideoState:'+id,{version:1,owner,epoch,operation:'unknown',target:id,state:'pending'});assert.equal((await g.create().recover()).blocked,1);assert.equal(g.writes.length,0);
+});
+test('recovery acknowledgement failure retains original command and a second recovery uses its receipt',async()=>{
+ const f=fixture();f.lose();await assert.rejects(f.create().update(f.video,{review:'Recover me'}));f.failClear();await assert.rejects(f.create().recover());assert.equal((await f.create().recover()).sent,1);assert.deepEqual(f.writes[0],f.writes[2]);
+});
