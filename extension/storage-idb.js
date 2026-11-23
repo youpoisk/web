@@ -24,6 +24,16 @@ globalThis.YPStorageIDB=(()=>{
    request.onerror=()=>reject(request.error);
   });
  }
+ async function entries(prefix,{after=null,limit=12}={}){
+  if(typeof prefix!=='string'||!/^yp-operation-v1:[^:]+:$/.test(prefix)||!Number.isInteger(limit)||limit<1||limit>100||after!==null&&(typeof after!=='string'||!after.startsWith(prefix)))throw new Error('Invalid queue page');
+  const db=await open();return new Promise((resolve,reject)=>{
+   const tx=db.transaction(STORE,'readonly'),items=[];let next=null;
+   const range=IDBKeyRange.bound(after??prefix,prefix+'\uffff',after!==null,false);
+   const cursor=tx.objectStore(STORE).openCursor(range);
+   cursor.onsuccess=()=>{const row=cursor.result;if(!row)return;if(row.value!==null){if(items.length===limit){next=items.at(-1)[0];return;}items.push([row.key,row.value]);}row.continue();};
+   tx.oncomplete=()=>resolve({items,next});tx.onabort=()=>reject(tx.error??new Error('Queue read aborted'));tx.onerror=()=>reject(tx.error);
+  });
+ }
  async function write(state,key=KEY){
   const db=await open();
   return await new Promise((resolve,reject)=>{
@@ -54,7 +64,7 @@ globalThis.YPStorageIDB=(()=>{
  }
  function accountStore(source=async()=>[]){
   const ready=Promise.resolve().then(source).then(migrate);ready.catch(()=>{});
-  return {async read(key){await ready;return read(key)},async write(value,key){await ready;return write(value,key)},async commit(entries){await ready;return commit(entries)}};
+  return {async entries(prefix,options){await ready;return entries(prefix,options)},async read(key){await ready;return read(key)},async write(value,key){await ready;return write(value,key)},async commit(entries){await ready;return commit(entries)}};
  }
- return {read,write,commit,migrate,accountStore};
+ return {read,write,entries,commit,migrate,accountStore};
 })();

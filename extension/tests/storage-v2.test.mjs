@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {IDBFactory,IDBObjectStore} from 'fake-indexeddb';
-function idb(){const context={indexedDB:new IDBFactory()};vm.createContext(context);vm.runInContext(readFileSync(new URL('../storage-idb.js',import.meta.url),'utf8'),context);return context.YPStorageIDB;}
+import {IDBFactory,IDBObjectStore,IDBKeyRange} from 'fake-indexeddb';
+function idb(){const context={indexedDB:new IDBFactory(),IDBKeyRange};vm.createContext(context);vm.runInContext(readFileSync(new URL('../storage-idb.js',import.meta.url),'utf8'),context);return context.YPStorageIDB;}
 test('v2 migration is atomic, repeatable and never overwrites newer IDB values or legacy data',async()=>{
  const s=idb();const legacy={version:1,videos:{old:{rating:7}}};await s.write(legacy,'yp-library-v1');await s.write({key:'new'},'yp-operation-v1:existing');await s.migrate([['yp-operation-v1:existing',{key:'old'}],['yp-operation-v1:copy',{key:'copy'}]]);assert.equal((await s.read('yp-layout-v2')).version,2);assert.equal((await s.read('yp-operation-v1:existing')).key,'new');assert.equal((await s.read('yp-operation-v1:copy')).key,'copy');assert.equal(JSON.stringify(await s.read('yp-library-v1')),JSON.stringify(legacy));await s.migrate([['yp-operation-v1:copy',{key:'do not repeat'}]]);assert.equal((await s.read('yp-operation-v1:copy')).key,'copy');
 });
@@ -32,4 +32,12 @@ test('canonical receipts never roll back a newer cached revision while pending r
 
 test('multiple receipts in one transaction keep the highest revision and corrupt cache cannot clear pending',async()=>{
  const s=idb(),key='yp-canonical-v2:owner:video_state:target';await s.commit([[key,{version:2,revision:9,value:{rating:9}}],[key,{version:2,revision:8,value:{rating:8}}]]);assert.equal((await s.read(key)).revision,9);await s.write({version:99,revision:10},key);await s.write({key:'operation'},'pending');await assert.rejects(s.commit([[key,{version:2,revision:11}],['pending',null]]));assert.equal((await s.read('pending')).key,'operation');
+});
+
+test('private outbox pages exclude auth, other accounts and acknowledged null rows',async()=>{
+ const s=idb(),prefix='yp-operation-v1:owner-A:';await s.write({refresh:'never return'},'yp-auth-v1');await s.write({owner:'B'},'yp-operation-v1:owner-B:one');
+ for(let i=0;i<15;i++)await s.write({owner:'A',index:i},prefix+String(i).padStart(2,'0'));
+ await s.write(null,prefix+'03');const account=s.accountStore();const first=await account.entries(prefix);assert.equal(first.items.length,12);assert.ok(first.next);assert.equal(first.items.some(([,v])=>v.index===3),false);
+ const second=await account.entries(prefix,{after:first.next});assert.equal(second.items.length,2);assert.equal(second.next,null);assert.equal(new Set([...first.items,...second.items].map(([key])=>key)).size,14);
+ assert.equal(JSON.stringify([...first.items,...second.items]).includes('never return'),false);await assert.rejects(account.entries('yp-auth-v1'));await assert.rejects(account.entries(prefix,{after:'yp-operation-v1:owner-B:one'}));await assert.rejects(account.entries(prefix,{limit:0}));
 });
