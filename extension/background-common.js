@@ -100,12 +100,13 @@ globalThis.YPWorker=(()=>{
       if(request.type==='CHANNEL_SET'){draft={rating:request.patch.rating,version:(draft?.version??0)+1};await storage.write(draft,key);}
       if(request.type==='CHANNEL_PREVIEW'||request.type==='CHANNEL_CONFIRM'){
        if(auth?.state!=='authenticated')throw Object.assign(Error('Authentication'),{kind:'authentication'});
+       if(!draft||draft.deleted)throw Object.assign(Error('Draft changed'),{kind:'preview_changed'});
        if(request.type==='CHANNEL_PREVIEW')return {draft,server:await backend.channelPreview(request.video.id),scope:auth.epoch};
        if(!draft||request.expected?.draftVersion!==draft.version)throw Object.assign(Error('Draft changed'),{kind:'preview_changed'});
        if(request.choice==='local')await backend.channelConfirm(request.video.id,request.expected.server,draft.rating);
-       if((await authState()).epoch!==auth.epoch)throw Object.assign(Error('Stale scope'),{kind:'stale'});await storage.write(null,key);draft=null;
+       if((await authState()).epoch!==auth.epoch)throw Object.assign(Error('Stale scope'),{kind:'stale'});await storage.write({rating:null,version:draft.version+1,deleted:true},key);draft=null;
       }
-      return {draft,scope:auth?.epoch??null};
+      return {draft:draft?.deleted?null:draft,scope:auth?.epoch??null};
      }
      if(request.type==='QUEUE_RESUME'||request.type==='QUEUE_DISCARD'){
       if(auth?.state!=='authenticated'||request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});

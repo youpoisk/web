@@ -8,7 +8,7 @@ function worker({scheduler=false}={}){let currentUrl=page.url,loginRound=0,liste
  if(scheduler){context.api.alarms={create(name,options){events.created={name,options}},onAlarm:{addListener(fn){events.alarm=fn}}};context.api.runtime.onStartup={addListener(fn){events.startup=fn}};context.api.runtime.onInstalled={addListener(fn){events.installed=fn}};context.api.windows={onFocusChanged:{addListener(fn){events.focus=fn}}};}
  context.storage={async read(key){return structuredClone(key?drafts.get(key)??null:legacy)},async write(v,key){if(key)drafts.set(key,structuredClone(v));else legacy=structuredClone(v)}};
  context.session={async peek(){return structuredClone(auth)},async status(){return structuredClone(auth)},async login(){calls++;auth={state:'authenticated',owner:'owner',epoch:loginRound++===0?'epoch-a':'epoch-b',user:{id:'owner',login:'qa_owner',name:'QA'}};return auth},async logout(){calls++;auth={state:'guest',owner:null,epoch:null,user:null};return auth}};
- context.backend={async previewImport(inputs,next){importInputs=structuredClone(inputs);return {scope:auth.epoch,id:'11111111-1111-4111-8111-111111111111',rows:inputs,next}},async importStatus(){return {scope:auth.epoch,rows:[]}},async commitImport(){return {scope:auth.epoch,rows:[]}},async pendingLibrary(){return {videos:{},pendingVideos:{[yt]:{id:yt,title:'Pending',url:'https://www.youtube.com/watch?v='+yt,later:true,pending:true}},pendingNext:null}},async recover(){recoveries++;return {sent:0,blocked:0,next:null}},async queueStatus(){return structuredClone(queue)},async discardPending(){queue={pending:0,blocked:0}},async resumePending(){},
+ context.backend={async channelPreview(){return {channelId:'confirmed',uc:'UCabcdefghijklmnopqrstuv',revision:1,rating:3}},async channelConfirm(){calls++},async previewImport(inputs,next){importInputs=structuredClone(inputs);return {scope:auth.epoch,id:'11111111-1111-4111-8111-111111111111',rows:inputs,next}},async importStatus(){return {scope:auth.epoch,rows:[]}},async commitImport(){return {scope:auth.epoch,rows:[]}},async pendingLibrary(){return {videos:{},pendingVideos:{[yt]:{id:yt,title:'Pending',url:'https://www.youtube.com/watch?v='+yt,later:true,pending:true}},pendingNext:null}},async recover(){recoveries++;return {sent:0,blocked:0,next:null}},async queueStatus(){return structuredClone(queue)},async discardPending(){queue={pending:0,blocked:0}},async resumePending(){},
   async current(id){return {videos:{[id]:{id,title:'Server',rating:8,later:true,review:'Server review'}}};},
   async library(){return {videos:{[yt]:{id:yt,title:'Server',rating:8,later:true}},next:'next-page'};},
   async update(video,patch){calls++;return {videos:{[video.id]:{...video,...patch}}};}
@@ -79,4 +79,11 @@ test('channel pending scores are trusted-only and isolated between guest, accoun
  assert.equal((await w.send({type:'YP_CHANNEL_SET',video,patch:{rating:9},scope:null})).ok,false);
  assert.equal((await w.send({type:'YP_CHANNEL_SET',video,patch:{rating:9},scope:'epoch-a'})).data.draft.rating,9);
  await w.send({type:'YP_AUTH_LOGOUT',scope:'epoch-a',pendingAction:'keep'});assert.equal((await get()).data.draft.rating,7);
+});
+
+test('an old channel preview cannot confirm a recreated draft with the same former score version',async()=>{
+ const w=worker(),video={id:yt,title:'Video',channelUrl:'https://www.youtube.com/@author'};await w.send({type:'YP_AUTH_LOGIN',login:'owner',password:'secret'});
+ await w.send({type:'YP_CHANNEL_SET',video,patch:{rating:7},scope:'epoch-a'});const preview=(await w.send({type:'YP_CHANNEL_PREVIEW',video,scope:'epoch-a'})).data;
+ const expected={draftVersion:preview.draft.version,server:preview.server};await w.send({type:'YP_CHANNEL_CONFIRM',video,scope:'epoch-a',choice:'server',expected});
+ await w.send({type:'YP_CHANNEL_SET',video,patch:{rating:9},scope:'epoch-a'});const before=w.calls();assert.equal((await w.send({type:'YP_CHANNEL_CONFIRM',video,scope:'epoch-a',choice:'local',expected})).ok,false);assert.equal(w.calls(),before);assert.equal((await w.send({type:'YP_CHANNEL_GET',video,scope:'epoch-a'})).data.draft.rating,9);
 });

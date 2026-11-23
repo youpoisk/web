@@ -320,3 +320,6 @@ Follow-up reviewer PASS: оба P2 закрыты в70bfd25/b70eac1, новых 
 
 ### Спорные вопросы — DEC-EXT-019-ALIAS
 Вопрос: как не смешать pending при reuse handle/одинаковых именах? Выбран консервативный ключ owner+videoID+каноническая ссылка канала, не глобальный handle. Причина: без provider proof разные видео не доказывают одного автора. После подтверждения перенос возможен только к текущему authoritative publisher; гостевые drafts не перескакивают в аккаунт. Server-side provider verification не подменяется DOM claim.
+
+### EXT-019 — review fix: draft ABA
+Reviewer P2: очистка→новый draft повторяли version1, старый preview мог подтвердить не показанную оценку. Теперь очистка сохраняет monotonic tombstone (version+1), новый draft продолжает revision; удалённый draft не доступен для preview/confirm. Regression старого preview после clear/recreate отклоняется до API и не удаляет новый draft. Coverage gate PASS.
