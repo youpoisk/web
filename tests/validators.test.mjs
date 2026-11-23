@@ -11,7 +11,7 @@ test('every pinned operation has runtime request/response validators', () => {
   const spec = JSON.parse(readFileSync(new URL('../contracts/openapi.json', import.meta.url)));
   const operations = Object.entries(spec.paths).flatMap(([path, methods]) =>
     Object.entries(methods).map(([method, operation]) => ({ path, method, operation })));
-  assert.equal(operations.length, 81);
+  assert.equal(operations.length, 82);
   assert.equal(Object.keys(validators.contract).length, operations.length);
   for (const { path, method, operation } of operations) {
     const actual = validators.contract[operation.operationId];
@@ -138,3 +138,4 @@ test('recommendation preference wire schema requires all fields and bounded uniq
  const value={expected_revision:1,show_site_recommendations:false,favorite_tags:['наука']};assert.equal(validators.putRecommendationPreferences_request(value),true);assert.equal(validators.putRecommendationPreferences_request({...value,favorite_tags:null}),false);assert.equal(validators.putRecommendationPreferences_request({...value,favorite_tags:['наука','наука']}),false);assert.equal(validators.putRecommendationPreferences_request({...value,favorite_tags:Array.from({length:21},(_,i)=>'tag'+i)}),false);assert.equal(validators.putRecommendationPreferences_request({...value,owner:uid}),false);
  const page={items:[],source:'site',enabled:true,preference_revision:0,updated_at:null,stale:true};assert.equal(validators.listSiteRecommendations_response_200(page),true);assert.equal(validators.listSiteRecommendations_response_200({...page,source:'friends'}),false);
 });
+
