@@ -3,7 +3,7 @@
 import {createSession} from '../extension/auth/session.mjs';
 import {createBackend} from '../extension/auth/backend.mjs';
 import {ApiClient} from '../src/shared/api/client.ts';
-const origin='http://127.0.0.1:18080',map=new Map(),storage={async read(k){return structuredClone(map.get(k)??null)},async write(v,k){map.set(k,structuredClone(v));}};
+const origin='http://127.0.0.1:18080',map=new Map(),storage={async commit(entries){for(const[k,v]of entries)map.set(k,structuredClone(v));},async read(k){return structuredClone(map.get(k)??null)},async write(v,k){map.set(k,structuredClone(v));}};
 const session=createSession({origin,store:{load:()=>storage.read('auth'),save:v=>storage.write(v,'auth')}});
 async function request(op,options={}){return session.authorize(async(token,scope)=>new ApiClient({baseUrl:origin,session:()=>({state:'authenticated',owner:scope.owner,epoch:scope.epoch,accessToken:token})}).request(op,options));}
 let video,oldState,oldReview;

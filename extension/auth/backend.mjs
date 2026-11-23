@@ -27,7 +27,8 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   try{
    const options={body:pending.body,header:{'Idempotency-Key':pending.key,'X-Offline-Lease':pending.lease},...(operation==='addObservedVideo'?{}:{path:{id:target}})};
    const result=await request(operation,options,scope);
-   await storage.write(null,slot);return result;
+   const value=result.state??result.review;
+   await storage.commit([[`yp-canonical-v2:${scope.owner}:${result.kind}:${result.target_id}`,{version:2,owner:scope.owner,kind:result.kind,target:result.target_id,revision:value.revision,value}],[slot,null]]);return result;
   }catch(error){
    if(error instanceof ApiError&&error.kind==='http'&&[409,410,422].includes(error.status)){await storage.write({...pending,state:'conflict'},slot);throw new BackendError('reconcile_required');}
    throw error;

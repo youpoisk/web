@@ -72,7 +72,7 @@ test('firefox manifest uses an event page, no storage permission and the firefox
  assert.equal(manifest.manifest_version,3);
  assert.deepEqual(manifest.permissions,['activeTab'],'storage must not be granted to page/content contexts in Firefox');
  assert.equal(manifest.background.service_worker,undefined);
- assert.deepEqual(manifest.background.scripts,['config.js','core.js','storage-firefox.js','auth-worker.js','background-common.js','background.firefox.js']);
+ assert.deepEqual(manifest.background.scripts,['config.js','core.js','storage-idb.js','storage-firefox.js','auth-worker.js','background-common.js','background.firefox.js']);
  assert.equal(manifest.browser_specific_settings.gecko.id,'youpoisk-dev@local.invalid');
  assert.equal(manifest.content_scripts.length,1);assert.deepEqual(manifest.content_scripts[0].matches,['https://www.youtube.com/*']);
  const files=[...manifest.background.scripts,manifest.action.default_popup,manifest.options_page,...manifest.content_scripts[0].js,...manifest.content_scripts[0].css];for(const file of files)assert.ok(readFileSync(new URL('../'+file,import.meta.url)).length>0,file);
@@ -81,7 +81,7 @@ test('firefox manifest uses an event page, no storage permission and the firefox
 
 test('firefox IndexedDB store round-trips and replaces the whole library atomically',async()=>{
  const {IDBFactory}=await import('fake-indexeddb');
- const context={indexedDB:new IDBFactory(),structuredClone};vm.createContext(context);vm.runInContext(readFileSync(new URL('../storage-firefox.js',import.meta.url),'utf8'),context);
+ const context={indexedDB:new IDBFactory(),structuredClone};vm.createContext(context);vm.runInContext(readFileSync(new URL('../storage-idb.js',import.meta.url),'utf8'),context);vm.runInContext(readFileSync(new URL('../storage-firefox.js',import.meta.url),'utf8'),context);
  const storage=context.YPStorageFirefox,read=async()=>JSON.stringify(await storage.read()),same=value=>JSON.stringify(value);
  assert.equal(await storage.read(),null);
  await storage.write(core.empty());assert.equal(await read(),same(core.empty()));
@@ -96,7 +96,7 @@ test('firefox background event page serves the same commands through the injecte
  const browser={runtime:{id:'test-extension',getURL:page=>'moz-extension://test-extension/'+page,onMessage:{addListener(fn){listener=fn}},async sendMessage(){}},tabs:{async get(){return{url:currentUrl}},async query(){return[]},async sendMessage(){}}};
  const context={browser,indexedDB:new IDBFactory(),URL,structuredClone,console};
  vm.createContext(context);
- for(const file of ['config.js','core.js','storage-firefox.js','background-common.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);vm.runInContext('YPWorker.start({api:browser,storage:YPStorageFirefox})',context);
+ for(const file of ['config.js','core.js','storage-idb.js','storage-firefox.js','background-common.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);vm.runInContext('YPWorker.start({api:browser,storage:YPStorageFirefox})',context);
  const send=(command,sender={id:'test-extension',url:'moz-extension://test-extension/popup.html'})=>new Promise(resolve=>listener(command,sender,resolve));
  const page={id:'test-extension',tab:{id:1},frameId:0,url:'https://www.youtube.com/watch?v='+video.id};
  assert.equal((await send({type:'YP_UPDATE_CURRENT_VIDEO',video,patch:{rating:9}},page)).ok,true);

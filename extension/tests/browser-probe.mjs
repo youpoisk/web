@@ -18,7 +18,7 @@ export default async function browserProbe(report,originReport,options){
   const resumed=await active.status();if(resumed.owner!==signed.owner||resumed.epoch!==signed.epoch)throw Error('Restored wrong owner');
   result.stage='read';
   card=await api('/v1/videos/by-youtube/p0iTgHMEoi4');originalState=(await api('/v1/me/videos/'+card.id+'/state')).state;originalReview=(await api('/v1/me/videos/'+card.id+'/review')).review;
-  const backend=YPAuth.createBackend({session:active,storage:YPStorageFirefox,origin:YPConfig.apiOrigin});
+  const backend=YPAuth.createBackend({session:active,storage:accountStorage,origin:YPConfig.apiOrigin});
   result.stage='write';const rating=originalState.rating===8?9:8;
   await backend.update({id:card.youtube_video_id,title:card.title},{rating});
   await backend.update({id:card.youtube_video_id,title:card.title},{review:'Проверка сохранения из Firefox.'});

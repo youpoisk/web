@@ -176,3 +176,5 @@ EXT004/005 onlinevertical: popupформавхода/выхода,worker-onlyacc
 - [x] EXT-004 onlineaccountintegration: popupвход/выход, workercredentials,независимаяnativeсессия,realFirefoxAPIread/write +restoreQA/logoutPASS.9cb89df4-c00f-4717-9821-a9350fcebee8 точныйdev-originвашегоFirefoxразрешёнbackend6c0de4b. При сменеUUIDнужнаобновлённаяdevallowlist, wildcardнеиспользуется.
 - [x] EXT-005: durableattemptUUID/proofдоrefreshPOST,exactretryприlostresponse/storecommit,owner/sessionbound,31+unit/replaytestsиrealFirefoxIDBrefreshrestorePASS. Истечение/отзывостанавливаетсерверныекоманды.
 EXT006/008/009далее: fullversionedaccountcache/durablequeueenumeration, offlinepull/reconcileUI. СейчасonlineкомандыужеидутнаAPI,ноofflineMVPещёнезакрыт.
+
+EXT006implemented: markerlayoutv2+sharedextensionoriginIDB,oldChromeoutboxcopiedatomicallyonce,legacy/authnevercopiedintocontent. Cachecanonicalstate/review+pendingackoneTX;quotaabort/retry/idempotentmigration/versionguards52testsPASS;realFirefoxsmokePASS. No silentlegacyimport/accountnamespacechange. Awaitindependentreviewbeforeclosing.

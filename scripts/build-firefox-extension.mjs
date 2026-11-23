@@ -11,7 +11,7 @@ const source = resolve(root, 'extension');
 const out = resolve(root, '.artifacts/firefox-extension', randomUUID());
 const files = [
   'config.js', 'core.js', 'bridge.js', 'content.js', 'content.css',
-  'auth-worker.js', 'background-common.js', 'storage-firefox.js', 'background.firefox.js',
+  'auth-worker.js', 'background-common.js', 'storage-idb.js', 'storage-firefox.js', 'background.firefox.js',
   'popup.html', 'popup.js', 'options.html', 'options.js',
   'extension.css', 'assets'
 ];

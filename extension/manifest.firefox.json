@@ -10,6 +10,7 @@
     "scripts": [
       "config.js",
       "core.js",
+      "storage-idb.js",
       "storage-firefox.js",
       "auth-worker.js",
       "background-common.js",
