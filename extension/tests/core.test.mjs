@@ -138,3 +138,7 @@ test('runtime validates exact trusted documents, strict shapes and current top f
 test('saved library records become metadata-only popup commands and preserve null/false patches',async()=>{
  const w=worker();await w.send({type:'YP_UPDATE_CURRENT_VIDEO',video,patch:{rating:8,later:true,review:'My review'}});const saved=(await w.send({type:'YP_GET_ACCOUNT_LIBRARY'})).data.videos[video.id];assert.ok(saved.updatedAt);const response=await w.send({type:'YP_UPDATE_CURRENT_VIDEO',video:core.metadata(saved),patch:{rating:null,later:false}});assert.equal(response.ok,true);assert.equal(response.data.videos[video.id].rating,null);assert.equal(response.data.videos[video.id].later,false);assert.equal(response.data.videos[video.id].review,'My review');
 });
+
+test('deferred deletion sends nothing before five seconds and cancellation suppresses the callback',()=>{
+ let task,delay,cleared=0,effects=0;const schedule=(callback,ms)=>{task=callback;delay=ms;return 1};const cancel=core.deferDelete(()=>effects++,schedule,()=>cleared++);assert.equal(delay,5000);assert.equal(effects,0);cancel();task();assert.equal(effects,0);assert.equal(cleared,1);const late=core.deferDelete(()=>effects++,schedule,()=>cleared++);task();assert.equal(effects,1);late();task();assert.equal(effects,1);
+});

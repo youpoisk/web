@@ -10,10 +10,11 @@ globalThis.YPWorker=(()=>{
    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!allowed.includes(k))||required.some(k=>!Object.hasOwn(value,k)))throw Error('Некорректная команда');
   }
   function validate(command){
-   fields(command,['type','videoId','video','patch','options','login','password','after','scope','ref','choice','expected','id','choices'],['type']);
-   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],GET_PENDING_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope'],QUEUE_CONFLICTS:['type','after'],QUEUE_RESOLVE:['type','scope','ref','choice','expected'],IMPORT_PREVIEW:['type','after','scope'],IMPORT_STATUS:['type','id'],IMPORT_COMMIT:['type','id','choices','scope']};
+   fields(command,['type','videoId','video','patch','options','login','password','after','scope','ref','choice','expected','id','choices','pendingAction'],['type']);
+   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],GET_PENDING_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type','scope','pendingAction'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope'],QUEUE_CONFLICTS:['type','after'],QUEUE_RESOLVE:['type','scope','ref','choice','expected'],IMPORT_PREVIEW:['type','after','scope'],IMPORT_STATUS:['type','id'],IMPORT_COMMIT:['type','id','choices','scope'],QUEUE_RESUME:['type','scope'],QUEUE_DISCARD:['type','scope']};
    if(!Object.hasOwn(shapes,command.type))throw Error('Неизвестная команда');
-   fields(command,shapes[command.type],shapes[command.type].filter(k=>!['after','scope'].includes(k)&&!(command.type==='IMPORT_STATUS'&&k==='id')));
+   fields(command,shapes[command.type],shapes[command.type].filter(k=>!['after','scope','pendingAction'].includes(k)&&!(command.type==='IMPORT_STATUS'&&k==='id')));
+   if(command.pendingAction!==undefined&&!['sync','keep','discard'].includes(command.pendingAction))throw Error('Некорректное действие с очередью');
    if(command.after!==undefined&&(typeof command.after!=='string'||command.after.length>512))throw Error('Некорректный курсор');
    if(command.type==='GET_CURRENT_VIDEO_STATE'&&!/^[\w-]{11}$/.test(command.videoId))throw Error('Некорректный ID видео');
    if(command.type==='IMPORT_COMMIT'&&(!Array.isArray(command.choices)||command.choices.length>12||command.choices.some(value=>!['server','local'].includes(value))))throw Error('Некорректный выбор импорта');
@@ -84,10 +85,15 @@ globalThis.YPWorker=(()=>{
      let access=await authorize(request,sender);
      if(request.type.startsWith('AUTH_')){
       if(!session)throw Error('Авторизация недоступна');
+      if(request.type==='AUTH_LOGOUT'&&backend?.queueStatus){const auth=await authState();if(request.scope!==undefined&&request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});if(auth.state==='authenticated'){let queue=await backend.queueStatus();if(queue.pending+queue.blocked>0){if(request.scope!==auth.epoch||!['sync','keep','discard'].includes(request.pendingAction))throw Object.assign(new Error('Choose pending action'),{kind:'pending_choice_required'});if(request.pendingAction==='discard')await backend.discardPending();if(request.pendingAction==='sync'){for(let page=0;page<10;page++){const result=await backend.recover();if(!result.next)break;}queue=await backend.queueStatus();if(queue.pending+queue.blocked>0)throw Object.assign(new Error('Queue not sent'),{kind:'pending_choice_required'});}}}}
       const result=request.type==='AUTH_LOGIN'?await session.login(request.login,request.password):request.type==='AUTH_LOGOUT'?await session.logout():await authState();
       if(request.type!=='AUTH_STATUS')broadcast().catch(()=>{});return result;
      }
      let state=await read();const auth=session?await authState():null;
+     if(request.type==='QUEUE_RESUME'||request.type==='QUEUE_DISCARD'){
+      if(auth?.state!=='authenticated'||request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});
+      if(request.type==='QUEUE_RESUME'){await backend.resumePending();wake();}else await backend.discardPending();broadcast().catch(()=>{});return {...await backend.queueStatus(),scope:auth.epoch};
+     }
      if(request.type.startsWith('IMPORT_')){
       if(auth?.state!=='authenticated')throw Object.assign(new Error('Authentication required'),{kind:'authentication'});
       if(request.type==='IMPORT_STATUS')return backend.importStatus(request.id);
@@ -127,7 +133,7 @@ globalThis.YPWorker=(()=>{
      return project({...state,auth},access);
     });
     writes=operation.catch(()=>{});if(request.type==='GET_ACCOUNT_LIBRARY'||request.type==='AUTH_LOGIN')operation.finally(wake).catch(()=>{});return await operation;
-   })().then(data=>respond({ok:true,data}),error=>respond({ok:false,error:error?.kind==='retry_later'?'Команда ожидает повторной отправки.':error?.kind==='authentication'?'Войдите в аккаунт расширения.':error?.kind==='reconcile_required'?'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.':'Не удалось выполнить действие. Проверьте текущую страницу, вход и соединение.'}));
+   })().then(data=>respond({ok:true,data}),error=>respond({ok:false,error:error?.kind==='pending_choice_required'?'В очереди есть изменения. Выберите отправку, сохранение на устройстве или удаление очереди.':error?.kind==='retry_later'?'Команда ожидает повторной отправки.':error?.kind==='authentication'?'Войдите в аккаунт расширения.':error?.kind==='reconcile_required'?'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.':'Не удалось выполнить действие. Проверьте текущую страницу, вход и соединение.'}));
    return true;
   });
  }

@@ -55,5 +55,8 @@
     delete next.channels;
     return next;
   }
-  globalThis.YPCore={empty,videoId,channelUrl,metadata,options,apply};
+  function deferDelete(action,schedule=(callback,ms)=>setTimeout(callback,ms),clear=timer=>clearTimeout(timer)){
+    let active=true;const timer=schedule(()=>{if(!active)return;active=false;action();},5000);return()=>{active=false;clear(timer);};
+  }
+  globalThis.YPCore={empty,videoId,channelUrl,metadata,options,apply,deferDelete};
 })();

@@ -150,6 +150,8 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   if(row.review!==null){if(!await marker(row.keys.review))await durable('putVideoReview',target,{text:row.review},scope,async()=>({expected_revision:row.reviewRevision,text:row.review}),null,row.keys.review);row.reviewDone=true;}
  }
  return {
+  resumePending:()=>exclusive(async()=>{const scope=await actor();return storage.mutateQueue(scope.owner,scope.epoch,'resume');}),
+  discardPending:()=>exclusive(async()=>{const scope=await actor();return storage.mutateQueue(scope.owner,scope.epoch,'discard');}),
   pendingLibrary:after=>exclusive(async()=>{const scope=await actor();return {videos:{},...await pendingPage(scope,after)};}),
   previewImport:(inputs,next=null)=>exclusive(async()=>{
    const scope=await actor();if(!Array.isArray(inputs)||inputs.length>12)throw new BackendError('input');const rows=[];
@@ -192,10 +194,10 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    await durable(row.operation,row.target,local,scope,async()=>{throw new BackendError('reconcile_required');});
   }),
   queueStatus:()=>exclusive(async()=>{
-   const scope=await actor(),prefix=`yp-operation-v1:${scope.owner}:`;let after=null,pending=0,blocked=0,nextAttemptAt=null,pages=0;
-   do{const page=await storage.entries(prefix,{after,limit:12});for(const [,row]of page.items){if(row.owner!==scope.owner||row.epoch!==scope.epoch||row.state!=='pending')blocked++;else{pending++;const due=row.nextAttemptAt??0;if(Number.isFinite(due))nextAttemptAt=nextAttemptAt===null?due:Math.min(nextAttemptAt,due);}}after=page.next;}while(after&&++pages<10);
-   const intents=await storage.entries(`yp-intent-v1:${scope.owner}:`,{limit:12});for(const [,row]of intents.items){if(row.epoch===scope.epoch)pending++;else blocked++;}
-   await check(scope);return {pending,blocked,nextAttemptAt,more:!!after||!!intents.next,sync:await pull.status(scope)};
+   const scope=await actor(),prefix=`yp-operation-v1:${scope.owner}:`;let after=null,pending=0,blocked=0,retained=0,nextAttemptAt=null,pages=0;
+   do{const page=await storage.entries(prefix,{after,limit:12});for(const [,row]of page.items){if(row.owner!==scope.owner||row.epoch!==scope.epoch||row.state!=='pending'){blocked++;if(row.owner===scope.owner&&row.epoch!==scope.epoch)retained++;}else{pending++;const due=row.nextAttemptAt??0;if(Number.isFinite(due))nextAttemptAt=nextAttemptAt===null?due:Math.min(nextAttemptAt,due);}}after=page.next;}while(after&&++pages<10);
+   const intents=await storage.entries(`yp-intent-v1:${scope.owner}:`,{limit:12});for(const [,row]of intents.items){if(row.epoch===scope.epoch)pending++;else{blocked++;retained++;}}
+   await check(scope);return {pending,blocked,retained,nextAttemptAt,more:!!after||!!intents.next,sync:await pull.status(scope)};
   }),
   recover:after=>exclusive(async()=>{
    const scope=await actor(),prefix=`yp-operation-v1:${scope.owner}:`,cursorKey=`yp-recovery-v1:${scope.owner}`;

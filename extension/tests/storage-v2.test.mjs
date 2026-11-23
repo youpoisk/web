@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {IDBFactory,IDBObjectStore,IDBKeyRange} from 'fake-indexeddb';
+import {IDBFactory,IDBObjectStore,IDBKeyRange,IDBCursor} from 'fake-indexeddb';
 function idb(){const context={indexedDB:new IDBFactory(),IDBKeyRange};vm.createContext(context);vm.runInContext(readFileSync(new URL('../storage-idb.js',import.meta.url),'utf8'),context);return context.YPStorageIDB;}
 test('v2 migration is atomic, repeatable and never overwrites newer IDB values or legacy data',async()=>{
  const s=idb();const legacy={version:1,videos:{old:{rating:7}}};await s.write(legacy,'yp-library-v1');await s.write({key:'new'},'yp-operation-v1:existing');await s.migrate([['yp-operation-v1:existing',{key:'old'}],['yp-operation-v1:copy',{key:'copy'}]]);assert.equal((await s.read('yp-layout-v2')).version,2);assert.equal((await s.read('yp-operation-v1:existing')).key,'new');assert.equal((await s.read('yp-operation-v1:copy')).key,'copy');assert.equal(JSON.stringify(await s.read('yp-library-v1')),JSON.stringify(legacy));await s.migrate([['yp-operation-v1:copy',{key:'do not repeat'}]]);assert.equal((await s.read('yp-operation-v1:copy')).key,'copy');
@@ -55,4 +55,13 @@ test('bounded resumable generation GC keeps active/staging, other owners and all
  let passes=0,result;do{result=await s.accountStore().pruneGenerations(owner,{limit:3});passes++;assert.ok(passes<20)}while(!result.done);
  assert.ok(passes>1);for(let i=0;i<5;i++){assert.equal(await s.read(prefix+'old:video_review:'+i),null);assert.equal(await s.read(prefix+'abandoned:video_review:'+i),null);assert.equal((await s.read(prefix+'active:video_review:'+i)).text,'active');assert.equal((await s.read(prefix+'staging:video_review:'+i)).text,'staging');}
  assert.equal((await s.read(pending)).key,'original');assert.equal((await s.read(foreign)).text,'other');await s.commit([['yp-sync-v2:'+owner,{generation:'staging'}],['yp-sync-progress-v2:'+owner,null]]);do{result=await s.pruneGenerations(owner,{limit:3})}while(!result.done);assert.equal(await s.read(prefix+'active:video_review:0'),null);assert.equal((await s.read(prefix+'staging:video_review:0')).text,'staging');
+});
+
+test('explicit queue resume changes only own epoch; discard leaves source, receipts and other owners intact',async()=>{
+ const s=idb(),a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222',epoch='33333333-3333-4333-8333-333333333333';const op='yp-operation-v1:'+a+':state:target',intent='yp-intent-v1:'+a+':video:state',other='yp-operation-v1:'+b+':state:target',receipt='yp-receipt-v1:'+a+':key';const original={version:1,owner:a,epoch:'old',key:'original',body:{rating:8},lease:'original-lease',state:'pending'};await s.write(original,op);await s.write({version:1,owner:a,epoch:'old',patch:{rating:null}},intent);await s.write({owner:b,epoch:'old'},other);await s.write({revision:8},receipt);await s.write({version:1,videos:{original:true}},'yp-library-v1');
+ assert.equal(await s.accountStore().mutateQueue(a,epoch,'resume'),2);const rebound=await s.read(op);assert.equal(rebound.epoch,epoch);assert.equal(rebound.key,'original');assert.equal(rebound.lease,'original-lease');assert.equal(JSON.stringify(rebound.body),JSON.stringify(original.body));assert.equal((await s.read(other)).epoch,'old');assert.equal(await s.mutateQueue(a,epoch,'discard'),2);assert.equal(await s.read(op),null);assert.equal(await s.read(intent),null);assert.equal((await s.read(receipt)).revision,8);assert.equal((await s.read(other)).owner,b);assert.equal((await s.read('yp-library-v1')).videos.original,true);
+});
+
+test('resume quota failure rolls back all epoch changes and preserves original command bodies',async()=>{
+ const s=idb(),owner='11111111-1111-4111-8111-111111111111',epoch='33333333-3333-4333-8333-333333333333',keys=['yp-operation-v1:'+owner+':state:one','yp-intent-v1:'+owner+':video:state'];for(const key of keys)await s.write({version:1,owner,epoch:'old',body:{rating:8}},key);const update=IDBCursor.prototype.update;let writes=0;IDBCursor.prototype.update=function(...args){if(++writes===2)throw new DOMException('quota','QuotaExceededError');return update.apply(this,args)};try{await assert.rejects(s.mutateQueue(owner,epoch,'resume'));}finally{IDBCursor.prototype.update=update;}for(const key of keys){assert.equal((await s.read(key)).epoch,'old');assert.equal((await s.read(key)).body.rating,8);}
 });

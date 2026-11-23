@@ -1,7 +1,7 @@
 (() => {
   let current=null, state=null, timer=null, generation=0, navigating=false, busy=false, nativeSizeObserver=null;
   // Unsaved review text per video: survives re-renders (rating/watch-later updates, YP_CHANGED, DOM refresh).
-  const drafts=new Map();
+  const drafts=new Map(),pendingDeletes=new Map();
   function context(){
     if(navigating)return null;
     const id=YPCore.videoId(location.href);
@@ -15,17 +15,19 @@
   }
   function node(tag,text,className){const n=document.createElement(tag);if(text)n.textContent=text;if(className)n.className=className;return n;}
   function notify(text){const s=document.querySelector('#yp-panel .yp-status');if(s)s.textContent=text;}
+  function cancelDeletes(){for(const cancel of [...pendingDeletes.values()])cancel();}
+  function delayedDelete(button,action){if(pendingDeletes.has(button)){pendingDeletes.get(button)();return;}const scope=state?.auth?.scope,id=current?.id,original=button.textContent;let seconds=5;button.textContent='Отменить удаление (5 с)';button.classList.add('yp-deleting');const interval=setInterval(()=>{if(--seconds>0)button.textContent='Отменить удаление ('+seconds+' с)';},1000);const restore=()=>{clearInterval(interval);button.textContent=original;button.classList.remove('yp-deleting');pendingDeletes.delete(button);};const cancel=YPCore.deferDelete(()=>{restore();if(state?.auth?.scope===scope&&context()?.id===id)action();});pendingDeletes.set(button,()=>{cancel();restore();});}
   async function update(patch){
     if(busy)return false;
     const video=context();if(!video || video.id!==current?.id){schedule();return false;}
-    busy=true;document.querySelectorAll('#yp-panel button').forEach(b=>b.disabled=true);
+    cancelDeletes();busy=true;document.querySelectorAll('#yp-panel button').forEach(b=>b.disabled=true);
     try{const scope=state?.auth?.scope;const result=await YP.request('UPDATE',{video,patch,scope});if(state?.auth?.scope!==scope||result.auth?.scope!==scope)return false;state=result;if(!result.queued&&'review' in patch)drafts.delete(video.id);if(context()?.id===video.id){render();notify(result.queued?'Изменение ожидает отправки.':'Сохранено на сервере');}return !result.queued;}
     catch(e){notify(e.message);return false;}finally{busy=false;document.querySelectorAll('#yp-panel button').forEach(b=>b.disabled=false);}
   }
   function scores(panel,value){
     const row=node('div','', 'yp-scores');
     for(let i=1;i<=10;i++){const b=node('button',String(i),value===i?'yp-active':'');b.type='button';b.setAttribute('aria-label',`Оценка видео: ${i}`);b.setAttribute('aria-pressed',String(value===i));b.onclick=()=>update({rating:i});row.append(b);}
-    const clear=node('button','Сбросить');clear.type='button';clear.disabled=value==null;clear.onclick=()=>update({rating:null});row.append(clear);panel.append(row);
+    const clear=node('button','Сбросить');clear.type='button';clear.disabled=value==null;clear.onclick=()=>delayedDelete(clear,()=>update({rating:null}));row.append(clear);panel.append(row);
   }
   // «Неинтересно» / «Просмотрено» (YP-102) next to the rating; pressing the
   // active one again clears it.
@@ -59,7 +61,7 @@
     sync();nativeSizeObserver=new ResizeObserver(sync);nativeSizeObserver.observe(native);
   }
   function render(){
-    const host=menuHost();
+    cancelDeletes();const host=menuHost();
     if(!host||!current||!state)return;
     if(state.options.enabled===false){document.getElementById('yp-panel')?.remove();return;}
     const panel=node('div');panel.id='yp-panel';panel.setAttribute('aria-label','Действия YouPoisk');
@@ -80,9 +82,9 @@
     const write=node('button',saved.review?'✎ Моя рецензия':'✎ Написать рецензию','yp-review');write.type='button';write.setAttribute('aria-pressed',String(!!saved.review));write.setAttribute('aria-haspopup','dialog');
     const editor=node('div','', 'yp-rating-popover yp-review-popover');editor.id='yp-review-popover';editor.setAttribute('popover','auto');editor.setAttribute('role','dialog');editor.setAttribute('aria-label','Рецензия YouPoisk');
     const area=node('textarea');area.rows=6;area.value=drafts.get(current.id)??(saved.review||'');area.placeholder='Что вы думаете об этом видео? До 1000 символов.';area.setAttribute('aria-label','Текст рецензии');
-    const counter=node('small','', 'yp-counter');const video=current.id;const count=()=>{const n=[...area.value.trim()].length;counter.textContent=`${n}/1000`;counter.classList.toggle('yp-over',n>1000);};area.oninput=()=>{if(area.value===(saved.review||''))drafts.delete(video);else drafts.set(video,area.value);count();};count();
+    const counter=node('small','', 'yp-counter');const video=current.id;const count=()=>{const n=[...area.value.trim()].length;counter.textContent=`${n}/1000`;counter.classList.toggle('yp-over',n>1000);};area.oninput=()=>{cancelDeletes();if(area.value===(saved.review||''))drafts.delete(video);else drafts.set(video,area.value);count();};count();
     const keep=node('button','Сохранить рецензию','yp-primary');keep.type='button';keep.onclick=async()=>{const text=area.value;if(!text.trim()){notify('Рецензия не может быть пустой');return;}if(await update({review:text}))document.getElementById('yp-review-popover')?.hidePopover();};
-    const drop=node('button','Удалить рецензию');drop.type='button';drop.disabled=!saved.review;drop.onclick=async()=>{if(await update({review:null}))document.getElementById('yp-review-popover')?.hidePopover();};
+    const drop=node('button','Удалить рецензию');drop.type='button';drop.disabled=!saved.review;drop.onclick=()=>delayedDelete(drop,async()=>{if(await update({review:null}))document.getElementById('yp-review-popover')?.hidePopover();});
     const actions=node('div','', 'yp-actions');actions.append(keep,drop);
     editor.append(node('strong','YouPoisk'),node('p','Ваша рецензия на видео'),area,counter,actions,node('small','Оценка или рецензия попадут в «Рекомендации» ваших друзей и подписчиков после подключения аккаунта. Сейчас сохраняется на этом устройстве.'));
     const openEditor=focus=>{
@@ -93,7 +95,7 @@
     };
     write.onclick=()=>{if(editor.matches(':popover-open'))editor.hidePopover();else openEditor(true);};
     editor.addEventListener('toggle',()=>{write.setAttribute('aria-expanded',String(editor.matches(':popover-open')));});
-    const later=node('button',saved.later?'✓ Посмотрю позже':'＋ Посмотрю позже','yp-save');later.type='button';later.setAttribute('aria-pressed',String(!!saved.later));later.onclick=()=>update({later:!saved.later});
+    const later=node('button',saved.later?'✓ Посмотрю позже':'＋ Посмотрю позже','yp-save');later.type='button';later.setAttribute('aria-pressed',String(!!saved.later));later.onclick=()=>saved.later?delayedDelete(later,()=>update({later:false})):update({later:true});
     const status=node('div',saved.conflict?'Есть конфликт. Откройте значок расширения для сверки.':saved.pending?'Изменение ожидает отправки.':saved.offline||state.offline?'Нет связи. Показаны последние доступные данные.':'', 'yp-status');status.setAttribute('role','status');
     panel.append(rate,later,write,popover,editor,status);
     const old=document.getElementById('yp-panel');const reopen=!!old?.querySelector('#yp-review-popover:popover-open');const typing=old?.querySelector('#yp-review-popover textarea')===document.activeElement;if(old)old.replaceWith(panel);else {const likes=[...host.children].find(el=>el.matches('segmented-like-dislike-button-view-model, ytd-segmented-like-dislike-button-renderer')||el.querySelector('segmented-like-dislike-button-view-model, ytd-segmented-like-dislike-button-renderer'));if(likes)likes.after(panel);else host.prepend(panel);}matchNativeRatingButton(rate,host);
@@ -106,7 +108,7 @@
     catch(e){notify(e.message);}
   }
   function schedule(){clearTimeout(timer);timer=setTimeout(refresh,200);}
-  document.addEventListener('yt-navigate-start',()=>{navigating=true;generation++;current=null;nativeSizeObserver?.disconnect();document.getElementById('yp-panel')?.remove();});
+  document.addEventListener('yt-navigate-start',()=>{cancelDeletes();navigating=true;generation++;current=null;nativeSizeObserver?.disconnect();document.getElementById('yp-panel')?.remove();});
   document.addEventListener('yt-navigate-finish',()=>{navigating=false;schedule();});
   const observer=new MutationObserver(records=>{if(records.every(r=>r.target.closest?.('#yp-panel')))return;if(!document.getElementById('yp-panel') || document.getElementById('yp-panel')?.parentElement!==menuHost() || context()?.id!==current?.id)schedule();});
   observer.observe(document.body,{childList:true,subtree:true});

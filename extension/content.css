@@ -41,3 +41,5 @@ html[dark] #yp-panel{--yp-text:#f1f1f1;--yp-bg:#212121;--yp-chip:#353535;--yp-se
 #yp-panel .yp-mark-chip{margin-left:6px;font-size:.85em;opacity:.8}
 
 #yp-panel .yp-score-value{font-size:calc(1em + 2px);color:#1da1f2;font-weight:700}#yp-panel .yp-scores button{font-size:calc(1em + 2px)}
+
+#yp-panel .yp-deleting:before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:yp-delete-spin .8s linear infinite}@keyframes yp-delete-spin{to{transform:rotate(360deg)}}

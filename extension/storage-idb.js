@@ -73,9 +73,20 @@ globalThis.YPStorageIDB=(()=>{
    tx.oncomplete=()=>resolve({done,removed});tx.onabort=()=>reject(tx.error??new Error('Cache cleanup aborted'));tx.onerror=()=>reject(tx.error);
   });
  }
+ async function mutateQueue(owner,epoch,mode){
+  const uuid=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
+  if(!uuid.test(owner)||!uuid.test(epoch)||!['resume','discard'].includes(mode))throw new Error('Invalid queue choice');
+  const db=await open();return new Promise((resolve,reject)=>{
+   const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);let changed=0;
+   for(const type of ['operation','intent']){const prefix=`yp-${type}-v1:${owner}:`,request=store.openCursor(IDBKeyRange.bound(prefix,prefix+'\uffff'));
+    request.onsuccess=()=>{try{const row=request.result;if(!row)return;if(row.value!==null){if(mode==='discard'){row.delete();changed++;}else if(row.value.owner===owner&&row.value.version===1&&row.value.epoch!==epoch){row.update({...row.value,epoch});changed++;}}row.continue();}catch(error){tx.abort();reject(error);}};
+   }
+   tx.oncomplete=()=>resolve(changed);tx.onabort=()=>reject(tx.error??new Error('Queue choice aborted'));tx.onerror=()=>reject(tx.error);
+  });
+ }
  function accountStore(source=async()=>[]){
   const ready=Promise.resolve().then(source).then(migrate);ready.catch(()=>{});
-  return {async pruneGenerations(owner,options){await ready;return pruneGenerations(owner,options)},async entries(prefix,options){await ready;return entries(prefix,options)},async read(key){await ready;return read(key)},async write(value,key){await ready;return write(value,key)},async commit(entries){await ready;return commit(entries)}};
+  return {async mutateQueue(owner,epoch,mode){await ready;return mutateQueue(owner,epoch,mode)},async pruneGenerations(owner,options){await ready;return pruneGenerations(owner,options)},async entries(prefix,options){await ready;return entries(prefix,options)},async read(key){await ready;return read(key)},async write(value,key){await ready;return write(value,key)},async commit(entries){await ready;return commit(entries)}};
  }
- return {read,write,entries,commit,migrate,pruneGenerations,accountStore};
+ return {read,write,entries,commit,migrate,pruneGenerations,mutateQueue,accountStore};
 })();
