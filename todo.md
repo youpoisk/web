@@ -336,3 +336,6 @@ Reviewer follow-up d2cda48 PASS, P2 закрыт, новых MEDIUM+ нет. Ful
 
 ### EXT-020 — review closure и финальная проверка
 Reviewer PASS d46c398, MEDIUM+ нет. LOW учтён: политика/listing теперь отдельно описывают YouTube thumbnails i.ytimg.com, авторизованные API запросы идут только APIorigin. Актуальный полный gate PASS на d46c398: .artifacts/extension-verification/6581c3de-2fb5-4c59-aa52-22fa2a1b53f7 —124tests, auth100%line/functions (branches86.41%), contract/validators/bundle, cleanFirefox/MozillaLint, realauth/business/sync/import, FirefoxDOM/ACKloss/controlledstop. WebbuildPASS. Выпускная подготовка завершена в разрешённом scope, публикация по-прежнему не выполнялась.
+
+## Задачи заказчика — рекомендации сайта
+- [ ] **YP-091.U1 · Исполнитель: заказчик · Создать ключ YouTube Data API.** В Google Cloud включить YouTube Data API v3, создать API key с ограничением этим API; добавить только в локальный C:\repos\youpoisk-backend\.env как YOUTUBE_API_KEY=... и сообщить агенту о готовности. Ключ не присылать в чат и не коммитить. После подключения агент включает worker и проверяет живой сбор/квоту; до этого collector отключён, API/UI проверяются без ключа.
