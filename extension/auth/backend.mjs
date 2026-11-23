@@ -1,3 +1,4 @@
+import {createPull} from './sync.mjs';
 import * as schemas from '../../src/shared/api/validators.js';
 import {ApiClient,ApiError} from '../../src/shared/api/client.ts';
 export class BackendError extends Error{constructor(kind){super('Extension backend '+kind);this.kind=kind;}}
@@ -5,6 +6,7 @@ export class BackendError extends Error{constructor(kind){super('Extension backe
 export function createBackend({session,storage,origin,fetch,crypto=globalThis.crypto,now=Date.now,random=Math.random}){
  let tail=Promise.resolve();
  const exclusive=fn=>{const work=tail.then(fn);tail=work.catch(()=>{});return work;};
+ const pull=createPull({storage,request,check,now});
  async function request(operation,options={},expected){
   const result=await session.authorize(async(token,scope)=>{
    if(expected&&(scope.owner!==expected.owner||scope.epoch!==expected.epoch))throw new BackendError('stale');
@@ -38,7 +40,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    const options={body:pending.body,header:{'Idempotency-Key':pending.key,'X-Offline-Lease':pending.lease},...(operation==='addObservedVideo'?{}:{path:{id:target}})};
    const result=await request(operation,options,scope);
    const value=result.state??result.review;
-   await storage.commit([[`yp-canonical-v2:${scope.owner}:${result.kind}:${result.target_id}`,{version:2,owner:scope.owner,kind:result.kind,target:result.target_id,revision:value.revision,value}],[slot,null],[`yp-receipt-v1:${scope.owner}:${pending.key}`,{revision:value.revision,target:result.target_id,kind:result.kind}]]);return result;
+   await storage.commit([[`yp-canonical-v2:${scope.owner}:${result.kind}:${result.target_id}`,{version:2,owner:scope.owner,kind:result.kind,target:result.target_id,revision:value.revision,value,changeSeq:result.change_seq}],[slot,null],[`yp-receipt-v1:${scope.owner}:${pending.key}`,{revision:value.revision,target:result.target_id,kind:result.kind}]]);return result;
   }catch(error){
    if(error instanceof ApiError&&error.kind==='http'){
     if(error.status===429||error.status>=500){const until=Math.max(pending.nextAttemptAt,now()+(error.retryAfterSeconds??0)*1000);if(error.status===429)await storage.commit([[slot,{...pending,nextAttemptAt:until}],[`yp-rate-limit-v1:${scope.owner}`,{until}]]);else await storage.write({...pending,nextAttemptAt:until},slot);}
@@ -59,7 +61,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   if(existing&&existing.epoch!==scope.epoch)throw new BackendError('reconcile_required');
   const cached=await storage.read(`yp-snapshot-v1:${scope.owner}:${video.id}`),target=cached?.video.id;
   const operation=review?'putVideoReview':'patchVideoState',pending=target?await storage.read(`yp-operation-v1:${scope.owner}:${operation}:${target}`):null;
-  const canonical=target?await storage.read(`yp-canonical-v2:${scope.owner}:${review?'video_review':'video_state'}:${target}`):null;
+  const canonical=target?await pull.read(scope,review?'video_review':'video_state',target):null;
   const revisions=[canonical?.revision,review?cached?.review.revision:cached?.video.my_state.revision].filter(Number.isSafeInteger),revision=revisions.length?Math.max(...revisions):null;
   const row={version:1,owner:scope.owner,epoch:scope.epoch,video,patch:{...(existing?.patch??{}),...patch},baseRevision:existing?.baseRevision??revision,createdAt:existing?.createdAt??now(),...(pending?{predecessor:pending.key}:{})};
   if(!review){if(patch.mark==='not_interested')row.patch.later=false;else if(patch.later===true&&row.patch.mark==='not_interested')row.patch.mark=null;}
@@ -117,6 +119,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   return {id:video.youtube_video_id,title:video.title??'Видео YouTube',url:video.url,preview:video.preview_url,channel:video.channel?.name??'',channelUrl:video.channel?.url??'',rating:own.rating,later:own.later,mark:own.mark??null,review:review?.text??null,hasReview:video.has_review??(review?.text!==null&&review?.text!==undefined),createdAt:video.listed_at??new Date(0).toISOString(),updatedAt:video.listed_at??new Date(0).toISOString()};
  }
  return {
+  pull:()=>exclusive(async()=>{const scope=await actor();return pull.step(scope);}),
   conflicts:after=>exclusive(async()=>{
    const scope=await actor(),page=await storage.entries(`yp-operation-v1:${scope.owner}:`,{after:after??null,limit:12}),items=[];
    for(const [ref,row]of page.items){if(row.state==='pending'&&row.epoch===scope.epoch)continue;try{const {local,value,video}=await conflictRecord(ref,scope);items.push({ref,operation:row.operation,title:video.title,local,server:value,status:row.errorStatus??null,expected:{revision:value.revision,key:row.key,intent:JSON.stringify(local)}});}catch(error){if(error.kind==='invalid_reference')continue;throw error;}}
@@ -138,7 +141,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    const scope=await actor(),prefix=`yp-operation-v1:${scope.owner}:`;let after=null,pending=0,blocked=0,nextAttemptAt=null,pages=0;
    do{const page=await storage.entries(prefix,{after,limit:12});for(const [,row]of page.items){if(row.owner!==scope.owner||row.epoch!==scope.epoch||row.state!=='pending')blocked++;else{pending++;const due=row.nextAttemptAt??0;if(Number.isFinite(due))nextAttemptAt=nextAttemptAt===null?due:Math.min(nextAttemptAt,due);}}after=page.next;}while(after&&++pages<10);
    const intents=await storage.entries(`yp-intent-v1:${scope.owner}:`,{limit:12});for(const [,row]of intents.items){if(row.epoch===scope.epoch)pending++;else blocked++;}
-   await check(scope);return {pending,blocked,nextAttemptAt,more:!!after||!!intents.next};
+   await check(scope);return {pending,blocked,nextAttemptAt,more:!!after||!!intents.next,sync:await pull.status(scope)};
   }),
   recover:after=>exclusive(async()=>{
    const scope=await actor(),prefix=`yp-operation-v1:${scope.owner}:`,cursorKey=`yp-recovery-v1:${scope.owner}`;

@@ -220,3 +220,11 @@ EXT-009 review fix: объединённый unsent intent применяет п
 
 EXT-009 review fixes: coalescing mark/later нормализуется; preview precondition включает показанную server revision, исходный command key и local intent. Если сайт изменён после preview — preview_changed до archive/HTTPwrite, требуется повторное подтверждение. Fixture исправлена: очищенная mark отсутствует в response, как в реальном API. Итог 73 теста PASS (новый mark regression первоначально выявил несоответствие fixture контракту, исправлен в этом коммите).
 
+
+EXT-009 review152320e+5ea1895+09cc77d: PASS, обаP2 закрыты, 73testsPASS; realFirefox/auth/IDB/API smokePASS, QAfixture restored andbothsessionsrevoked.
+### EXT-010 — client snapshot/delta
+- Client pull uses committed backend077f86f OpenAPI76ops; standalone validators regenerated. Personal snapshot pages12 are staged into private generation, page+checkpoint commit atomically; last page atomically switches active pointer. Pending/outbox/receipts remain separate and are never imported as new writes.
+- Delta page+cursor oneTX, revisioned tombstone retained; local ACK newer than snapshot cut_seq wins until matching delta. Cursor/snapshot410 requests full resync without erasing outbox/oldactivegeneration. Scope checked before HTTP/commit; errors retain progress. Batches5pages yield to UI, immediate continuation with durable alarms fallback. RetryAfter on pull persisted separately.
+- 79 extensiontestsPASS, sharedAPI116tests/core100PASS, productionwebbuildPASS, Firefoxbuild+lint0warnings. Awaitindependentreview+localbackendmigration20+realAPIpullsmoke before closing EXT010. Backendreview077f86f+47d53d0 PASS.
+- DEC-EXT-010-CACHE: active generation pointer prevents exposing partial snapshot. Old generations are retained pending bounded cleanup inEXT014/016; account keyspaces remain isolated. Snapshot empty fields do not turn into write commands. Foreign profile/feed not synchronized.
+

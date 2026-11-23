@@ -969,6 +969,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getSyncChanges
+         * @description Own-account personal sync only. Pages contain at most12 canonical carriers/tombstones. Account-bound signed cursor expires after7days; retention floor or access epoch change returns410 sync_resync_required. Immutable snapshots expire after1hour; at most2 live peraccount and24000items. Unknown/repeated query keys rejected. Snapshot creation bounded to2 concurrent requests.
+         */
+        get: operations["getSyncChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/sync/snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * createSyncSnapshot
+         * @description Own-account personal sync only. Pages contain at most12 canonical carriers/tombstones. Account-bound signed cursor expires after7days; retention floor or access epoch change returns410 sync_resync_required. Immutable snapshots expire after1hour; at most2 live peraccount and24000items. Unknown/repeated query keys rejected. Snapshot creation bounded to2 concurrent requests.
+         */
+        post: operations["createSyncSnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/sync/snapshots/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getSyncSnapshotPage
+         * @description Own-account personal sync only. Pages contain at most12 canonical carriers/tombstones. Account-bound signed cursor expires after7days; retention floor or access epoch change returns410 sync_resync_required. Immutable snapshots expire after1hour; at most2 live peraccount and24000items. Unknown/repeated query keys rejected. Snapshot creation bounded to2 concurrent requests.
+         */
+        get: operations["getSyncSnapshotPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/videos": {
         parameters: {
             query?: never;
@@ -1898,6 +1958,35 @@ export interface components {
             login: string | null;
             /** @enum {string} */
             status: "active" | "disabled" | "deleting" | "deleted";
+        };
+        SyncItem: {
+            /** @enum {string} */
+            kind: "video_state" | "channel_state" | "privacy" | "video_review" | "channel_review" | "post" | "account" | "social" | "notifications";
+            /** @enum {string} */
+            operation: "upsert" | "delete" | "invalidate";
+            revision: number | null;
+            seq?: number;
+            /** Format: uuid */
+            target_id: string;
+            value: Record<string, never> | null;
+        };
+        SyncPage: {
+            cursor: string;
+            items: components["schemas"]["SyncItem"][];
+            more: boolean;
+        };
+        SyncSnapshotPage: {
+            cut_cursor: string;
+            cut_seq: number;
+            items: components["schemas"]["SyncItem"][];
+            next_page: number | null;
+        };
+        SyncSnapshotResult: {
+            cut_cursor: string;
+            cut_seq: number;
+            /** Format: uuid */
+            id: string;
+            pages: number;
         };
         UnreadNotifications: {
             unread_count: number;
@@ -4813,6 +4902,156 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getSyncChanges: {
+        parameters: {
+            query: {
+                after: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Own personal sync page or immutable snapshot descriptor. */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createSyncSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Own personal sync page or immutable snapshot descriptor. */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncSnapshotResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getSyncSnapshotPage: {
+        parameters: {
+            query: {
+                page: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Own personal sync page or immutable snapshot descriptor. */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncSnapshotPage"];
+                };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
             403: {

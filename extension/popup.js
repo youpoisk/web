@@ -10,6 +10,7 @@ function scoreButtons(id,key,value){const root=$(id);root.replaceChildren();for(
 function renderQueue(queue){
  const pending=queue?.pending??0,blocked=queue?.blocked??0;
  $('queue-status').textContent=pending||blocked?`Ожидают отправки: ${pending}${queue.more?'+':''}. Требуют сверки: ${blocked}. Изменения ещё не подтверждены сервером.`:'';
+ if(queue?.sync?.state==='syncing')$('queue-status').textContent+=' Синхронизация…';else if(queue?.sync?.state==='offline')$('queue-status').textContent+=' Связь с сервером временно недоступна.';
  $('queue-retry').hidden=!signed()||!pending;$('conflicts-open').hidden=!signed()||!blocked;
 }
 async function refreshQueue(){if(!signed())return;const scope=state.auth.epoch;try{const queue=await YP.request('SYNC_STATUS');if(state?.auth?.epoch===scope&&queue.scope===scope){state.queue=queue;renderQueue(queue);}}catch{}}

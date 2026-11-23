@@ -56,13 +56,14 @@ globalThis.YPWorker=(()=>{
   let recoveryQueued=false;
   async function recover(){
    if(!backend?.recover||!session||recoveryQueued)return;
-   recoveryQueued=true;
+   recoveryQueued=true;let continuePull=false;
    const work=writes.then(async()=>{
     if((await session.status()).state!=='authenticated')return;
     let after=undefined,sent=0;for(let page=0;page<10;page++){const result=await backend.recover(after);sent+=result.sent;after=result.next;if(!after)break;}
-    if(sent)await broadcast();
+    const pulled=backend.pull?await backend.pull():null;continuePull=pulled?.complete===false||pulled?.reset===true;
+    if(sent||pulled?.changed)await broadcast();
    });
-   writes=work.catch(()=>{});try{await work;}finally{recoveryQueued=false;}
+   writes=work.catch(()=>{});try{await work;}finally{recoveryQueued=false;if(continuePull)setTimeout(wake,0);}
   }
   const wake=()=>{void recover().catch(()=>{});};
   if(api.alarms&&backend?.recover){
