@@ -28,3 +28,7 @@ test('lost transport preserves progress, cooldown and newer local receipt; owner
 test('quota abort on the final snapshot page leaves the previous active generation intact',async()=>{
  const f=fixture();await f.create().step(scope,{pages:1});f.fail();await assert.rejects(f.create().step(scope,{pages:1}));assert.equal(f.db.get('yp-sync-v2:'+owner),undefined);assert.equal(f.db.get('yp-sync-progress-v2:'+owner).page,1);await f.create().step(scope,{pages:1});assert.equal(f.db.get('yp-sync-v2:'+owner).cursor,'cut');
 });
+
+test('schema-valid wrong snapshot continuation is rejected before checkpoint activation',async()=>{
+ const f=fixture(),bad=createPull({storage:f.storage,check:async()=>{},request:async op=>op==='createSyncSnapshot'?{id:snapshot,pages:2,cut_seq:10}:{items:[],cut_seq:10,next_page:0,cut_cursor:'cut'}});await assert.rejects(bad.step(scope),error=>error.kind==='protocol');assert.equal(f.db.get('yp-sync-v2:'+owner),undefined);assert.equal(f.db.get('yp-sync-progress-v2:'+owner).page,0);
+});

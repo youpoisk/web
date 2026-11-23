@@ -268,3 +268,10 @@ UnexpectedIDBclose reopens nextevent. SnapshotmetadataLRU200, watchlistpageLRU10
 
 EXT014 reviewfix: content lateUPDATE now checks both current/incoming authenticated state as well as scope, so retained-epoch expiry cannot restore old UI. Bounded pruneCaches adopts cleanup of pre-LRU unindexed metadata/list records, keeping indexedcache/pending/source/otherowners; workercursor resumescleanup. 104testsPASS. Pendingreviewfollowup beforeEXT015.
 
+
+- [x] EXT-014 32e16bd+3edc46c independentreviewPASS, expiryP2 andunindexedcacheLOWclosed.
+### EXT-015 — reproducible verification
+Gate scripts/extension-verify.mjs [--api], per-run immutable reportdirs withcommit/dirtymarker/runtime/workerhash.110unit/regressiontests; worker auth/backend/sync100% lines/functions (branches86.12%, not100). ActualFirefox controlledDOM rating/deletecancel/expiry/SPA/Shorts/missingmetadata PASS; injected ACK failure→newcoordinator realIDB retry samekey/body/lease singleRevision PASS; controlledstop independenthostrepairPASS. Ordinarypackage excludesQAcredentials/probes/plans.
+New regressionfound/fixed unknownvideo addACKloss: stage.addKey persisted atomically and originaladdreceipt anchors nextstateversion; no self-conflict/freshLWW. Importmissingvideo path covered too. Native API probes restore QA and revoke nativesessions.
+EXT015 automatedFirefox acceptance complete; installedChrome andmanualcurrentYouTube layout remain explicit releasegates (see extension/docs/testing.md), not falsely closed. User2026-11-23 confirmed productionaddressesnotready: EXT020 preparationonly, nopublication. Fullbackend10k/500loadTST007 notclaimedbytheseprobes.
+

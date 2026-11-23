@@ -27,9 +27,10 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    if(!schemas[schemas.contract[operation].request](pending.body)||pending.fingerprint!==JSON.stringify(operation==='addObservedVideo'?{id:pending.body.youtube_video_id}:Object.fromEntries(Object.entries(pending.body).filter(([key])=>key!=='expected_revision'))))throw new BackendError('reconcile_required');
    if(pending.version!==1||pending.owner!==scope.owner||pending.epoch!==scope.epoch||pending.operation!==operation||pending.target!==target||pending.fingerprint!==fingerprint||pending.state!=='pending')throw new BackendError('reconcile_required');
   }else{
+   if(typeof bodyFactory!=='function')throw new BackendError('reconcile_required');
    const body=await bodyFactory();const anchor=await request('issueOfflineLease',{},scope);
    pending={version:1,owner:scope.owner,epoch:scope.epoch,operation,target,fingerprint,body,lease:anchor.lease,key:fixedKey??crypto.randomUUID(),state:'pending',createdAt:now(),attempts:0,nextAttemptAt:0};
-   if(stage){stage.row.commandKey=pending.key;await storage.commit([[slot,pending],[stage.slot,stage.row]]);}else await storage.write(pending,slot);
+   if(stage){stage.row[stage.field??'commandKey']=pending.key;await storage.commit([[slot,pending],[stage.slot,stage.row]]);}else await storage.write(pending,slot);
   }
   if((pending.nextAttemptAt??0)>now())throw new BackendError('retry_later');
   const live=await actor();if(live.owner!==scope.owner||live.epoch!==scope.epoch)throw new BackendError('stale');
@@ -68,7 +69,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   const operation=review?'putVideoReview':'patchVideoState',pending=target?await storage.read(`yp-operation-v1:${scope.owner}:${operation}:${target}`):null;
   const canonical=target?await pull.read(scope,review?'video_review':'video_state',target):null;
   const revisions=[canonical?.revision,review?cached?.review.revision:cached?.video.my_state.revision].filter(Number.isSafeInteger),revision=revisions.length?Math.max(...revisions):null;
-  const row={version:1,owner:scope.owner,epoch:scope.epoch,video,patch:{...(existing?.patch??{}),...patch},baseRevision:existing?.baseRevision??revision,createdAt:existing?.createdAt??now(),...(pending?{predecessor:pending.key}:{})};
+  const row={version:1,owner:scope.owner,epoch:scope.epoch,video,patch:{...(existing?.patch??{}),...patch},baseRevision:existing?.baseRevision??revision,createdAt:existing?.createdAt??now(),...(existing?.deferred?{deferred:true}:{}),...(existing?.addKey?{addKey:existing.addKey}:{}),...(pending?{predecessor:pending.key}:{})};
   if(!review){if(patch.mark==='not_interested')row.patch.later=false;else if(patch.later===true&&row.patch.mark==='not_interested')row.patch.mark=null;}
   // A sent command is immutable. Further clicks replace only the unsent successor.
   if(existing?.commandKey){row.predecessor=existing.commandKey;row.predecessorIntent=JSON.stringify(review?{text:existing.patch.review}:existing.patch);}
@@ -84,13 +85,15 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   if(row.commandKey&&await storage.read(`yp-receipt-v1:${scope.owner}:${row.commandKey}`)){await storage.write(null,slot);return false;}
   let resolved=await card(row.video.id,scope);
   const addSlot=`yp-operation-v1:${scope.owner}:addObservedVideo:${row.video.id}`;
-  if(await storage.read(addSlot)||!resolved){await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>({youtube_video_id:row.video.id,title:row.video.title,expected_revision:0}));resolved=await card(row.video.id,scope);}
+  const priorAdd=await storage.read(addSlot);if(priorAdd&&!row.addKey){row.addKey=priorAdd.key;await storage.write(row,slot);}
+  if(priorAdd||!resolved){await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>({youtube_video_id:row.video.id,title:row.video.title,expected_revision:0}),{...stage,field:'addKey'});resolved=await card(row.video.id,scope);}
   if(!resolved)throw new BackendError('protocol');
-  const review=Object.hasOwn(row.patch,'review'),operation=review?'putVideoReview':'patchVideoState',pendingSlot=`yp-operation-v1:${scope.owner}:${operation}:${resolved.id}`;
+  const review=Object.hasOwn(row.patch,'review');if(!review&&row.addKey){const added=await storage.read(`yp-receipt-v1:${scope.owner}:${row.addKey}`);if(added?.kind==='video_state'&&added.target===resolved.id)row.baseRevision=added.revision;}
+  const operation=review?'putVideoReview':'patchVideoState',pendingSlot=`yp-operation-v1:${scope.owner}:${operation}:${resolved.id}`;
   const predecessor=await storage.read(pendingSlot);
   if(predecessor&&predecessor.key!==row.commandKey){
    if(predecessor.epoch!==scope.epoch||predecessor.state!=='pending')throw new BackendError('reconcile_required');
-   await durable(operation,resolved.id,JSON.parse(predecessor.fingerprint),scope,async()=>{throw new BackendError('reconcile_required');});
+   await durable(operation,resolved.id,JSON.parse(predecessor.fingerprint),scope,null);
    row.predecessor=predecessor.key;row.predecessorIntent=predecessor.fingerprint;
   }
   if(row.predecessor){const receipt=await storage.read(`yp-receipt-v1:${scope.owner}:${row.predecessor}`);if(!receipt)throw new BackendError('reconcile_required');row.baseRevision=receipt.revision;if(row.predecessorIntent===JSON.stringify(review?{text:row.patch.review}:row.patch)){await storage.write(null,slot);return false;}}
@@ -195,7 +198,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    const anchor=await request('issueOfflineLease',{},scope);
    const pending={version:1,owner:scope.owner,epoch:scope.epoch,operation:row.operation,target:row.target,fingerprint:JSON.stringify(local),body:{expected_revision:value.revision,...local},key:crypto.randomUUID(),lease:anchor.lease,state:'pending',createdAt:now(),attempts:0,nextAttemptAt:0};
    await check(scope);await storage.commit([[archive,{...row,staged,resolution:'local'}],[ref,pending],[stageSlot,null]]);
-   await durable(row.operation,row.target,local,scope,async()=>{throw new BackendError('reconcile_required');});
+   await durable(row.operation,row.target,local,scope,null);
   }),
   queueStatus:()=>exclusive(async()=>{
    const scope=await actor(),prefix=`yp-operation-v1:${scope.owner}:`;let after=null,pending=0,blocked=0,retained=0,nextAttemptAt=null,pages=0;
@@ -224,7 +227,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
     else bound=bound&&Object.keys(body).length===intentKeys.length+1&&intentKeys.every(key=>Object.hasOwn(body,key)&&body[key]===intent[key]);
     const envelope=typeof pending.key==='string'&&/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(pending.key)&&typeof pending.lease==='string'&&pending.lease.length>0&&pending.lease.length<=16384;
     if(!bound||!envelope){blocked++;continue;}
-    try{await durable(operation,target,intent,scope,async()=>{throw new BackendError('reconcile_required');});sent++;}catch(error){if(error instanceof ApiError&&error.kind==='invalid_input'){await storage.write({...pending,state:'invalid'},slot);blocked++;continue;}if(error.kind==='retry_later'){deferred++;continue;}if(error.kind==='reconcile_required'){blocked++;continue;}throw error;}
+    try{await durable(operation,target,intent,scope,null);sent++;}catch(error){if(error instanceof ApiError&&error.kind==='invalid_input'){await storage.write({...pending,state:'invalid'},slot);blocked++;continue;}if(error.kind==='retry_later'){deferred++;continue;}if(error.kind==='reconcile_required'){blocked++;continue;}throw error;}
    }
    await check(scope);await storage.write({epoch:scope.epoch,after:page.next},cursorKey);sent+=await flushIntents(scope);return {sent,blocked,...(deferred?{deferred}:{}),next:page.next};
   }),

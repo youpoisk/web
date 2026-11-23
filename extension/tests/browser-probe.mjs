@@ -18,15 +18,22 @@ export default async function browserProbe(report,originReport,options){
   const resumed=await active.status();if(resumed.owner!==signed.owner||resumed.epoch!==signed.epoch)throw Error('Restored wrong owner');
   result.stage='read';
   card=await api('/v1/videos/by-youtube/p0iTgHMEoi4');originalState=(await api('/v1/me/videos/'+card.id+'/state')).state;originalReview=(await api('/v1/me/videos/'+card.id+'/review')).review;
-  const backend=YPAuth.createBackend({session:active,storage:accountStorage,origin:YPConfig.apiOrigin});
+  let backend=YPAuth.createBackend({session:active,storage:accountStorage,origin:YPConfig.apiOrigin});
   result.stage='sync-snapshot';let synced;for(let i=0;i<400;i++){synced=await backend.pull();if(synced.complete)break;if(synced.waiting)throw Error('Sync waiting');}if(!synced?.complete)throw Error('Snapshot incomplete');
   const checkpoint=await accountStorage.read('yp-sync-v2:'+signed.owner);if(!checkpoint?.cursor)throw Error('Snapshot cursor missing');
   result.stage='write';const rating=originalState.rating===8?9:8;
-  await backend.update({id:card.youtube_video_id,title:card.title},{rating});
+  if(options.ackRestart){
+   let failAck=true;const captured=[],fetchProbe=async(url,init)=>{if(init.method==='PATCH'&&new URL(url).pathname.endsWith('/state')){const headers=new Headers(init.headers);captured.push({key:headers.get('Idempotency-Key'),lease:headers.get('X-Offline-Lease'),body:init.body});}return fetch(url,init);};
+   const interrupted={...accountStorage,async commit(entries,...rest){if(failAck&&entries.some(([key])=>key.startsWith('yp-canonical-v2:'))){failAck=false;throw Error('Controlled ACK loss');}return accountStorage.commit(entries,...rest);}};
+   backend=YPAuth.createBackend({session:active,storage:interrupted,origin:YPConfig.apiOrigin,fetch:fetchProbe});let rejected=false;try{await backend.update({id:card.youtube_video_id,title:card.title},{rating});}catch{rejected=true;}if(!rejected||failAck)throw Error('ACK fault not exercised');
+   await new Promise(resolve=>setTimeout(resolve,5100));backend=YPAuth.createBackend({session:active,storage:accountStorage,origin:YPConfig.apiOrigin,fetch:fetchProbe});await backend.recover();
+   if(captured.length!==2||JSON.stringify(captured[0])!==JSON.stringify(captured[1]))throw Error('Retry changed original command');const after=(await api('/v1/me/videos/'+card.id+'/state')).state;if(after.revision!==originalState.revision+1)throw Error('Retry duplicated revision');result.ackRestart={sameCommand:true,singleRevision:true};
+  }else await backend.update({id:card.youtube_video_id,title:card.title},{rating});
   await backend.update({id:card.youtube_video_id,title:card.title},{review:'Проверка сохранения из Firefox.'});
   const current=await backend.current(card.youtube_video_id);
   if(current.videos[card.youtube_video_id].rating!==rating||current.videos[card.youtube_video_id].review!=='Проверка сохранения из Firefox.')throw Error('Server write mismatch');
   result.stage='sync-delta';await backend.pull();const syncedState=await accountStorage.read('yp-generation-v2:'+signed.owner+':'+checkpoint.generation+':video_state:'+card.id);if(syncedState?.value?.rating!==rating)throw Error('Firefox delta cache mismatch');
+  if(options.dom&&!options.controlled){result.stage='content-dom';result.dom=await YPContentDOMProbe(current.videos[card.youtube_video_id]);}
   if(options.controlled){await fetch(options.writtenReport,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});await new Promise(()=>{});}
   result.ok=true;result.stage='done';
  }catch(error){result.kind=error.kind??'error';result.status=error.status??0;}

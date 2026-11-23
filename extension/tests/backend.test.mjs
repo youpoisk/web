@@ -14,6 +14,9 @@ function fixture(){
   if(offline)throw Error('offline');
   const path=new URL(url).pathname;
   if(path==='/v1/videos/'+id)return json(card());
+  if(path==='/v1/me/sync/snapshots')return json({id:'00000000-0000-4000-8000-000000000006',pages:1,cut_seq:seq,cut_cursor:'unit-cut'});
+  if(path.startsWith('/v1/me/sync/snapshots/'))return json({items:[{kind:'video_state',target_id:id,revision:state.revision,operation:'upsert',value:state}],next_page:null,cut_seq:seq,cut_cursor:'unit-cut'});
+  if(path==='/v1/me/sync')return json({items:[],cursor:'unit-cut',more:false});
   if(path.includes('/by-youtube/'))return exists?json(card()):json({code:'not_found',message:'Missing',request_id:'request',field_errors:{}},404);
   if(path.endsWith('/offline-lease'))return json({lease:'original-signed-lease',valid_for_seconds:604800});
   if(init.method==='GET'&&path.endsWith('/state'))return json(result());
@@ -143,7 +146,7 @@ test('offline later on cached current is shown even when absent from the cached 
 });
 
 test('import preview writes no server data, defaults can keep server and repeated commit never duplicates',async()=>{
- const f=fixture(),preview=await f.create().previewImport([{video:f.video,rating:8,review:'Imported review'}]);assert.equal(f.writes.length,0);assert.equal(preview.rows[0].existing,true);assert.equal(preview.choices,null);const kept=await f.create().commitImport(preview.id,['server']);assert.equal(kept.rows[0].result,'skipped');assert.equal(f.writes.length,0);
+ const f=fixture(),preview=await f.create().previewImport([{video:f.video,rating:8,review:'Imported review'}]);assert.equal(f.writes.length,0);assert.equal(preview.rows[0].existing,true);assert.equal((await f.create().importStatus(preview.id)).id,preview.id);assert.equal((await f.create().importStatus()).id,preview.id);assert.equal(preview.choices,null);const kept=await f.create().commitImport(preview.id,['server']);assert.equal(kept.rows[0].result,'skipped');assert.equal(f.writes.length,0);
  const next=await f.create().previewImport([{video:f.video,rating:8,review:'Imported review'}]);const done=await f.create().commitImport(next.id,['local']);assert.equal(done.rows[0].result,'imported');assert.equal(f.writes.length,2);await f.create().commitImport(next.id,['local']);assert.equal(f.writes.length,2);await assert.rejects(f.create().commitImport(next.id,['server']),e=>e.kind==='reconcile_required');assert.equal((await f.create().current(yt)).videos[yt].review,'Imported review');
 });
 test('import crash after server effect retries exact key/body and crash after ACK uses receipt marker',async()=>{
@@ -163,4 +166,15 @@ test('old session queue stays blocked until explicit resume and then replays ori
 
 test('cached list pages have a bounded LRU without removing pending commands or other accounts',async()=>{
  const f=fixture(),pending='yp-operation-v1:'+owner+':probe';f.db.set(pending,{original:true});f.db.set('yp-library-page-v2:other:first',{items:[]});for(let i=0;i<12;i++)await f.create().library('cursor-'+i);assert.equal([...f.db.keys()].filter(key=>key.startsWith('yp-library-page-v2:'+owner+':')).length,10);assert.equal(f.db.has('yp-library-page-v2:'+owner+':cursor-0'),false);assert.equal(f.db.get(pending).original,true);assert.ok(f.db.has('yp-library-page-v2:other:first'));f.offline();assert.equal((await f.create().library('cursor-0')).cacheMiss,true);assert.equal((await f.create().library('cursor-11')).cacheMiss,undefined);
+});
+
+test('new-video observation receipt anchors the next state after ACK loss and background restart',async()=>{
+ const f=fixture();f.missing();f.lose();assert.equal((await f.create().update(f.video,{rating:7})).queued,true);f.advance();await f.create().recover();assert.deepEqual(f.writes[0],f.writes[1]);assert.equal(f.writes[2].body.expected_revision,1);assert.equal(f.writes[2].body.rating,7);assert.equal((await f.create().current(yt)).videos[yt].rating,7);assert.equal((await f.create().queueStatus()).pending,0);
+});
+test('backend pull exposes real canonical generation and explicit discard preserves legacy source',async()=>{
+ const f=fixture();assert.equal((await f.create().importStatus()).rows.length,0);assert.equal((await f.create().pull()).complete,true);assert.equal((await f.create().queueStatus()).sync.state,'idle');f.db.set('yp-library-v1',{source:true});f.offline();await f.create().update(f.video,{rating:8});assert.ok((await f.create().queueStatus()).pending>0);await f.create().discardPending();assert.equal((await f.create().queueStatus()).pending,0);assert.equal(f.db.get('yp-library-v1').source,true);
+});
+
+test('explicit import creates a missing video once and uses the observation receipt revision for state',async()=>{
+ const f=fixture();f.missing();const preview=await f.create().previewImport([{video:f.video,rating:8}]);assert.equal(preview.rows[0].existing,false);const done=await f.create().commitImport(preview.id,['local']);assert.equal(done.rows[0].result,'imported');assert.equal(f.writes[0].path,'/v1/me/videos');assert.equal(f.writes[1].body.expected_revision,1);await f.create().commitImport(preview.id,['local']);assert.equal(f.writes.length,2);
 });
