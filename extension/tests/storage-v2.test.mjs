@@ -41,3 +41,9 @@ test('private outbox pages exclude auth, other accounts and acknowledged null ro
  const second=await account.entries(prefix,{after:first.next});assert.equal(second.items.length,2);assert.equal(second.next,null);assert.equal(new Set([...first.items,...second.items].map(([key])=>key)).size,14);
  assert.equal(JSON.stringify([...first.items,...second.items]).includes('never return'),false);await assert.rejects(account.entries('yp-auth-v1'));await assert.rejects(account.entries(prefix,{after:'yp-operation-v1:owner-B:one'}));await assert.rejects(account.entries(prefix,{limit:0}));
 });
+
+test('quota abort cannot commit only one half of a 429 command/account deadline',async()=>{
+ const s=idb(),slot='yp-operation-v1:owner:state:target',key='yp-rate-limit-v1:owner';await s.write({nextAttemptAt:5000},slot);const original=IDBObjectStore.prototype.put;let puts=0;IDBObjectStore.prototype.put=function(...args){if(++puts===2)throw new DOMException('quota','QuotaExceededError');return original.apply(this,args)};
+ try{await assert.rejects(s.commit([[slot,{nextAttemptAt:120000}],[key,{until:120000}]]));}finally{IDBObjectStore.prototype.put=original;}
+ assert.equal((await s.read(slot)).nextAttemptAt,5000);assert.equal(await s.read(key),null);await s.commit([[slot,{nextAttemptAt:120000}],[key,{until:120000}]]);assert.equal((await s.read(slot)).nextAttemptAt,(await s.read(key)).until);
+});
