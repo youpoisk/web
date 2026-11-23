@@ -91,3 +91,7 @@ test('permanent HTTP failure is retained and never automatically resent',async()
 test('server failures increase persisted exponential delay across worker restarts',async()=>{
  const f=fixture();f.failHTTP(503);await assert.rejects(f.create().update(f.video,{rating:8}));assert.equal((await f.create().recover()).deferred,1);f.advance(5000);await assert.rejects(f.create().recover());let row=[...f.db.values()].find(v=>v?.state==='pending');assert.equal(row.attempts,2);assert.equal(row.nextAttemptAt,1015000);assert.deepEqual(f.writes[0],f.writes[1]);f.advance(10000);f.failHTTP(0);assert.equal((await f.create().recover()).sent,1);
 });
+
+test('429 command deadline and account cooldown use a single atomic transaction',async()=>{
+ const f=fixture();const commits=[],original=f.storage.commit;f.storage.commit=async entries=>{commits.push(structuredClone(entries));return original(entries)};f.failHTTP(429,120);await assert.rejects(f.create().update(f.video,{rating:8}));assert.equal(commits.length,1);assert.equal(commits[0].length,2);const [[slot,pending],[cooldownKey,cooldown]]=commits[0];assert.ok(slot.startsWith('yp-operation-v1:'));assert.equal(cooldownKey,'yp-rate-limit-v1:'+owner);assert.equal(cooldown.until,pending.nextAttemptAt);assert.equal(cooldown.until,1120000);
+});

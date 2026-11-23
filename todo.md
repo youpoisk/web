@@ -203,3 +203,6 @@ EXT-008 review fix follow-up: UUID key, bounded nonempty lease, safe revision; i
 - Проверки: 64 extension tests, Mozilla lint0errors0warnings, real API rating/review smoke и восстановление исходной QA-fixture PASS. Независимое ревью после коммита; исправления до EXT-009.
 - Спорные вопросы DEC-EXT-008-WAKE: минимальный повтор scheduler — раз в минуту (alarms), точный срок определяет durable nextAttemptAt. Причина: worker может быть выгружен; setTimeout не обеспечивает recovery. Ручная кнопка не обходит Retry-After. Новые offline-intents и конфликт UI относятся к EXT-009/010, не считаются готовыми в этом пункте.
 
+
+EXT-008 review fix: deadline команды при429 и общий cooldown сохраняются одним storage.commit, без crash-gap между двумя записями. 65 тестов PASS.
+

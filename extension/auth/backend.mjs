@@ -38,7 +38,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    await storage.commit([[`yp-canonical-v2:${scope.owner}:${result.kind}:${result.target_id}`,{version:2,owner:scope.owner,kind:result.kind,target:result.target_id,revision:value.revision,value}],[slot,null]]);return result;
   }catch(error){
    if(error instanceof ApiError&&error.kind==='http'){
-    if(error.status===429||error.status>=500){const until=Math.max(pending.nextAttemptAt,now()+(error.retryAfterSeconds??0)*1000);await storage.write({...pending,nextAttemptAt:until},slot);if(error.status===429)await storage.write({until},`yp-rate-limit-v1:${scope.owner}`);}
+    if(error.status===429||error.status>=500){const until=Math.max(pending.nextAttemptAt,now()+(error.retryAfterSeconds??0)*1000);if(error.status===429)await storage.commit([[slot,{...pending,nextAttemptAt:until}],[`yp-rate-limit-v1:${scope.owner}`,{until}]]);else await storage.write({...pending,nextAttemptAt:until},slot);}
     else if(error.status!==401){await storage.write({...pending,state:[409,410,422].includes(error.status)?'conflict':'rejected',errorStatus:error.status},slot);throw new BackendError('reconcile_required');}
    }
    throw error;
