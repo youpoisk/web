@@ -119,12 +119,13 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
  return {
   conflicts:after=>exclusive(async()=>{
    const scope=await actor(),page=await storage.entries(`yp-operation-v1:${scope.owner}:`,{after:after??null,limit:12}),items=[];
-   for(const [ref,row]of page.items){if(row.state==='pending'&&row.epoch===scope.epoch)continue;try{const {local,value,video}=await conflictRecord(ref,scope);items.push({ref,operation:row.operation,title:video.title,local,server:value,status:row.errorStatus??null});}catch(error){if(error.kind==='invalid_reference')continue;throw error;}}
+   for(const [ref,row]of page.items){if(row.state==='pending'&&row.epoch===scope.epoch)continue;try{const {local,value,video}=await conflictRecord(ref,scope);items.push({ref,operation:row.operation,title:video.title,local,server:value,status:row.errorStatus??null,expected:{revision:value.revision,key:row.key,intent:JSON.stringify(local)}});}catch(error){if(error.kind==='invalid_reference')continue;throw error;}}
    await check(scope);return {items,next:page.next};
   }),
-  resolve:(ref,choice)=>exclusive(async()=>{
+  resolve:(ref,choice,expected)=>exclusive(async()=>{
    const scope=await actor();if(!['server','local'].includes(choice))throw new BackendError('invalid_reference');
    const {row,local,result,value,stageSlot,staged}=await conflictRecord(ref,scope),archive=`yp-history-v1:${scope.owner}:${crypto.randomUUID()}`;
+   if(!expected||expected.revision!==value.revision||expected.key!==row.key||expected.intent!==JSON.stringify(local))throw new BackendError('preview_changed');
    if(choice==='server'){
     await check(scope);await storage.commit([[archive,{...row,staged,resolution:'server'}],[`yp-canonical-v2:${scope.owner}:${result.kind}:${row.target}`,{version:2,owner:scope.owner,kind:result.kind,target:row.target,revision:value.revision,value}],[ref,null],[stageSlot,null]]);return;
    }

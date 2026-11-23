@@ -217,3 +217,6 @@ EXT-008 review 4af8c78+36d1ce4+f29e089: PASS, P2 про атомарный429coo
 
 EXT-009 review fix: объединённый unsent intent применяет правила mark/later: not_interested снимает later, later=true снимает not_interested; обе последовательности покрыты regression. 72 теста PASS.
 
+
+EXT-009 review fixes: coalescing mark/later нормализуется; preview precondition включает показанную server revision, исходный command key и local intent. Если сайт изменён после preview — preview_changed до archive/HTTPwrite, требуется повторное подтверждение. Fixture исправлена: очищенная mark отсутствует в response, как в реальном API. Итог 73 теста PASS (новый mark regression первоначально выявил несоответствие fixture контракту, исправлен в этом коммите).
+

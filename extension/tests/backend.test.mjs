@@ -24,7 +24,7 @@ function fixture(){
   if(receipts.has(key))return json(receipts.get(key));
   const body=JSON.parse(init.body);let response;
   if(path.endsWith('/review')){assert.equal(body.expected_revision,review.revision);review={revision:review.revision+1,text:body.text};response={kind:'video_review',target_id:id,review,change_seq:++seq};}
-  else if(path.endsWith('/state')){if(body.expected_revision!==state.revision)return json({code:'revision_conflict',message:'Conflict',request_id:'request',field_errors:{}},409);const {expected_revision,...patch}=body;state={...state,...patch,revision:state.revision+1};response=result();}
+  else if(path.endsWith('/state')){if(body.expected_revision!==state.revision)return json({code:'revision_conflict',message:'Conflict',request_id:'request',field_errors:{}},409);const {expected_revision,...patch}=body;state={...state,...patch,revision:state.revision+1};if(state.mark===null)delete state.mark;response=result();}
   else{exists=true;response=result();}
   receipts.set(key,structuredClone(response));if(lose){lose=false;throw Error('lost response');}return json(response);
  }
@@ -100,10 +100,10 @@ test('429 command deadline and account cooldown use a single atomic transaction'
 
 test('conflict preview is owner-scoped and local choice uses fresh revision, key and archived original',async()=>{
  const f=fixture();f.failHTTP(409);assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.serverState({revision:2,rating:10});f.failHTTP(0);const first=f.writes[0],page=await f.create().conflicts();assert.equal(page.items.length,1);assert.equal(page.items[0].local.rating,8);assert.equal(page.items[0].server.rating,10);assert.equal(page.items[0].title,'Real video');assert.equal(JSON.stringify(page).includes('original-signed-lease'),false);
- await f.create().resolve(page.items[0].ref,'local');assert.notEqual(f.writes[1].key,first.key);assert.equal(f.writes[1].body.expected_revision,2);assert.equal(f.writes[1].body.rating,8);assert.equal((await f.create().current(yt)).videos[yt].rating,8);assert.ok([...f.db].some(([k,v])=>k.startsWith('yp-history-v1:')&&v.key===first.key));
+ await f.create().resolve(page.items[0].ref,'local',page.items[0].expected);assert.notEqual(f.writes[1].key,first.key);assert.equal(f.writes[1].body.expected_revision,2);assert.equal(f.writes[1].body.rating,8);assert.equal((await f.create().current(yt)).videos[yt].rating,8);assert.ok([...f.db].some(([k,v])=>k.startsWith('yp-history-v1:')&&v.key===first.key));
 });
 test('keeping server archives the conflict without mutation, foreign and still pending references fail',async()=>{
- const f=fixture();f.failHTTP(409);assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.failHTTP(0);const ref=(await f.create().conflicts()).items[0].ref;await assert.rejects(f.create().resolve(ref.replace(owner,'00000000-0000-4000-8000-000000000009'),'local'));await f.create().resolve(ref,'server');assert.equal(f.writes.length,1);assert.equal(await f.storage.read(ref),null);assert.equal((await f.create().conflicts()).items.length,0);
+ const f=fixture();f.failHTTP(409);assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.failHTTP(0);const preview=(await f.create().conflicts()).items[0],ref=preview.ref;await assert.rejects(f.create().resolve(ref.replace(owner,'00000000-0000-4000-8000-000000000009'),'local'));await f.create().resolve(ref,'server',preview.expected);assert.equal(f.writes.length,1);assert.equal(await f.storage.read(ref),null);assert.equal((await f.create().conflicts()).items.length,0);
  const g=fixture();g.lose();assert.equal((await g.create().update(g.video,{later:true})).queued,true);const pending=[...g.db.keys()].find(k=>k.startsWith('yp-operation-v1:'));await assert.rejects(g.create().resolve(pending,'server'),e=>e.kind==='pending');assert.equal(g.writes.length,1);
 });
 
@@ -115,9 +115,13 @@ test('sent command stays immutable while its successor rebases only after the ex
  const f=fixture();await f.create().current(yt);f.lose();assert.equal((await f.create().update(f.video,{rating:7})).queued,true);const first=structuredClone(f.writes[0]);assert.equal((await f.create().update(f.video,{rating:8})).queued,true);assert.equal((await f.create().update(f.video,{rating:null})).queued,true);assert.equal(f.writes.length,1);f.advance();await f.create().recover();assert.deepEqual(f.writes[1],first);assert.equal(f.writes[2].body.expected_revision,2);assert.equal(f.writes[2].body.rating,null);assert.notEqual(f.writes[2].key,first.key);assert.equal(f.writes.length,3);assert.equal((await f.create().queueStatus()).pending,0);
 });
 test('offline intent cannot silently overwrite a newer website edit and keeping server cannot resurrect it',async()=>{
- const f=fixture();await f.create().current(yt);f.offline();assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.serverState({revision:2,rating:10});f.offline(false);await f.create().recover();const conflict=(await f.create().conflicts()).items[0];assert.equal(conflict.local.rating,8);assert.equal(conflict.server.rating,10);await f.create().resolve(conflict.ref,'server');const writes=f.writes.length;await f.create().recover();assert.equal(f.writes.length,writes);assert.equal((await f.create().current(yt)).videos[yt].rating,10);assert.equal((await f.create().queueStatus()).pending,0);
+ const f=fixture();await f.create().current(yt);f.offline();assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.serverState({revision:2,rating:10});f.offline(false);await f.create().recover();const conflict=(await f.create().conflicts()).items[0];assert.equal(conflict.local.rating,8);assert.equal(conflict.server.rating,10);await f.create().resolve(conflict.ref,'server',conflict.expected);const writes=f.writes.length;await f.create().recover();assert.equal(f.writes.length,writes);assert.equal((await f.create().current(yt)).videos[yt].rating,10);assert.equal((await f.create().queueStatus()).pending,0);
 });
 
 test('offline coalescing follows mark/later domain rules in both click orders',async()=>{
  for(const reverse of [false,true]){const f=fixture();await f.create().current(yt);f.offline();for(const patch of reverse?[{mark:'not_interested'},{later:true}]:[{later:true},{mark:'not_interested'}])assert.equal((await f.create().update(f.video,patch)).queued,true);f.offline(false);await f.create().recover();assert.equal(f.writes.length,1);assert.equal(f.writes[0].body.later,reverse);assert.equal(f.writes[0].body.mark,reverse?null:'not_interested');}
+});
+
+test('a server edit after conflict preview requires new confirmation and cannot be overwritten',async()=>{
+ const f=fixture();f.failHTTP(409);assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.failHTTP(0);const preview=(await f.create().conflicts()).items[0];f.serverState({revision:2,rating:10});const before=f.writes.length;await assert.rejects(f.create().resolve(preview.ref,'local',preview.expected),e=>e.kind==='preview_changed');assert.equal(f.writes.length,before);assert.ok(await f.storage.read(preview.ref));const fresh=(await f.create().conflicts()).items[0];await f.create().resolve(fresh.ref,'local',fresh.expected);assert.equal(f.writes.at(-1).body.expected_revision,2);
 });
