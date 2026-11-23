@@ -265,3 +265,6 @@ Signal-only broadcasts tolerate failedtab/query/closedUIport; errorcode quota/st
 UnexpectedIDBclose reopens nextevent. SnapshotmetadataLRU200, watchlistpageLRU10 (pages12); index/cacheevictions oneTX, protected namespaces not removable. Cachemiss shown as unavailableoffline, not emptyserverlist; pending/source/receipts unaffected. GenerationGC fromEXT010 remainsactive.
 102extensiontestsPASS, sharedAPI/core100 previouslyPASS, webbuildPASS, actualFirefoxauth/IDB/snapshot/delta/write/readback+hostQArestore/sessionrevokePASS. Review beforeEXT015.
 
+
+EXT014 reviewfix: content lateUPDATE now checks both current/incoming authenticated state as well as scope, so retained-epoch expiry cannot restore old UI. Bounded pruneCaches adopts cleanup of pre-LRU unindexed metadata/list records, keeping indexedcache/pending/source/otherowners; workercursor resumescleanup. 104testsPASS. Pendingreviewfollowup beforeEXT015.
+

@@ -21,7 +21,7 @@
     if(busy)return false;
     const video=context();if(!video || video.id!==current?.id){schedule();return false;}
     cancelDeletes();busy=true;document.querySelectorAll('#yp-panel button').forEach(b=>b.disabled=true);
-    try{const scope=state?.auth?.scope;const result=await YP.request('UPDATE',{video,patch,scope});if(state?.auth?.scope!==scope||result.auth?.scope!==scope)return false;state=result;if(!result.queued&&'review' in patch)drafts.delete(video.id);if(context()?.id===video.id){render();notify(result.queued?'Изменение ожидает отправки.':'Сохранено на сервере');}return !result.queued;}
+    try{const scope=state?.auth?.scope;const result=await YP.request('UPDATE',{video,patch,scope});if(!YPCore.sameVideoAuth(state?.auth,result.auth,scope))return false;state=result;if(!result.queued&&'review' in patch)drafts.delete(video.id);if(context()?.id===video.id){render();notify(result.queued?'Изменение ожидает отправки.':'Сохранено на сервере');}return !result.queued;}
     catch(e){notify(e.message);return false;}finally{busy=false;document.querySelectorAll('#yp-panel button').forEach(b=>b.disabled=false);}
   }
   function scores(panel,value){

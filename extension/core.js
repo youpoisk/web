@@ -59,5 +59,6 @@
     let active=true;const timer=schedule(()=>{if(!active)return;active=false;action();},5000);return()=>{active=false;clear(timer);};
   }
   function sameAuth(current,incoming,epoch){return current?.state==='authenticated'&&incoming?.state==='authenticated'&&typeof current.owner==='string'&&current.owner===incoming.owner&&current.epoch===epoch&&incoming.epoch===epoch;}
-  globalThis.YPCore={empty,videoId,channelUrl,metadata,options,apply,deferDelete,sameAuth};
+  function sameVideoAuth(current,incoming,scope){return current?.state==='authenticated'&&incoming?.state==='authenticated'&&typeof scope==='string'&&current.scope===scope&&incoming.scope===scope;}
+  globalThis.YPCore={empty,videoId,channelUrl,metadata,options,apply,deferDelete,sameAuth,sameVideoAuth};
 })();

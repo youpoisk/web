@@ -146,3 +146,7 @@ test('deferred deletion sends nothing before five seconds and cancellation suppr
 test('late UI pages cannot merge across account change or expiry even if an old epoch remains present',()=>{
  const a={state:'authenticated',owner:'A',epoch:'epoch-a'},b={state:'authenticated',owner:'B',epoch:'epoch-b'};assert.equal(core.sameAuth(a,{...a},'epoch-a'),true);assert.equal(core.sameAuth(b,a,'epoch-a'),false);assert.equal(core.sameAuth({...a,state:'session-expired'},a,'epoch-a'),false);assert.equal(core.sameAuth(a,{...a,state:'session-expired'},'epoch-a'),false);assert.equal(core.sameAuth(a,{...a,owner:'B'},'epoch-a'),false);
 });
+
+test('delayed content update cannot restore authenticated UI after expiry with unchanged scope',()=>{
+ const before={state:'authenticated',scope:'epoch-a'},expired={state:'session-expired',scope:'epoch-a'},late={...before};assert.equal(core.sameVideoAuth(before,late,'epoch-a'),true);assert.equal(core.sameVideoAuth(expired,late,'epoch-a'),false);assert.equal(core.sameVideoAuth(before,expired,'epoch-a'),false);assert.equal(core.sameVideoAuth({...before,scope:'epoch-b'},late,'epoch-a'),false);
+});

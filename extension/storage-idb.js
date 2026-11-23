@@ -85,9 +85,23 @@ globalThis.YPStorageIDB=(()=>{
    tx.oncomplete=()=>resolve(changed);tx.onabort=()=>reject(tx.error??new Error('Queue choice aborted'));tx.onerror=()=>reject(tx.error);
   });
  }
+ async function pruneCaches(owner,{limit=128}={}){
+  if(typeof owner!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(owner)||!Number.isInteger(limit)||limit<1||limit>512)throw new Error('Invalid cache cleanup');
+  const db=await open();return new Promise((resolve,reject)=>{
+   const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);let done=true,removed=0;
+   for(const kind of ['snapshot','library']){
+    const prefix=kind==='snapshot'?`yp-snapshot-v1:${owner}:`:`yp-library-page-v2:${owner}:`,indexKey=`yp-${kind}-index-v2:${owner}`,cursorKey=`yp-cache-gc-v2:${owner}:${kind}`;let index,after,left=2,scanned=0;
+    const start=()=>{if(--left)return;try{if(index!==undefined&&(!Array.isArray(index)||index.some(key=>typeof key!=='string'||!key.startsWith(prefix))))throw new Error('Invalid cache index');const keep=new Set(index??[]),lower=typeof after==='string'&&after.startsWith(prefix)?after:null,request=store.openCursor(IDBKeyRange.bound(lower??prefix,prefix+'\uffff',lower!==null,false));
+     request.onsuccess=()=>{try{const row=request.result;if(!row){store.put(null,cursorKey);return;}if(scanned>=limit){done=false;store.put(after,cursorKey);return;}scanned++;after=row.key;if(!keep.has(row.key)){row.delete();removed++;}row.continue();}catch(error){tx.abort();reject(error);}};
+    }catch(error){tx.abort();reject(error);}};
+    const readIndex=store.get(indexKey);readIndex.onsuccess=()=>{index=readIndex.result;start();};const readCursor=store.get(cursorKey);readCursor.onsuccess=()=>{after=readCursor.result;start();};
+   }
+   tx.oncomplete=()=>resolve({done,removed});tx.onabort=()=>reject(tx.error??new Error('Cache cleanup aborted'));tx.onerror=()=>reject(tx.error);
+  });
+ }
  function accountStore(source=async()=>[]){
   const ready=Promise.resolve().then(source).then(migrate);ready.catch(()=>{});
-  return {async mutateQueue(owner,epoch,mode){await ready;return mutateQueue(owner,epoch,mode)},async pruneGenerations(owner,options){await ready;return pruneGenerations(owner,options)},async entries(prefix,options){await ready;return entries(prefix,options)},async read(key){await ready;return read(key)},async write(value,key){await ready;return write(value,key)},async commit(entries,removals){await ready;return commit(entries,removals)}};
+  return {async pruneCaches(owner,options){await ready;return pruneCaches(owner,options)},async mutateQueue(owner,epoch,mode){await ready;return mutateQueue(owner,epoch,mode)},async pruneGenerations(owner,options){await ready;return pruneGenerations(owner,options)},async entries(prefix,options){await ready;return entries(prefix,options)},async read(key){await ready;return read(key)},async write(value,key){await ready;return write(value,key)},async commit(entries,removals){await ready;return commit(entries,removals)}};
  }
- return {read,write,entries,commit,migrate,pruneGenerations,mutateQueue,accountStore};
+ return {read,write,entries,commit,migrate,pruneGenerations,mutateQueue,pruneCaches,accountStore};
 })();

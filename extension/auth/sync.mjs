@@ -13,7 +13,7 @@ export function createPull({storage,request,check,now=Date.now}){
  }
  async function step(scope,{pages=5}={}){
   await check(scope);
-  const gc=storage.pruneGenerations?await storage.pruneGenerations(scope.owner):{done:true};
+  const generations=storage.pruneGenerations?await storage.pruneGenerations(scope.owner):{done:true},caches=storage.pruneCaches?await storage.pruneCaches(scope.owner):{done:true},gc={done:generations.done&&caches.done};
   let active=await storage.read(pointer(scope.owner)),pending=await storage.read(progress(scope.owner));
   if(pending?.epoch!==scope.epoch)pending=null;
   const cooldown=await storage.read(`yp-sync-retry-v2:${scope.owner}`);if(cooldown?.until>now())return {changed:false,waiting:true,cleanupPending:!gc.done};
