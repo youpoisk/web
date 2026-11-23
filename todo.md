@@ -333,3 +333,6 @@ Reviewer follow-up d2cda48 PASS, P2 закрыт, новых MEDIUM+ нет. Ful
 
 ### Спорные вопросы — DEC-EXT-020-NO-PUBLISH
 Вопрос: чем заменить отсутствующие production URLs? Ничем: по явному ответу заказчика выпускаются только dev preparation artifacts; адреса/публикация не выдумываются. Имена prod placeholders существуют лишь в примере команды. Финальный Store release не помечается завершённым наличием ZIP.
+
+### EXT-020 — review closure и финальная проверка
+Reviewer PASS d46c398, MEDIUM+ нет. LOW учтён: политика/listing теперь отдельно описывают YouTube thumbnails i.ytimg.com, авторизованные API запросы идут только APIorigin. Актуальный полный gate PASS на d46c398: .artifacts/extension-verification/6581c3de-2fb5-4c59-aa52-22fa2a1b53f7 —124tests, auth100%line/functions (branches86.41%), contract/validators/bundle, cleanFirefox/MozillaLint, realauth/business/sync/import, FirefoxDOM/ACKloss/controlledstop. WebbuildPASS. Выпускная подготовка завершена в разрешённом scope, публикация по-прежнему не выполнялась.

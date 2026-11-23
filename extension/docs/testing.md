@@ -29,7 +29,7 @@
 | accidental QA/demo/credential packaging | normal-package whitelist regression |
 | interrupted Firefox fixture restoration | controlled-stop + independent host repair |
 
-Последний полный gate:112tests; auth/transport/sync100% lines/functions, branches86.24%. Shared API/core100% lines/functions. Mozilla lint0errors/0warnings. Real API/Firefox/controlled-stop PASS, QA restored.
+Последний полный gate:124tests; auth/transport/sync100% lines/functions, branches86.41%. Shared API/core100% lines/functions. Mozilla lint0errors/0warnings. Real API/Firefox/controlled-stop PASS, QA restored. Отчёт актуального полного прогона: `.artifacts/extension-verification/6581c3de-2fb5-4c59-aa52-22fa2a1b53f7` (d46c398, перед последующим уточнением документации).
 
 ## Открытые внешние проверки
 
