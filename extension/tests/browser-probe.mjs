@@ -19,11 +19,14 @@ export default async function browserProbe(report,originReport,options){
   result.stage='read';
   card=await api('/v1/videos/by-youtube/p0iTgHMEoi4');originalState=(await api('/v1/me/videos/'+card.id+'/state')).state;originalReview=(await api('/v1/me/videos/'+card.id+'/review')).review;
   const backend=YPAuth.createBackend({session:active,storage:accountStorage,origin:YPConfig.apiOrigin});
+  result.stage='sync-snapshot';let synced;for(let i=0;i<400;i++){synced=await backend.pull();if(synced.complete)break;if(synced.waiting)throw Error('Sync waiting');}if(!synced?.complete)throw Error('Snapshot incomplete');
+  const checkpoint=await accountStorage.read('yp-sync-v2:'+signed.owner);if(!checkpoint?.cursor)throw Error('Snapshot cursor missing');
   result.stage='write';const rating=originalState.rating===8?9:8;
   await backend.update({id:card.youtube_video_id,title:card.title},{rating});
   await backend.update({id:card.youtube_video_id,title:card.title},{review:'Проверка сохранения из Firefox.'});
   const current=await backend.current(card.youtube_video_id);
   if(current.videos[card.youtube_video_id].rating!==rating||current.videos[card.youtube_video_id].review!=='Проверка сохранения из Firefox.')throw Error('Server write mismatch');
+  result.stage='sync-delta';await backend.pull();const syncedState=await accountStorage.read('yp-generation-v2:'+signed.owner+':'+checkpoint.generation+':video_state:'+card.id);if(syncedState?.value?.rating!==rating)throw Error('Firefox delta cache mismatch');
   if(options.controlled){await fetch(options.writtenReport,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});await new Promise(()=>{});}
   result.ok=true;result.stage='done';
  }catch(error){result.kind=error.kind??'error';result.status=error.status??0;}

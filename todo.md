@@ -231,3 +231,6 @@ EXT-009 review152320e+5ea1895+09cc77d: PASS, обаP2 закрыты, 73testsPAS
 
 EXT010 client reviewfix: bounded transactional IDB generationGC (128keys/pass, durable cursor), keeps active+staging IDs read in sameTX, touches no ACK/outbox/intents/otheraccounts; wake continuation finishes cleanup. Regression repeatedgeneration/activation, inactive reviewdata removed, finalpagequota leaves activecache intact. 80testsPASS. Oldgeneration cleanup no longer deferred.
 
+
+- [x] EXT-010: backend077f86f+47d53d0 andclientf72765e+9371fd2 independentreviewPASS, allP2fixed. LocalDBbackup665830bytes beforemigration19/20, APIhealthy/ready200,20migrations. RealHTTPsync smoke: fullsnapshot/delta/tombstone/restart/outboxpreservedPASS; actualFirefoxIDB snapshot+delta+auth/write/readbackPASS. QAstate/review restored andnativeQA/browsertestsessionsrevoked; websessionuntouched. 80unitextensiontests,116sharedAPI/core100, webbuild/MozillaLint0warnings. Follow-up smoke scripts retained outside releasebundle.
+
