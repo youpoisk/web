@@ -43,6 +43,7 @@ export function createSession({origin,store,fetch:send=globalThis.fetch,crypto=g
   await persist({version:1,owner:record.owner,epoch:record.epoch,session:record.session,refresh:data.refresh_token});access=data.access_token;user=data.user;until=clock()+10*60*1000;
  }
  return {
+  peek:()=>exclusive(async()=>{await load();return snapshot();}),
   status:()=>exclusive(async()=>{await load();if(record?.refresh){try{await ensure();}catch(error){if(error.kind==='authentication')return snapshot();throw error;}}return snapshot();}),
   login:(login,password)=>exclusive(async()=>{
    if(typeof login!=='string'||!login.trim()||login.length>254||typeof password!=='string'||!password||new TextEncoder().encode(password).length>1024)throw new AuthError('input');

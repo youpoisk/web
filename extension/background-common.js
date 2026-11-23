@@ -4,6 +4,7 @@
 globalThis.YPWorker=(()=>{
  function start({api,storage,session,backend}){
   let writes=Promise.resolve();
+  async function authState(){try{return await session.status();}catch(error){if(session.peek&&(['network','timeout'].includes(error.kind)||error.status>=500||error.status===429))return session.peek();throw error;}}
   async function read(){return await storage.read()||YPCore.empty();}
   function fields(value,allowed,required=[]){
    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!allowed.includes(k))||required.some(k=>!Object.hasOwn(value,k)))throw Error('Некорректная команда');
@@ -42,10 +43,10 @@ globalThis.YPWorker=(()=>{
    const videos={};
    for(const id of access.trusted?Object.keys(state.videos):[access.id]){
     if(!Object.hasOwn(state.videos,id))continue;const v=state.videos[id];if(!v)continue;
-    const safe={};for(const field of ['id','title','url','preview','channel','channelUrl','rating','later','review','mark','createdAt','updatedAt','reviewedAt','pending'])if(Object.hasOwn(v,field))safe[field]=v[field];
+    const safe={};for(const field of ['id','title','url','preview','channel','channelUrl','rating','later','review','mark','createdAt','updatedAt','reviewedAt','pending','conflict','offline','ratingAverage','ratingCount'])if(Object.hasOwn(v,field))safe[field]=v[field];
     videos[id]=safe;
    }
-   return {version:1,options,videos,...(state.queued?{queued:true}:{}),...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,...(state.queue?{queue:state.queue}:{})}:{})};
+   return {version:1,options,videos,...(state.queued?{queued:true}:{}),...(state.offline?{offline:true}:{}),...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,...(state.queue?{queue:state.queue}:{})}:{})};
   }
   async function broadcast(){
    const tabs=await api.tabs.query({url:'https://www.youtube.com/*'});
@@ -81,10 +82,10 @@ globalThis.YPWorker=(()=>{
      let access=await authorize(request,sender);
      if(request.type.startsWith('AUTH_')){
       if(!session)throw Error('Авторизация недоступна');
-      const result=request.type==='AUTH_LOGIN'?await session.login(request.login,request.password):request.type==='AUTH_LOGOUT'?await session.logout():await session.status();
+      const result=request.type==='AUTH_LOGIN'?await session.login(request.login,request.password):request.type==='AUTH_LOGOUT'?await session.logout():await authState();
       if(request.type!=='AUTH_STATUS')broadcast().catch(()=>{});return result;
      }
-     let state=await read();const auth=session?await session.status():null;
+     let state=await read();const auth=session?await authState():null;
      if(request.type==='QUEUE_CONFLICTS'||request.type==='QUEUE_RESOLVE'){
       if(auth?.state!=='authenticated')throw Object.assign(new Error('Authentication required'),{kind:'authentication'});
       if(request.type==='QUEUE_CONFLICTS')return {...await backend.conflicts(request.after),scope:auth.epoch};

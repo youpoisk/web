@@ -234,3 +234,9 @@ EXT010 client reviewfix: bounded transactional IDB generationGC (128keys/pass, d
 
 - [x] EXT-010: backend077f86f+47d53d0 andclientf72765e+9371fd2 independentreviewPASS, allP2fixed. LocalDBbackup665830bytes beforemigration19/20, APIhealthy/ready200,20migrations. RealHTTPsync smoke: fullsnapshot/delta/tombstone/restart/outboxpreservedPASS; actualFirefoxIDB snapshot+delta+auth/write/readbackPASS. QAstate/review restored andnativeQA/browsertestsessionsrevoked; websessionuntouched. 80unitextensiontests,116sharedAPI/core100, webbuild/MozillaLint0warnings. Follow-up smoke scripts retained outside releasebundle.
 
+
+EXT-010 finalsmoke bcfb9fc independentreviewPASS; backendAPIhealthy,migrations20; taskclosed.
+### EXT-011 — panel and popup state
+UI separates overall average/count from ownrating; ratings highlighted/+2px. Per-video pending/offline/conflict labels, conflict opens trustedpopup flow. Cached real current/watchlist pages12 available offline with owner isolation; overlays generation/tombstone and ownpending, never sampledata. Review editor remains open/draft retained for queued. Safe local auth.peek contains no credentials and cannot authorize HTTP; writes still use session.authorize.
+Unknown-base deferred intent uses expected_revision0 (instead of silently fetching a freshbase after reconnect), so pre-existing serverstate requires explicit conflict choice. 83extensiontestsPASS, Firefoxbuild/lint0warning; independentreview required before EXT012.
+

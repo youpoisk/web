@@ -19,7 +19,7 @@
     if(busy)return false;
     const video=context();if(!video || video.id!==current?.id){schedule();return false;}
     busy=true;document.querySelectorAll('#yp-panel button').forEach(b=>b.disabled=true);
-    try{const scope=state?.auth?.scope;const result=await YP.request('UPDATE',{video,patch,scope});if(state?.auth?.scope!==scope||result.auth?.scope!==scope)return false;state=result;if(!result.queued&&'review' in patch)drafts.delete(video.id);if(context()?.id===video.id){render();notify(result.queued?'Изменение ожидает отправки.':'Сохранено на сервере');}return true;}
+    try{const scope=state?.auth?.scope;const result=await YP.request('UPDATE',{video,patch,scope});if(state?.auth?.scope!==scope||result.auth?.scope!==scope)return false;state=result;if(!result.queued&&'review' in patch)drafts.delete(video.id);if(context()?.id===video.id){render();notify(result.queued?'Изменение ожидает отправки.':'Сохранено на сервере');}return !result.queued;}
     catch(e){notify(e.message);return false;}finally{busy=false;document.querySelectorAll('#yp-panel button').forEach(b=>b.disabled=false);}
   }
   function scores(panel,value){
@@ -64,9 +64,9 @@
     if(state.options.enabled===false){document.getElementById('yp-panel')?.remove();return;}
     const panel=node('div');panel.id='yp-panel';panel.setAttribute('aria-label','Действия YouPoisk');
     const saved=state.videos[current.id]||{};
-    const rate=node('button','','yp-rate-trigger');const star=document.createElementNS('http://www.w3.org/2000/svg','svg');star.setAttribute('viewBox','0 0 24 24');star.setAttribute('aria-hidden','true');star.classList.add('yp-rate-icon');const starPath=document.createElementNS('http://www.w3.org/2000/svg','path');starPath.setAttribute('d','m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2L3.2 9.6l6.3-.9Z');star.append(starPath);rate.replaceChildren(star,node('span',saved.rating?String(saved.rating)+'/10':'Оценить','yp-rate-label'));if(saved.mark){const m=node('span',saved.mark==='watched'?'Просмотрено':'Неинтересно','yp-mark-chip');rate.append(m);}rate.type='button';rate.title='Оценка YouPoisk от 1 до 10';rate.setAttribute('aria-expanded','false');rate.setAttribute('aria-haspopup','dialog');
+    const rate=node('button','','yp-rate-trigger');const star=document.createElementNS('http://www.w3.org/2000/svg','svg');star.setAttribute('viewBox','0 0 24 24');star.setAttribute('aria-hidden','true');star.classList.add('yp-rate-icon');const starPath=document.createElementNS('http://www.w3.org/2000/svg','path');starPath.setAttribute('d','m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2L3.2 9.6l6.3-.9Z');star.append(starPath);rate.replaceChildren(star,node('span',saved.rating?String(saved.rating)+'/10':'Оценить','yp-rate-label'+(saved.rating?' yp-score-value':'')));if(saved.mark){const m=node('span',saved.mark==='watched'?'Просмотрено':'Неинтересно','yp-mark-chip');rate.append(m);}rate.type='button';rate.title='Оценка YouPoisk от 1 до 10';rate.setAttribute('aria-expanded','false');rate.setAttribute('aria-haspopup','dialog');
     const popover=node('div','', 'yp-rating-popover');popover.id='yp-rating-popover';popover.setAttribute('popover','auto');popover.setAttribute('role','dialog');popover.setAttribute('aria-label','Оценка YouPoisk');
-    popover.append(node('strong','YouPoisk'),node('p','Ваша оценка видео'));scores(popover,saved.rating);marks(popover,saved.mark||null);
+    popover.append(node('strong','YouPoisk'),node('p',saved.ratingCount?'Общая оценка: '+Number(saved.ratingAverage).toFixed(1).replace('.',',')+' · Оценок: '+saved.ratingCount:'Общих оценок пока нет'),node('p','Ваша оценка видео'));scores(popover,saved.rating);marks(popover,saved.mark||null);
     popover.append(node('small',state.auth?.state==='authenticated'?'Сохраняется в аккаунте YouPoisk.':'Войдите в расширении YouPoisk для сохранения.'));
     rate.onclick=()=>{
       if(popover.matches(':popover-open')){popover.hidePopover();return;}
@@ -94,7 +94,7 @@
     write.onclick=()=>{if(editor.matches(':popover-open'))editor.hidePopover();else openEditor(true);};
     editor.addEventListener('toggle',()=>{write.setAttribute('aria-expanded',String(editor.matches(':popover-open')));});
     const later=node('button',saved.later?'✓ Посмотрю позже':'＋ Посмотрю позже','yp-save');later.type='button';later.setAttribute('aria-pressed',String(!!saved.later));later.onclick=()=>update({later:!saved.later});
-    const status=node('div','', 'yp-status');status.setAttribute('role','status');
+    const status=node('div',saved.conflict?'Есть конфликт. Откройте значок расширения для сверки.':saved.pending?'Изменение ожидает отправки.':saved.offline||state.offline?'Нет связи. Показаны последние доступные данные.':'', 'yp-status');status.setAttribute('role','status');
     panel.append(rate,later,write,popover,editor,status);
     const old=document.getElementById('yp-panel');const reopen=!!old?.querySelector('#yp-review-popover:popover-open');const typing=old?.querySelector('#yp-review-popover textarea')===document.activeElement;if(old)old.replaceWith(panel);else {const likes=[...host.children].find(el=>el.matches('segmented-like-dislike-button-view-model, ytd-segmented-like-dislike-button-renderer')||el.querySelector('segmented-like-dislike-button-view-model, ytd-segmented-like-dislike-button-renderer'));if(likes)likes.after(panel);else host.prepend(panel);}matchNativeRatingButton(rate,host);
     if(reopen)openEditor(typing);

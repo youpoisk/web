@@ -6,3 +6,5 @@ textarea.review{display:block;width:100%;margin:12px 0 0;padding:10px 12px;borde
 #account{margin:14px 0 18px;padding:14px;border:1px solid #e2eaf0;border-radius:12px;background:#f8fbfd}#login-form{display:grid;gap:10px}#login-form label{display:grid;gap:5px;font-size:12px;font-weight:500}#login-form input{box-sizing:border-box;width:100%;padding:10px 12px;border:1px solid #ccd8e2;border-radius:8px;font:inherit;background:#fff;color:#17212a}#login-form input:focus{outline:2px solid #8bd0fb;border-color:#1da1f2}#account #mode{margin-bottom:0}#account-name{font-size:13px;font-weight:600;margin:0 0 6px}
 
 .queue-conflict{margin-top:14px;padding:12px;border:1px solid #ccd6dd;border-radius:10px;background:white}.queue-conflict p{font-size:11px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap}
+
+#score-label.rating-number{font-size:12px;color:#168bd0;font-weight:700}.scores button{font-size:13px}#aggregate-rating,#video-state{margin-top:8px}#video-state:not(:empty){padding:8px;border-radius:6px;background:#fff3df;color:#805600}

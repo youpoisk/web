@@ -23,7 +23,7 @@ function fixture(){
   if(failStatus){const response=json({code:'rate_limited',message:'Retry',request_id:'request',field_errors:{}},failStatus);if(retryAfter!==null)response.headers.set('Retry-After',String(retryAfter));return response;}
   if(receipts.has(key))return json(receipts.get(key));
   const body=JSON.parse(init.body);let response;
-  if(path.endsWith('/review')){assert.equal(body.expected_revision,review.revision);review={revision:review.revision+1,text:body.text};response={kind:'video_review',target_id:id,review,change_seq:++seq};}
+  if(path.endsWith('/review')){if(body.expected_revision!==review.revision)return json({code:'revision_conflict',message:'Conflict',request_id:'request',field_errors:{}},409);review={revision:review.revision+1,text:body.text};response={kind:'video_review',target_id:id,review,change_seq:++seq};}
   else if(path.endsWith('/state')){if(body.expected_revision!==state.revision)return json({code:'revision_conflict',message:'Conflict',request_id:'request',field_errors:{}},409);const {expected_revision,...patch}=body;state={...state,...patch,revision:state.revision+1};if(state.mark===null)delete state.mark;response=result();}
   else{exists=true;response=result();}
   receipts.set(key,structuredClone(response));if(lose){lose=false;throw Error('lost response');}return json(response);
@@ -32,7 +32,7 @@ function fixture(){
  return {create,storage,db,writes,offline(value=true){offline=value},serverState(patch){state={...state,...patch}},advance(ms=3600000){clock+=ms},failHTTP(status,seconds=null){failStatus=status;retryAfter=seconds},badReview(){badReviewTarget=true},switchOnAuthorize(n){switchAt=n},video:{id:yt,title:'Real video'},missing(){exists=false},lose(){lose=true},failClear(){failClear=true},switchEpoch(){scope='00000000-0000-4000-8000-000000000004'},switchOwner(){who='00000000-0000-4000-8000-000000000005'}};
 }
 test('server state and review use independent revisions, preserve null/false and never expose auth',async()=>{
- const f=fixture(),b=f.create();assert.equal((await b.current(yt)).videos[yt].review,'Existing review');await b.update(f.video,{rating:8});await b.update(f.video,{later:false});const saved=await b.update(f.video,{review:'Edited review'});assert.equal(saved.videos[yt].rating,8);assert.equal(saved.videos[yt].review,'Edited review');assert.equal(f.writes[0].body.expected_revision,1);assert.equal(f.writes[2].body.expected_revision,4);await b.update(f.video,{rating:null});assert.equal(f.writes.at(-1).body.rating,null);assert.equal((await b.library()).videos[yt].hasReview,true);assert.equal(JSON.stringify(saved).includes('opaque'),false);
+ const f=fixture(),b=f.create();assert.equal((await b.current(yt)).videos[yt].review,'Existing review');await b.update(f.video,{rating:8});await b.update(f.video,{later:false});const saved=await b.update(f.video,{review:'Edited review'});assert.equal(saved.videos[yt].rating,8);assert.equal(saved.videos[yt].review,'Edited review');assert.equal(f.writes[0].body.expected_revision,1);assert.equal(f.writes[2].body.expected_revision,4);await b.update(f.video,{rating:null});assert.equal(f.writes.at(-1).body.rating,null);await b.update(f.video,{later:true});assert.equal((await b.library()).videos[yt].hasReview,true);assert.equal(JSON.stringify(saved).includes('opaque'),false);
 });
 test('lost state response and worker restart replay original key/body/lease without double commit',async()=>{
  const f=fixture();f.lose();assert.equal((await f.create().update(f.video,{rating:9})).queued,true);assert.ok([...f.db.values()].some(Boolean));f.advance();await f.create().update(f.video,{rating:9});assert.deepEqual(f.writes[0],f.writes[1]);assert.equal((await f.create().current(yt)).videos[yt].rating,9);assert.equal([...f.db.entries()].filter(([key,value])=>key.startsWith('yp-operation-v1:')&&value).length,0);
@@ -84,7 +84,7 @@ test('damaged key, lease, revision or schema body is retained blocked without HT
 
 test('durable retry deadline survives restart, respects Retry-After and keeps original command',async()=>{
  const f=fixture();f.failHTTP(429,120);assert.equal((await f.create().update(f.video,{rating:8})).queued,true);const command=f.writes[0];assert.equal((await f.create().update(f.video,{review:'Must respect shared cooldown'})).queued,true);assert.equal(f.writes.length,1);const pending=[...f.db.values()].find(v=>v?.state==='pending');assert.equal(pending.attempts,1);assert.equal(pending.nextAttemptAt,1120000);assert.equal((await f.create().recover()).deferred,1);assert.equal(f.writes.length,1);
- f.advance(119999);assert.equal((await f.create().recover()).deferred,1);f.advance(1);f.failHTTP(0);assert.equal((await f.create().recover()).sent,2);assert.deepEqual(f.writes[1],command);
+ f.advance(119999);assert.equal((await f.create().recover()).deferred,1);f.advance(1);f.failHTTP(0);assert.equal((await f.create().recover()).sent,1);assert.deepEqual(f.writes[1],command);
 });
 test('permanent HTTP failure is retained and never automatically resent',async()=>{
  const f=fixture();f.failHTTP(403);assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.advance();assert.equal((await f.create().recover()).blocked,1);assert.equal(f.writes.length,1);assert.equal([...f.db.values()].find(v=>v?.state==='rejected').errorStatus,403);
@@ -124,4 +124,12 @@ test('offline coalescing follows mark/later domain rules in both click orders',a
 
 test('a server edit after conflict preview requires new confirmation and cannot be overwritten',async()=>{
  const f=fixture();f.failHTTP(409);assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.failHTTP(0);const preview=(await f.create().conflicts()).items[0];f.serverState({revision:2,rating:10});const before=f.writes.length;await assert.rejects(f.create().resolve(preview.ref,'local',preview.expected),e=>e.kind==='preview_changed');assert.equal(f.writes.length,before);assert.ok(await f.storage.read(preview.ref));const fresh=(await f.create().conflicts()).items[0];await f.create().resolve(fresh.ref,'local',fresh.expected);assert.equal(f.writes.at(-1).body.expected_revision,2);
+});
+
+test('offline current and watchlist use only real cached account data with explicit pending state',async()=>{
+ const f=fixture();await f.create().current(yt);await f.create().update(f.video,{later:true});await f.create().library();f.offline();assert.equal((await f.create().update(f.video,{rating:8})).queued,true);const current=await f.create().current(yt),list=await f.create().library();assert.equal(current.offline,true);assert.equal(current.videos[yt].offline,true);assert.equal(current.videos[yt].pending,true);assert.equal(current.videos[yt].rating,8);assert.equal(current.videos[yt].ratingAverage,null);assert.equal(current.videos[yt].ratingCount,0);assert.equal(list.offline,true);assert.equal(list.videos[yt].pending,true);
+ f.switchOwner();assert.deepEqual((await f.create().current(yt)).videos,{});assert.deepEqual((await f.create().library()).videos,{});
+});
+test('an offline intent without known base cannot silently overwrite an existing server revision',async()=>{
+ const f=fixture();f.serverState({rating:10,revision:3});f.offline();assert.equal((await f.create().update(f.video,{rating:8})).queued,true);f.offline(false);await f.create().recover();assert.equal(f.writes[0].body.expected_revision,0);const preview=(await f.create().conflicts()).items[0];assert.equal(preview.server.rating,10);assert.equal(preview.local.rating,8);assert.equal((await f.create().current(yt)).videos[yt].conflict,true);
 });
