@@ -193,3 +193,6 @@ EXT-008 recovery primitive: backend.recover читает не более 12 со
 
 EXT-008 review fix: перед replay сверять body с сохранённым intent и target (включая YouTube ID add), несовпадение оставлять blocked без HTTP. Замечание P2 закрыто regression-тестом для state/review/add; 59 тестов PASS.
 
+
+EXT-008 review fix follow-up: UUID key, bounded nonempty lease, safe revision; invalid_input block/continue сохраняет повреждённую запись без HTTP и не стопорит страницу. 60 тестов PASS.
+

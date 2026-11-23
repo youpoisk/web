@@ -60,8 +60,9 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
     let bound=revisionOK&&intentKeys.length>0&&intentKeys.every(key=>allowed.includes(key));
     if(operation==='addObservedVideo')bound=bound&&intentKeys.length===1&&intent.id===target&&body.youtube_video_id===target&&body.expected_revision===0&&typeof body.title==='string'&&Object.keys(body).every(key=>['youtube_video_id','title','expected_revision'].includes(key));
     else bound=bound&&Object.keys(body).length===intentKeys.length+1&&intentKeys.every(key=>Object.hasOwn(body,key)&&body[key]===intent[key]);
-    if(!bound){blocked++;continue;}
-    await durable(operation,target,intent,scope,async()=>{throw new BackendError('reconcile_required');});sent++;
+    const envelope=typeof pending.key==='string'&&/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(pending.key)&&typeof pending.lease==='string'&&pending.lease.length>0&&pending.lease.length<=16384;
+    if(!bound||!envelope){blocked++;continue;}
+    try{await durable(operation,target,intent,scope,async()=>{throw new BackendError('reconcile_required');});sent++;}catch(error){if(error instanceof ApiError&&error.kind==='invalid_input'){blocked++;continue;}throw error;}
    }
    await check(scope);return {sent,blocked,next:page.next};
   }),

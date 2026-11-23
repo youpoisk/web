@@ -70,3 +70,11 @@ test('recovery blocks schema-valid body that no longer matches saved intent or Y
   f.db.set(key,pending);const count=f.writes.length;assert.deepEqual(await f.create().recover(),{sent:0,blocked:1,next:null});assert.equal(f.writes.length,count);assert.ok(f.db.get(key));
  }
 });
+
+test('damaged key, lease, revision or schema body is retained blocked without HTTP',async()=>{
+ for(const field of ['key','lease','revision','schema']){
+  const f=fixture();f.lose();await assert.rejects(f.create().update(f.video,{rating:8}));const [slot,p]=[...f.db].find(([k,v])=>k.startsWith('yp-operation-v1:')&&v);
+  if(field==='key')p.key='invalid';if(field==='lease')p.lease=null;if(field==='revision')p.body.expected_revision=-1;if(field==='schema'){p.body.rating=88;p.fingerprint=JSON.stringify({rating:88});}
+  f.db.set(slot,p);const count=f.writes.length;assert.equal((await f.create().recover()).blocked,1);assert.equal(f.writes.length,count);assert.ok(f.db.get(slot));
+ }
+});
