@@ -55,7 +55,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
  async function check(scope){if(session.peek){const live=await session.peek();if(live.state!=='authenticated'||live.owner!==scope.owner||live.epoch!==scope.epoch)throw new BackendError('stale');return;}await session.authorize(async(_,live)=>{if(live.owner!==scope.owner||live.epoch!==scope.epoch)throw new BackendError('stale');});}
 
 
- function observedBody(video,revision=0){const obs=video.observation;return {youtube_video_id:video.id,title:video.title,expected_revision:revision,...(obs?{hashtags:obs.tags,hashtags_observation_status:obs.status}:{})};}
+ function observedBody(video,revision=0){const obs=video.observation,body={youtube_video_id:video.id,title:video.title,expected_revision:revision,...(obs?{hashtags:[...obs.tags],hashtags_observation_status:obs.status}:{})};if(obs)while(new TextEncoder().encode(JSON.stringify(body)).length>8192&&body.hashtags.length){body.hashtags.pop();body.hashtags_observation_status='partial';}return body;}
  function transient(error){return ['network','timeout','retry_later'].includes(error.kind)||error.status>=500||error.status===429;}
  async function cacheRecord(prefix,indexKey,id,value,limit){
   const slot=prefix+id,stored=await storage.read(indexKey),index=stored??[];if(!Array.isArray(index)||index.some(key=>typeof key!=='string'||!key.startsWith(prefix)))throw new BackendError('storage');

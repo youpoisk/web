@@ -305,3 +305,6 @@ Commit 1b3e005: reviewer follow-up PASS, P2 closed; shared exact Add receipt for
 
 ### Спорные вопросы — DEC-EXT-018-BOUNDS
 Вопрос: исходный лимит 50 tags расходится с действующим API (30). Выбраны 30 tags/100 code points и максимум32768 code units исходного DOM текста, при обрезке partial. Причина: совместимость со строгим серверным контрактом и отсутствие молчаливого заявления complete. Открытие страницы не вызывает mutation; наблюдения отправляются только при пользовательской записи, и не воскрешают удалённую библиотечную запись.
+
+### EXT-018 — review fix: serialized byte budget
+Reviewer P2:30×100 multibyte tags превышают 8192-byte API request bound и блокируют personal write. Исправлено до сохранения immutable body: с конца удаляются дополнительные tags до полного JSON<=8192UTF8bytes, status становится partial. Exact retry сохраняет уже ограниченный body. Regression CJK30×100 подтверждает успешную отправку rating. Coverage100line/function PASS. До byte-fix full gate --api PASS: .artifacts/extension-verification/e5c5d341-a80e-4085-91bb-8c24ea90cc75.

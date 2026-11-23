@@ -192,3 +192,9 @@ test('description observation reaches add API for new and already-added video wi
 });
 
 
+
+test('optional CJK description metadata respects serialized request budget and never blocks a rating',async()=>{
+ const f=fixture();f.missing();const tags=Array.from({length:30},(_,i)=>'漢'.repeat(98)+String(i).padStart(2,'0'));
+ await f.create().update({...f.video,observation:{source:'youtube-description-dom',status:'complete',tags}},{rating:9});
+ const add=f.writes.find(row=>row.path==='/v1/me/videos');assert.ok(new TextEncoder().encode(JSON.stringify(add.body)).length<=8192);assert.equal(add.body.hashtags_observation_status,'partial');assert.ok(add.body.hashtags.length<30);assert.equal(f.writes.at(-1).body.rating,9);
+});
