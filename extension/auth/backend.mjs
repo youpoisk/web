@@ -55,6 +55,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
  async function check(scope){if(session.peek){const live=await session.peek();if(live.state!=='authenticated'||live.owner!==scope.owner||live.epoch!==scope.epoch)throw new BackendError('stale');return;}await session.authorize(async(_,live)=>{if(live.owner!==scope.owner||live.epoch!==scope.epoch)throw new BackendError('stale');});}
 
 
+ function observedBody(video,revision=0){const obs=video.observation;return {youtube_video_id:video.id,title:video.title,expected_revision:revision,...(obs?{hashtags:obs.tags,hashtags_observation_status:obs.status}:{})};}
  function transient(error){return ['network','timeout','retry_later'].includes(error.kind)||error.status>=500||error.status===429;}
  async function cacheRecord(prefix,indexKey,id,value,limit){
   const slot=prefix+id,stored=await storage.read(indexKey),index=stored??[];if(!Array.isArray(index)||index.some(key=>typeof key!=='string'||!key.startsWith(prefix)))throw new BackendError('storage');
@@ -69,7 +70,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   const operation=review?'putVideoReview':'patchVideoState',pending=target?await storage.read(`yp-operation-v1:${scope.owner}:${operation}:${target}`):null;
   const canonical=target?await pull.read(scope,review?'video_review':'video_state',target):null;
   const revisions=[canonical?.revision,review?cached?.review.revision:cached?.video.my_state.revision].filter(Number.isSafeInteger),revision=revisions.length?Math.max(...revisions):null;
-  const row={version:1,owner:scope.owner,epoch:scope.epoch,video,patch:{...(existing?.patch??{}),...patch},baseRevision:existing?.baseRevision??revision,createdAt:existing?.createdAt??now(),...(existing?.deferred?{deferred:true}:{}),...(existing?.addKey?{addKey:existing.addKey}:{}),...(pending?{predecessor:pending.key}:{})};
+  const row={version:1,owner:scope.owner,epoch:scope.epoch,video,patch:{...(existing?.patch??{}),...patch},baseRevision:existing?.baseRevision??revision,createdAt:existing?.createdAt??now(),...(existing?.deferred?{deferred:true}:{}),...(existing?.addKey?{addKey:existing.addKey}:{}),...(existing?.observationOnly?{observationOnly:true,observationRevision:existing.observationRevision}:{}),...(pending?{predecessor:pending.key}:{})};
   if(!review){if(patch.mark==='not_interested')row.patch.later=false;else if(patch.later===true&&row.patch.mark==='not_interested')row.patch.mark=null;}
   // A sent command is immutable. Further clicks replace only the unsent successor.
   if(existing?.commandKey){row.predecessor=existing.commandKey;row.predecessorIntent=JSON.stringify(review?{text:existing.patch.review}:existing.patch);}
@@ -86,14 +87,16 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   let resolved=await card(row.video.id,scope);
   const addSlot=`yp-operation-v1:${scope.owner}:addObservedVideo:${row.video.id}`;
   const priorAdd=await storage.read(addSlot);
-  if(priorAdd||!resolved){
+  const observeExisting=resolved?.my_state?.added===true&&row.video.observation&&row.video.observation.status!=='unknown';
+  if(priorAdd||!resolved||(!row.addKey&&observeExisting)){
+   if(!row.addKey&&!priorAdd&&resolved){row.observationOnly=true;row.observationRevision=resolved.my_state.revision;}
    row.addKey=priorAdd?.key??row.addKey??crypto.randomUUID();const peerSlot=`yp-intent-v1:${scope.owner}:${row.video.id}:${isReview?'state':'review'}`,peer=await storage.read(peerSlot),links=[[slot,row]];
-   if(peer?.version===1&&peer.owner===scope.owner&&peer.epoch===scope.epoch&&peer.video?.id===row.video.id)links.push([peerSlot,{...peer,addKey:row.addKey}]);
+   if(peer?.version===1&&peer.owner===scope.owner&&peer.epoch===scope.epoch&&peer.video?.id===row.video.id)links.push([peerSlot,{...peer,addKey:row.addKey,...(row.observationOnly?{observationOnly:true,observationRevision:row.observationRevision}:{})}]);
    await storage.commit(links);
-   await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>({youtube_video_id:row.video.id,title:row.video.title,expected_revision:0}),{...stage,field:'addKey'},row.addKey);resolved=await card(row.video.id,scope);
+   await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>observedBody(row.video,row.observationRevision??0),{...stage,field:'addKey'},row.addKey);resolved=await card(row.video.id,scope);
   }
   if(!resolved)throw new BackendError('protocol');
-  const review=Object.hasOwn(row.patch,'review');if(!review&&row.addKey){const added=await storage.read(`yp-receipt-v1:${scope.owner}:${row.addKey}`);if(added?.kind==='video_state'&&added.target===resolved.id)row.baseRevision=added.revision;}
+  const review=Object.hasOwn(row.patch,'review');if(!review&&row.addKey&&!row.observationOnly){const added=await storage.read(`yp-receipt-v1:${scope.owner}:${row.addKey}`);if(added?.kind==='video_state'&&added.target===resolved.id)row.baseRevision=added.revision;}
   const operation=review?'putVideoReview':'patchVideoState',pendingSlot=`yp-operation-v1:${scope.owner}:${operation}:${resolved.id}`;
   const predecessor=await storage.read(pendingSlot);
   if(predecessor&&predecessor.key!==row.commandKey){
@@ -157,7 +160,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
  async function importBatch(scope,id){if(typeof id!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(id))throw new BackendError('invalid_reference');const batch=await storage.read(`yp-import-v1:${scope.owner}:${id}`);if(!batch||batch.owner!==scope.owner||batch.epoch!==scope.epoch||batch.version!==1)throw new BackendError('reconcile_required');return batch;}
  async function applyImportRow(row,scope){
   const marker=key=>storage.read(`yp-receipt-v1:${scope.owner}:${key}`);let target=row.target,revision=row.stateRevision;
-  if(!target||revision===0){let receipt=await marker(row.keys.add);if(!receipt){await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>({youtube_video_id:row.video.id,title:row.video.title,expected_revision:0}),null,row.keys.add);receipt=await marker(row.keys.add);}if(!receipt)throw new BackendError('protocol');target=receipt.target;revision=receipt.revision;row.addedDone=true;}
+  if(!target||revision===0){let receipt=await marker(row.keys.add);if(!receipt){await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>observedBody(row.video),null,row.keys.add);receipt=await marker(row.keys.add);}if(!receipt)throw new BackendError('protocol');target=receipt.target;revision=receipt.revision;row.addedDone=true;}
   if(Object.keys(row.patch).length){if(!await marker(row.keys.state))await durable('patchVideoState',target,row.patch,scope,async()=>({expected_revision:revision,...row.patch}),null,row.keys.state);row.stateDone=true;}
   if(row.review!==null){if(!await marker(row.keys.review))await durable('putVideoReview',target,{text:row.review},scope,async()=>({expected_revision:row.reviewRevision,text:row.review}),null,row.keys.review);row.reviewDone=true;}
  }
@@ -228,7 +231,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
     const revisionOK=body&&Number.isSafeInteger(body.expected_revision)&&body.expected_revision>=0;
     const intentKeys=Object.keys(intent),allowed=operation==='patchVideoState'?['rating','later','mark']:operation==='putVideoReview'?['text']:['id'];
     let bound=revisionOK&&intentKeys.length>0&&intentKeys.every(key=>allowed.includes(key));
-    if(operation==='addObservedVideo')bound=bound&&intentKeys.length===1&&intent.id===target&&body.youtube_video_id===target&&body.expected_revision===0&&typeof body.title==='string'&&Object.keys(body).every(key=>['youtube_video_id','title','expected_revision'].includes(key));
+    if(operation==='addObservedVideo')bound=bound&&intentKeys.length===1&&intent.id===target&&body.youtube_video_id===target&&typeof body.title==='string'&&Object.keys(body).every(key=>['youtube_video_id','title','expected_revision','hashtags','hashtags_observation_status'].includes(key));
     else bound=bound&&Object.keys(body).length===intentKeys.length+1&&intentKeys.every(key=>Object.hasOwn(body,key)&&body[key]===intent[key]);
     const envelope=typeof pending.key==='string'&&/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(pending.key)&&typeof pending.lease==='string'&&pending.lease.length>0&&pending.lease.length<=16384;
     if(!bound||!envelope){blocked++;continue;}

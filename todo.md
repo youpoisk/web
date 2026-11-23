@@ -296,3 +296,12 @@ Commit 1b3e005: reviewer follow-up PASS, P2 closed; shared exact Add receipt for
 
 ### Спорные вопросы — DEC-EXT-017-YP099
 Вопрос: реализовывать устаревший отдельный composer/posts API из начального плана? Выбрана принятая модель YP-099: оценка/рецензия сама попадает в ленту по privacy, отдельного post нет. Причина: не создавать вторую противоречащую продукту публикацию. EXT-017 закрывается редактором одной рецензии и переходом к карточке, существующие tests покрывают versioned retry/conflict; исходный исторический план не перезаписывается.
+
+### EXT-017 — review closure
+Независимое ревью7a16916 PASS, MEDIUM+ не найдено.
+
+### EXT-018 — наблюдения хэштегов описания
+Реализовано: description-only selector внутри текущего ytd-watch-flexy, SPA video-id fence; unknown/partial/complete, bounded Unicode NFC tags; complete только при явно раскрытом описании без обрезки. Нет чтения comments/sidebar или внешнего fetch. Наблюдение прикрепляется к явному действию: неизвестное видео — обычный Add, уже добавленное — version-checked observation Add без изменения personal fields; не добавленное пользователем существующее видео не добавляется только ради метаданных. Серверный client_observed provenance authoritative; исходные данные остаются недоверенными. Существующий сервер не стирает известные tags из unknown/partial/empty untrusted observations. Сохранены exact retry body/key/lease и прежняя base revision пользовательского patch. Тесты покрывают Unicode/лимиты/empty/forged provenance, новый и уже добавленный ролик, stale state после metadata observation. Полный gate запущен отдельно.
+
+### Спорные вопросы — DEC-EXT-018-BOUNDS
+Вопрос: исходный лимит 50 tags расходится с действующим API (30). Выбраны 30 tags/100 code points и максимум32768 code units исходного DOM текста, при обрезке partial. Причина: совместимость со строгим серверным контрактом и отсутствие молчаливого заявления complete. Открытие страницы не вызывает mutation; наблюдения отправляются только при пользовательской записи, и не воскрешают удалённую библиотечную запись.

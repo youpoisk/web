@@ -24,8 +24,9 @@ globalThis.YPWorker=(()=>{
    if(command.type==='QUEUE_RESOLVE'){fields(command.expected,['revision','key','intent'],['revision','key','intent']);if(!Number.isSafeInteger(command.expected.revision)||command.expected.revision<0||typeof command.expected.key!=='string'||command.expected.key.length>64||typeof command.expected.intent!=='string'||command.expected.intent.length>10000)throw Error('Некорректная версия сверки');}
    if(command.type==='QUEUE_RESOLVE'&&(typeof command.ref!=='string'||command.ref.length>256||!['server','local'].includes(command.choice)))throw Error('Некорректное решение конфликта');
    if(command.type==='UPDATE_CURRENT_VIDEO'){
-    fields(command.video,['id','title','url','preview','channel','channelUrl'],['id','title']);
-    if(typeof command.video.id!=='string'||typeof command.video.title!=='string'||command.video.title.length>250||['url','preview','channel','channelUrl'].some(k=>Object.hasOwn(command.video,k)&&typeof command.video[k]!=='string'))throw Error('Некорректное видео');
+    fields(command.video,['id','title','url','preview','channel','channelUrl','observation'],['id','title']);
+    if(typeof command.video.id!=='string'||typeof command.video.title!=='string'||[...command.video.title.normalize('NFC')].length>250||['url','preview','channel','channelUrl'].some(k=>Object.hasOwn(command.video,k)&&typeof command.video[k]!=='string'))throw Error('Некорректное видео');
+    if(command.video.observation)YPCore.observation(command.video.observation);
     fields(command.patch,['rating','later','review','mark']);
     if(!Object.keys(command.patch).length)throw Error('Пустое изменение');
    }

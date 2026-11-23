@@ -155,3 +155,12 @@ test('site review navigation uses baked origin and canonical video id only',()=>
  assert.equal(core.siteVideoUrl(video.id),'http://127.0.0.1:5173/#/video/aqz-KE-bpKQ');
  for(const id of ['../settings','https://evil.test','bad',''])assert.throws(()=>core.siteVideoUrl(id));
 });
+
+test('description hashtags are bounded Unicode observations, not complete when truncated',()=>{
+ assert.deepEqual([...core.descriptionTags('a #Тест #Cafe\u0301 #Тест',true).tags],['Тест','Café']);
+ assert.equal(core.descriptionTags('no tags',true).status,'complete');assert.equal(core.descriptionTags('no tags').status,'partial');
+ assert.equal(core.descriptionTags('#'+ 'x'.repeat(101),true).status,'partial');
+ const many=core.descriptionTags(Array.from({length:31},(_,i)=>'#tag'+i).join(' '),true);assert.equal(many.tags.length,30);assert.equal(many.status,'partial');
+ assert.throws(()=>core.observation({source:'comments',status:'complete',tags:['x']}));assert.throws(()=>core.observation({source:'youtube-description-dom',status:'unknown',tags:['x']}));
+ assert.equal([...core.metadata({...video,title:'😀'.repeat(251)}).title].length,250);
+});

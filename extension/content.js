@@ -11,7 +11,9 @@
     const title=document.querySelector('ytd-watch-metadata h1 yt-formatted-string, #above-the-fold h1 yt-formatted-string, #title h1')?.textContent?.trim();
     const owner=document.querySelector('#owner ytd-channel-name a, ytd-video-owner-renderer ytd-channel-name a');
     if(!title)return null;
-    return YPCore.metadata({id,title,channel:owner?.textContent?.trim(),channelUrl:owner?.getAttribute('href')});
+    const description=page?.querySelector('ytd-text-inline-expander #attributed-snippet-text, #description-inline-expander #attributed-snippet-text');
+    const observation=description?YPCore.descriptionTags(description.textContent||'',description.closest('ytd-text-inline-expander')?.hasAttribute('is-expanded')===true):{source:'youtube-description-dom',status:'unknown',tags:[]};
+    return YPCore.metadata({id,title,observation,channel:owner?.textContent?.trim(),channelUrl:owner?.getAttribute('href')});
   }
   function node(tag,text,className){const n=document.createElement(tag);if(text)n.textContent=text;if(className)n.className=className;return n;}
   function notify(text){const s=document.querySelector('#yp-panel .yp-status');if(s)s.textContent=text;}

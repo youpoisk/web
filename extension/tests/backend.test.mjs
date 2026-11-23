@@ -185,3 +185,10 @@ test('unknown video offline review plus rating shares exact own add receipt in e
 test('shared observation receipt never rebases across a website edit after the add',async()=>{
  const f=fixture();f.missing();f.serverReview({revision:0,text:null});f.offline();await f.create().update(f.video,{review:'Offline new review'});await f.create().update(f.video,{rating:8});f.offline(false);f.afterReview(()=>f.serverState({revision:2,rating:10}));await f.create().recover();const conflict=(await f.create().conflicts()).items[0];assert.equal(conflict.server.rating,10);assert.equal(conflict.local.rating,8);assert.equal(f.writes.find(value=>value.path.endsWith('/state')).body.expected_revision,1);
 });
+
+test('description observation reaches add API for new and already-added video without hiding stale state',async()=>{
+ for(const missing of [false,true]){const f=fixture();if(missing)f.missing();const b=f.create();await b.update({...f.video,observation:{source:'youtube-description-dom',status:'partial',tags:['Тест']}},{rating:8});const add=f.writes.find(row=>row.path==='/v1/me/videos');assert.deepEqual(add.body.hashtags,['Тест']);assert.equal(add.body.hashtags_observation_status,'partial');assert.equal(add.body.expected_revision,missing?0:1);}
+ const f=fixture(),b=f.create();await b.current(yt);f.serverState({revision:2,rating:10});await b.update({...f.video,observation:{source:'youtube-description-dom',status:'complete',tags:[]}},{rating:8});assert.equal(f.writes.find(row=>row.path.endsWith('/state')).body.expected_revision,1);assert.equal((await b.queueStatus()).blocked>0,true);
+});
+
+

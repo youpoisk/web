@@ -11,9 +11,19 @@
   }
   function metadata(value) {
     if(!value || !/^[\w-]{11}$/.test(value.id||'')) throw Error('Некорректный ID видео');
-    const title=String(value.title||'').trim().slice(0,250);
+    const title=[...String(value.title||'').normalize('NFC').trim()].slice(0,250).join('');
     if(!title) throw Error('Название видео ещё не загрузилось');
-    return {id:value.id,title,url:`https://www.youtube.com/watch?v=${value.id}`,preview:`https://i.ytimg.com/vi/${value.id}/hqdefault.jpg`,channel:String(value.channel||'').slice(0,150),channelUrl:channelUrl(value.channelUrl)};
+    return {id:value.id,title,url:`https://www.youtube.com/watch?v=${value.id}`,preview:`https://i.ytimg.com/vi/${value.id}/hqdefault.jpg`,channel:[...String(value.channel||'').normalize('NFC')].slice(0,150).join(''),channelUrl:channelUrl(value.channelUrl),...(value.observation?{observation:observation(value.observation)}:{})};
+  }
+  function descriptionTags(text,complete=false){
+    const tags=new Set();let truncated=text.length>32768;text=text.slice(0,32768).normalize('NFC');
+    for(const match of text.matchAll(/(?:^|[^\p{L}\p{N}_])#([\p{L}\p{N}_][\p{L}\p{N}\p{M}_]*)/gu)){const tag=match[1];if([...tag].length>100){truncated=true;continue;}tags.add(tag);if(tags.size>30){truncated=true;break;}}
+    return {source:'youtube-description-dom',status:complete&&!truncated?'complete':'partial',tags:[...tags].slice(0,30)};
+  }
+  function observation(value){
+    if(!value||value.source!=='youtube-description-dom'||!['unknown','partial','complete'].includes(value.status)||!Array.isArray(value.tags)||value.tags.length>30||value.status==='unknown'&&value.tags.length)throw Error('Некорректное наблюдение');
+    const tags=value.tags.map(tag=>{if(typeof tag!=='string'||![...tag].length||[...tag].length>100||!/^([\p{L}\p{N}_][\p{L}\p{N}\p{M}_]*)$/u.test(tag))throw Error('Некорректный хэштег');return tag.normalize('NFC');});
+    return {source:value.source,status:value.status,tags:[...new Set(tags)]};
   }
   // Review: plain text, 1..1000 characters after trim (null deletes it).
   function review(value) {
@@ -61,5 +71,5 @@
   }
   function sameAuth(current,incoming,epoch){return current?.state==='authenticated'&&incoming?.state==='authenticated'&&typeof current.owner==='string'&&current.owner===incoming.owner&&current.epoch===epoch&&incoming.epoch===epoch;}
   function sameVideoAuth(current,incoming,scope){return current?.state==='authenticated'&&incoming?.state==='authenticated'&&typeof scope==='string'&&current.scope===scope&&incoming.scope===scope;}
-  globalThis.YPCore={empty,videoId,siteVideoUrl,channelUrl,metadata,options,apply,deferDelete,sameAuth,sameVideoAuth};
+  globalThis.YPCore={empty,descriptionTags,observation,videoId,siteVideoUrl,channelUrl,metadata,options,apply,deferDelete,sameAuth,sameVideoAuth};
 })();
