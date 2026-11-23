@@ -361,3 +361,6 @@ Reviewer PASS d46c398, MEDIUM+ нет. LOW учтён: политика/listing 
 ### Спорные вопросы — DEC-WEB-YP101
 Без хэштегов блок скрыт, не создаём пустую same-channel fallback. Квота50% применяется к первой порции/суммарному списку: сервер сохраняет earned credit между cursor pages. Неизвестный год не выдумывается; показывается канал/известная длительность. Следующая незавершённая функциональная задача — YP-055.1 (фильтр рецензий), YP-101 больше не относится к открытым реализациям.
 
+
+### YP-101 — локальный rollout
+Backend API/DB healthy, frontend source200. В рабочем каталоге31видео, всеavailabilityunknown, tags у2; related block скрыт до available source и пересечения hashtags. Фиктивные теги/статусы не назначаются. Parent не запрашивает related для unknown/unavailable source, чтобы ожидаемое отсутствие подборки не показывалось ошибкой404. Final review backend91ece27/frontenda2cc212 PASS, MEDIUM+ нет.
