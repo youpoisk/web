@@ -345,3 +345,6 @@ Reviewer PASS d46c398, MEDIUM+ нет. LOW учтён: политика/listing 
 
 ### Обновление локальной версии сайта/расширения
 По просьбе заказчика: production build сайта обновлён, extension manifests0.5.1 с актуальным runtime/API81.124extensiontestsPASS; webtype/buildPASS. Отдельно готовится clean devpackage изамена старого0.4 sourceкаталогаFirefox сbackup. Это не означает автоматическойперезагрузки/публикации установленногоaddon.
+
+### Локальное обновление 2026-11-23 — подтверждённое состояние
+Сайт http://127.0.0.1:5173/ обслуживает текущий исходный код; pnpm build и 124 теста расширения прошли. Чистый Firefox dev package 0.5.1 скопирован в прежний source-каталог C:\Users\HP-Serebro\Desktop\YouPoisk-Firefox-20261122-224558. Старая версия 0.4.0 сохранена отдельно: C:\Users\HP-Serebro\Desktop\YouPoisk-Firefox-backup-0.4.0-7575b906-f8de-4d6c-81af-2dc39506e6c6. Gecko ID и browser storage не изменялись. Фактическая перезагрузка addon в основном Firefox не подтверждена: требуется Reload в about:debugging#/runtime/this-firefox и обновление YouTube. Backend b690f8b пересобран и запущен, API/DB healthy, публичный endpoint рекомендаций отвечает 200; collector явно отключён до YP-091.U1. Независимое ревью YP-093 и SQL b690f8b: PASS, MEDIUM+ нет.
