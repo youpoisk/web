@@ -6,7 +6,7 @@
   const trusted=installed&&['popup.html','options.html'].some(page=>location.href===api.runtime.getURL(page));
   async function request(type, payload={}) {
     if(installed){
-      const commands={GET:trusted?'GET_ACCOUNT_LIBRARY':'GET_CURRENT_VIDEO_STATE',UPDATE:'UPDATE_CURRENT_VIDEO',OPTIONS:'OPTIONS',CURRENT:'GET_CURRENT_VIDEO_STATE',AUTH_STATUS:'AUTH_STATUS',AUTH_LOGIN:'AUTH_LOGIN',AUTH_LOGOUT:'AUTH_LOGOUT'};
+      const commands={GET:trusted?'GET_ACCOUNT_LIBRARY':'GET_CURRENT_VIDEO_STATE',UPDATE:'UPDATE_CURRENT_VIDEO',OPTIONS:'OPTIONS',CURRENT:'GET_CURRENT_VIDEO_STATE',AUTH_STATUS:'AUTH_STATUS',AUTH_LOGIN:'AUTH_LOGIN',AUTH_LOGOUT:'AUTH_LOGOUT',SYNC_STATUS:'SYNC_STATUS',SYNC_NOW:'SYNC_NOW'};
       if(!Object.hasOwn(commands,type)||Object.keys(payload).some(key=>!['video','patch','options','videoId','after','login','password','scope'].includes(key)))throw Error('Неизвестная команда');
       const request={...payload,type:'YP_'+commands[type]};
       if(type==='GET'&&!trusted)request.videoId=YPCore.videoId(location.href);

@@ -62,7 +62,7 @@ test('failed storage write does not corrupt state or poison the queue',async()=>
 
 test('manifest declares all runtime files and restricts content scripts to YouTube',()=>{
  const manifest=JSON.parse(readFileSync(new URL('../manifest.json',import.meta.url),'utf8'));
- assert.equal(manifest.manifest_version,3);assert.deepEqual(manifest.permissions,['storage','activeTab']);assert.equal(manifest.content_scripts.length,1);assert.deepEqual(manifest.content_scripts[0].matches,['https://www.youtube.com/*']);
+ assert.equal(manifest.manifest_version,3);assert.deepEqual(manifest.permissions,['storage','activeTab','alarms']);assert.equal(manifest.content_scripts.length,1);assert.deepEqual(manifest.content_scripts[0].matches,['https://www.youtube.com/*']);
  const files=[manifest.background.service_worker,manifest.action.default_popup,manifest.options_page,...manifest.content_scripts[0].js,...manifest.content_scripts[0].css];for(const file of files)assert.ok(readFileSync(new URL('../'+file,import.meta.url)).length>0,file);
  assert.equal(manifest.externally_connectable,undefined);
 });
@@ -70,7 +70,7 @@ test('manifest declares all runtime files and restricts content scripts to YouTu
 test('firefox manifest uses an event page, no storage permission and the firefox worker files',()=>{
  const manifest=JSON.parse(readFileSync(new URL('../manifest.firefox.json',import.meta.url),'utf8'));
  assert.equal(manifest.manifest_version,3);
- assert.deepEqual(manifest.permissions,['activeTab'],'storage must not be granted to page/content contexts in Firefox');
+ assert.deepEqual(manifest.permissions,['activeTab','alarms'],'storage must not be granted to page/content contexts in Firefox');
  assert.equal(manifest.background.service_worker,undefined);
  assert.deepEqual(manifest.background.scripts,['config.js','core.js','storage-idb.js','storage-firefox.js','auth-worker.js','background-common.js','background.firefox.js']);
  assert.equal(manifest.browser_specific_settings.gecko.id,'youpoisk-dev@local.invalid');

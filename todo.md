@@ -196,3 +196,10 @@ EXT-008 review fix: перед replay сверять body с сохранённ�
 
 EXT-008 review fix follow-up: UUID key, bounded nonempty lease, safe revision; invalid_input block/continue сохраняет повреждённую запись без HTTP и не стопорит страницу. 60 тестов PASS.
 
+
+### EXT-008 — durable outbox recovery
+- [x] EXT-008: durable nextAttemptAt/attempts/createdAt, exponential backoff+jitter (5s…1h), Retry-After и общий cooldown аккаунта при429; timer не является источником надёжности. Исходные key/body/lease неизменны. Постоянные4xx сохраняются conflict/rejected без автоматического resend, повреждённые input — invalid.
+- Восстановление: worker cold start, onStartup/onInstalled, alarms раз в минуту, focus окна и открытие popup; сериализация с auth/write, до120 команд за wake, durable cursor позволяет продолжить после blocked страниц. Статус pending/blocked и ручной повтор в trusted popup; содержимое очереди не передаётся content script. UI не выдаёт pending за серверный успех.
+- Проверки: 64 extension tests, Mozilla lint0errors0warnings, real API rating/review smoke и восстановление исходной QA-fixture PASS. Независимое ревью после коммита; исправления до EXT-009.
+- Спорные вопросы DEC-EXT-008-WAKE: минимальный повтор scheduler — раз в минуту (alarms), точный срок определяет durable nextAttemptAt. Причина: worker может быть выгружен; setTimeout не обеспечивает recovery. Ручная кнопка не обходит Retry-After. Новые offline-intents и конфликт UI относятся к EXT-009/010, не считаются готовыми в этом пункте.
+

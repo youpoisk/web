@@ -10,7 +10,7 @@ globalThis.YPWorker=(()=>{
   }
   function validate(command){
    fields(command,['type','videoId','video','patch','options','login','password','after','scope'],['type']);
-   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type']};
+   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope']};
    if(!Object.hasOwn(shapes,command.type))throw Error('Неизвестная команда');
    fields(command,shapes[command.type],shapes[command.type].filter(k=>!['after','scope'].includes(k)));
    if(command.after!==undefined&&(typeof command.after!=='string'||command.after.length>512))throw Error('Некорректный курсор');
@@ -43,12 +43,31 @@ globalThis.YPWorker=(()=>{
     const safe={};for(const field of ['id','title','url','preview','channel','channelUrl','rating','later','review','mark','createdAt','updatedAt','reviewedAt'])if(Object.hasOwn(v,field))safe[field]=v[field];
     videos[id]=safe;
    }
-   return {version:1,options,videos,...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null}:{})};
+   return {version:1,options,videos,...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,...(state.queue?{queue:state.queue}:{})}:{})};
   }
   async function broadcast(){
    const tabs=await api.tabs.query({url:'https://www.youtube.com/*'});
    await Promise.allSettled(tabs.map(t=>api.tabs.sendMessage(t.id,{type:'YP_CHANGED'})));
    try{await api.runtime.sendMessage({type:'YP_CHANGED'});}catch{/* no open extension page */}
+  }
+  // Events wake the durable queue; deadlines live in IDB, not in worker timers.
+  let recoveryQueued=false;
+  async function recover(){
+   if(!backend?.recover||!session||recoveryQueued)return;
+   recoveryQueued=true;
+   const work=writes.then(async()=>{
+    if((await session.status()).state!=='authenticated')return;
+    let after=undefined,sent=0;for(let page=0;page<10;page++){const result=await backend.recover(after);sent+=result.sent;after=result.next;if(!after)break;}
+    if(sent)await broadcast();
+   });
+   writes=work.catch(()=>{});try{await work;}finally{recoveryQueued=false;}
+  }
+  const wake=()=>{void recover().catch(()=>{});};
+  if(api.alarms&&backend?.recover){
+   api.alarms.onAlarm.addListener(alarm=>{if(alarm.name==='yp-outbox')wake();});
+   Promise.resolve(api.alarms.create('yp-outbox',{periodInMinutes:1})).catch(()=>{});
+   api.runtime.onStartup?.addListener(wake);api.runtime.onInstalled?.addListener(wake);
+   api.windows?.onFocusChanged?.addListener(id=>{if(id!==-1)wake();});wake();
   }
   api.runtime.onMessage.addListener((command,sender,respond)=>{
    if(typeof command?.type!=='string'||command.type==='YP_CHANGED'||!command.type.startsWith('YP_'))return;
@@ -63,6 +82,11 @@ globalThis.YPWorker=(()=>{
       if(request.type!=='AUTH_STATUS')broadcast().catch(()=>{});return result;
      }
      let state=await read();const auth=session?await session.status():null;
+     if(request.type==='SYNC_STATUS'||request.type==='SYNC_NOW'){
+      if(auth?.state!=='authenticated')throw Object.assign(new Error('Authentication required'),{kind:'authentication'});
+      if(request.type==='SYNC_NOW'){if(request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});await backend.recover();broadcast().catch(()=>{});}
+      return {...await backend.queueStatus(),scope:auth.epoch};
+     }
      if(request.type==='OPTIONS'){state=YPCore.apply(state,request);await storage.write(state);broadcast().catch(()=>{});return project({...state,auth},access);}
      if(auth?.state==='authenticated'){
       let result;
@@ -72,6 +96,7 @@ globalThis.YPWorker=(()=>{
        const patch={...request.patch};if(Object.hasOwn(patch,'review'))patch.review=validated.videos[request.video.id]?.review??null;
        result=await backend.update(request.video,patch);broadcast().catch(()=>{});
       }else result=request.type==='GET_CURRENT_VIDEO_STATE'?await backend.current(request.videoId):await backend.library(request.after);
+      if(access.trusted&&backend.queueStatus)result.queue=await backend.queueStatus();
       access=await authorize(request,sender);return project({...state,...result,auth},access);
      }
      if(request.type==='UPDATE_CURRENT_VIDEO'){
@@ -80,8 +105,8 @@ globalThis.YPWorker=(()=>{
      }
      return project({...state,auth},access);
     });
-    writes=operation.catch(()=>{});return await operation;
-   })().then(data=>respond({ok:true,data}),error=>respond({ok:false,error:error?.kind==='authentication'?'Войдите в аккаунт расширения.':error?.kind==='reconcile_required'?'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.':'Не удалось выполнить действие. Проверьте текущую страницу, вход и соединение.'}));
+    writes=operation.catch(()=>{});if(request.type==='GET_ACCOUNT_LIBRARY'||request.type==='AUTH_LOGIN')operation.finally(wake).catch(()=>{});return await operation;
+   })().then(data=>respond({ok:true,data}),error=>respond({ok:false,error:error?.kind==='retry_later'?'Команда ожидает повторной отправки.':error?.kind==='authentication'?'Войдите в аккаунт расширения.':error?.kind==='reconcile_required'?'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.':'Не удалось выполнить действие. Проверьте текущую страницу, вход и соединение.'}));
    return true;
   });
  }
