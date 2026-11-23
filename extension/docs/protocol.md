@@ -49,3 +49,7 @@ API writes используют expected_revision, Idempotency-Key UUID и X-Off
 ## Перенос и приёмка следующих этапов
 
 Новая авторизация не импортирует legacy_local_v1. Только preview+явное подтверждение владельцем (EXT-012); backup не содержит JWT/refresh/lease. Worker restart не должен терять durable outbox (EXT-006/008), refresh attempt сохраняется до отправки (EXT-005). Content DTO не содержит чужие videos, user email, токены, lease или всю очередь. EXT-002 regression cases: iframe/foreign origin/поддельный popup URL/stale videoId/переход SPA/auth command от страницы/неизвестное поле; допустимые null/false/mark/review не теряются.
+
+## EXT-012 actual import boundary
+Explicit trusted preview/commit uses existing typed per-row personal commands, batches12, captured revisions and durable fixed operation keys. import_id and batch progress live only in this extension profile; server stores ordinary transactional idempotency receipts, not a separate import manifest. Existing-server values kept by default, conflicting/pending objects require explicit reconciliation. Source legacy backup is never deleted. Ratings/reviews follow normal account privacy; legacy recommended flag is not a separate post or DM action. See DEC-EXT-012-ROW-API in todo.md for the deliberate scope choice.
+

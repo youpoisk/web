@@ -3,18 +3,18 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const yt='p0iTgHMEoi4',trusted={id:'extension',url:'moz-extension://extension/popup.html'},page={id:'extension',url:'https://www.youtube.com/watch?v='+yt,tab:{id:1},frameId:0};
-function worker({scheduler=false}={}){let currentUrl=page.url,loginRound=0,listener,auth={state:'guest',owner:null,epoch:null,user:null},calls=0,legacy={version:1,options:{enabled:true,site:'https://old.invalid/'},videos:{[yt]:{id:yt,title:'Legacy',rating:3,later:true}}};let recoveries=0;const events={};const timers=[];const context={URL,structuredClone,setTimeout(fn){timers.push(fn)}};
+function worker({scheduler=false}={}){let currentUrl=page.url,loginRound=0,listener,auth={state:'guest',owner:null,epoch:null,user:null},calls=0,legacy={version:1,options:{enabled:true,site:'https://old.invalid/'},videos:{[yt]:{id:yt,title:'Legacy',rating:3,later:true}}};let recoveries=0,importInputs=null;const events={};const timers=[];const context={URL,structuredClone,setTimeout(fn){timers.push(fn)}};
  context.api={runtime:{id:'extension',getURL:p=>'moz-extension://extension/'+p,onMessage:{addListener(fn){listener=fn}},async sendMessage(){}},tabs:{async get(){return {url:currentUrl}},async query(){return[]},async sendMessage(){}}};
  if(scheduler){context.api.alarms={create(name,options){events.created={name,options}},onAlarm:{addListener(fn){events.alarm=fn}}};context.api.runtime.onStartup={addListener(fn){events.startup=fn}};context.api.runtime.onInstalled={addListener(fn){events.installed=fn}};context.api.windows={onFocusChanged:{addListener(fn){events.focus=fn}}};}
  context.storage={async read(){return structuredClone(legacy)},async write(v){legacy=structuredClone(v)}};
  context.session={async status(){return structuredClone(auth)},async login(){calls++;auth={state:'authenticated',owner:'owner',epoch:loginRound++===0?'epoch-a':'epoch-b',user:{id:'owner',login:'qa_owner',name:'QA'}};return auth},async logout(){calls++;auth={state:'guest',owner:null,epoch:null,user:null};return auth}};
- context.backend={async pendingLibrary(){return {videos:{},pendingVideos:{[yt]:{id:yt,title:'Pending',url:'https://www.youtube.com/watch?v='+yt,later:true,pending:true}},pendingNext:null}},async recover(){recoveries++;return {sent:0,blocked:0,next:null}},async queueStatus(){return {pending:2,blocked:1,nextAttemptAt:123,more:false}},
+ context.backend={async previewImport(inputs,next){importInputs=structuredClone(inputs);return {scope:auth.epoch,id:'11111111-1111-4111-8111-111111111111',rows:inputs,next}},async importStatus(){return {scope:auth.epoch,rows:[]}},async commitImport(){return {scope:auth.epoch,rows:[]}},async pendingLibrary(){return {videos:{},pendingVideos:{[yt]:{id:yt,title:'Pending',url:'https://www.youtube.com/watch?v='+yt,later:true,pending:true}},pendingNext:null}},async recover(){recoveries++;return {sent:0,blocked:0,next:null}},async queueStatus(){return {pending:2,blocked:1,nextAttemptAt:123,more:false}},
   async current(id){return {videos:{[id]:{id,title:'Server',rating:8,later:true,review:'Server review'}}};},
   async library(){return {videos:{[yt]:{id:yt,title:'Server',rating:8,later:true}},next:'next-page'};},
   async update(video,patch){calls++;return {videos:{[video.id]:{...video,...patch}}};}
  };
  vm.createContext(context);for(const file of ['config.js','core.js','background-common.js'])vm.runInContext(readFileSync(new URL('../'+file,import.meta.url),'utf8'),context);vm.runInContext('YPWorker.start({api,storage,session,backend})',context);
- return {holdPull(fn){context.backend.pull=fn},timers,events,recoveries:()=>recoveries,navigate(url){currentUrl=url},holdCurrent(fn){context.backend.current=fn},send:(msg,sender=trusted)=>new Promise(resolve=>listener(msg,sender,resolve)),calls:()=>calls,legacy:()=>legacy};
+ return {importInputs:()=>importInputs,holdPull(fn){context.backend.pull=fn},timers,events,recoveries:()=>recoveries,navigate(url){currentUrl=url},holdCurrent(fn){context.backend.current=fn},send:(msg,sender=trusted)=>new Promise(resolve=>listener(msg,sender,resolve)),calls:()=>calls,legacy:()=>legacy};
 }
 test('auth is trusted-only and guest mutations do not write new local ratings',async()=>{
  const w=worker();const before=JSON.stringify(w.legacy());for(const type of ['YP_AUTH_LOGIN','YP_AUTH_LOGOUT','YP_AUTH_STATUS'])assert.equal((await w.send({type,...(type==='YP_AUTH_LOGIN'?{login:'name',password:'secret'}:{})},page)).ok,false);
@@ -50,4 +50,8 @@ test('unfinished pull continues in bounded batches, allowing durable alarm recov
 
 test('pending library is restricted to trusted UI and never projected to YouTube content',async()=>{
  const w=worker();await w.send({type:'YP_AUTH_LOGIN',login:'name',password:'secret'});assert.equal((await w.send({type:'YP_GET_PENDING_LIBRARY'},page)).ok,false);const pending=await w.send({type:'YP_GET_PENDING_LIBRARY'});assert.equal(pending.data.pendingVideos[yt].pending,true);const current=await w.send({type:'YP_GET_CURRENT_VIDEO_STATE',videoId:yt},page);assert.equal(current.data.pendingVideos,undefined);assert.equal(current.data.pendingNext,undefined);
+});
+
+test('legacy import requires explicit trusted command and scope; login never autoimports',async()=>{
+ const w=worker(),before=JSON.stringify(w.legacy());for(const type of ['YP_IMPORT_PREVIEW','YP_IMPORT_STATUS','YP_IMPORT_COMMIT'])assert.equal((await w.send({type,scope:'epoch-a'},page)).ok,false);await w.send({type:'YP_AUTH_LOGIN',login:'name',password:'secret'});await new Promise(setImmediate);assert.equal(w.importInputs(),null);assert.equal((await w.send({type:'YP_IMPORT_PREVIEW',scope:'stale'})).ok,false);assert.equal(w.importInputs(),null);const preview=await w.send({type:'YP_IMPORT_PREVIEW',scope:'epoch-a'});assert.equal(preview.ok,true);assert.equal(w.importInputs().length,1);assert.equal(w.importInputs()[0].rating,3);assert.equal(w.importInputs()[0].video.id,yt);assert.equal(JSON.stringify(w.legacy()),before);
 });

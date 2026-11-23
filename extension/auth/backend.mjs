@@ -17,17 +17,18 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   return result.data;
  }
  async function actor(){let state;try{state=await session.status();}catch(error){if(!session.peek||!transient(error))throw error;state=await session.peek();}if(state.state!=='authenticated')throw new BackendError('authentication');return state;}
- async function durable(operation,target,intent,scope,bodyFactory,stage=null){
+ async function durable(operation,target,intent,scope,bodyFactory,stage=null,fixedKey=null){
   const cooldown=await storage.read(`yp-rate-limit-v1:${scope.owner}`);if(cooldown?.until>now())throw new BackendError('retry_later');
   const slot=`yp-operation-v1:${scope.owner}:${operation}:${target}`,fingerprint=JSON.stringify(intent);
   let pending=await storage.read(slot);
   if(pending){
+   if(fixedKey&&pending.key!==fixedKey)throw new BackendError('reconcile_required');
    if(typeof pending.key!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(pending.key)||typeof pending.lease!=='string'||!pending.lease.length||pending.lease.length>16384)throw new BackendError('reconcile_required');
    if(!schemas[schemas.contract[operation].request](pending.body)||pending.fingerprint!==JSON.stringify(operation==='addObservedVideo'?{id:pending.body.youtube_video_id}:Object.fromEntries(Object.entries(pending.body).filter(([key])=>key!=='expected_revision'))))throw new BackendError('reconcile_required');
    if(pending.version!==1||pending.owner!==scope.owner||pending.epoch!==scope.epoch||pending.operation!==operation||pending.target!==target||pending.fingerprint!==fingerprint||pending.state!=='pending')throw new BackendError('reconcile_required');
   }else{
    const body=await bodyFactory();const anchor=await request('issueOfflineLease',{},scope);
-   pending={version:1,owner:scope.owner,epoch:scope.epoch,operation,target,fingerprint,body,lease:anchor.lease,key:crypto.randomUUID(),state:'pending',createdAt:now(),attempts:0,nextAttemptAt:0};
+   pending={version:1,owner:scope.owner,epoch:scope.epoch,operation,target,fingerprint,body,lease:anchor.lease,key:fixedKey??crypto.randomUUID(),state:'pending',createdAt:now(),attempts:0,nextAttemptAt:0};
    if(stage){stage.row.commandKey=pending.key;await storage.commit([[slot,pending],[stage.slot,stage.row]]);}else await storage.write(pending,slot);
   }
   if((pending.nextAttemptAt??0)>now())throw new BackendError('retry_later');
@@ -140,8 +141,38 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   for(const [,row]of page.items){if(row?.owner!==scope.owner||row.epoch!==scope.epoch||row.patch?.later!==true||!/^[\w-]{11}$/.test(row.video?.id??''))continue;const view=await pendingView(row.video.id,scope);if(view?.later)pendingVideos[view.id]=view;}
   await check(scope);return {pendingVideos,pendingNext:page.next};
  }
+ function importProjection(batch,scope){return {id:batch.id,scope:scope.epoch,account:scope.user?{login:scope.user.login,name:scope.user.name}:null,rows:batch.rows.map((row,index)=>({index,title:row.video?.title??'Некорректная запись',local:row.patch??{},review:row.review??null,server:row.server??null,existing:row.existing??false,blocked:row.blocked??false,error:row.error??null,result:row.result??null,partial:row.result==='conflict'&&!!(row.addedDone||row.stateDone||row.reviewDone)})),choices:batch.choices?JSON.parse(batch.choices):null,next:batch.next,completed:batch.completed??false};}
+ async function importBatch(scope,id){if(typeof id!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(id))throw new BackendError('invalid_reference');const batch=await storage.read(`yp-import-v1:${scope.owner}:${id}`);if(!batch||batch.owner!==scope.owner||batch.epoch!==scope.epoch||batch.version!==1)throw new BackendError('reconcile_required');return batch;}
+ async function applyImportRow(row,scope){
+  const marker=key=>storage.read(`yp-receipt-v1:${scope.owner}:${key}`);let target=row.target,revision=row.stateRevision;
+  if(!target||revision===0){let receipt=await marker(row.keys.add);if(!receipt){await durable('addObservedVideo',row.video.id,{id:row.video.id},scope,async()=>({youtube_video_id:row.video.id,title:row.video.title,expected_revision:0}),null,row.keys.add);receipt=await marker(row.keys.add);}if(!receipt)throw new BackendError('protocol');target=receipt.target;revision=receipt.revision;row.addedDone=true;}
+  if(Object.keys(row.patch).length){if(!await marker(row.keys.state))await durable('patchVideoState',target,row.patch,scope,async()=>({expected_revision:revision,...row.patch}),null,row.keys.state);row.stateDone=true;}
+  if(row.review!==null){if(!await marker(row.keys.review))await durable('putVideoReview',target,{text:row.review},scope,async()=>({expected_revision:row.reviewRevision,text:row.review}),null,row.keys.review);row.reviewDone=true;}
+ }
  return {
   pendingLibrary:after=>exclusive(async()=>{const scope=await actor();return {videos:{},...await pendingPage(scope,after)};}),
+  previewImport:(inputs,next=null)=>exclusive(async()=>{
+   const scope=await actor();if(!Array.isArray(inputs)||inputs.length>12)throw new BackendError('input');const rows=[];
+   for(const input of inputs){if(input.error){rows.push({error:input.error});continue;}const row={video:input.video,patch:{},review:null,keys:{add:crypto.randomUUID(),state:crypto.randomUUID(),review:crypto.randomUUID()}};
+    if(input.rating!==null&&input.rating!==undefined)row.patch.rating=input.rating;if(input.later===true)row.patch.later=true;if(['watched','not_interested'].includes(input.mark))row.patch.mark=input.mark;if(typeof input.review==='string'&&input.review.trim())row.review=input.review.trim().normalize('NFC');
+    if(row.patch.mark==='not_interested')row.patch.later=false;
+    if(!Object.keys(row.patch).length&&row.review===null){rows.push({...row,error:'Нет оценки, рецензии или отметки для импорта'});continue;}
+    if(Object.keys(row.patch).length&&!schemas.patchVideoState_request({expected_revision:0,...row.patch})||row.review!==null&&!schemas.putVideoReview_request({expected_revision:0,text:row.review})){rows.push({...row,error:'Значения не соответствуют правилам сервера'});continue;}
+    const video=await card(row.video.id,scope);row.target=video?.id??null;row.stateRevision=video?.my_state.revision??0;const review=video?(await request('getVideoReview',{path:{id:video.id}},scope)).review:{revision:0,text:null};row.reviewRevision=review.revision;row.server=video?{rating:video.my_state.rating,later:video.my_state.later,mark:video.my_state.mark??null,review:review.text}:null;row.existing=row.stateRevision>0||review.revision>0;
+    row.blocked=!!(await storage.read(`yp-intent-v1:${scope.owner}:${row.video.id}:state`)||await storage.read(`yp-intent-v1:${scope.owner}:${row.video.id}:review`)||row.target&&(await storage.read(`yp-operation-v1:${scope.owner}:patchVideoState:${row.target}`)||await storage.read(`yp-operation-v1:${scope.owner}:putVideoReview:${row.target}`)));
+    rows.push(row);
+   }
+   const batch={version:1,id:crypto.randomUUID(),owner:scope.owner,epoch:scope.epoch,rows,next,createdAt:now()};await check(scope);await storage.commit([[`yp-import-v1:${scope.owner}:${batch.id}`,batch],[`yp-import-last-v1:${scope.owner}`,batch.id]]);return importProjection(batch,scope);
+  }),
+  importStatus:id=>exclusive(async()=>{const scope=await actor(),latest=id??await storage.read(`yp-import-last-v1:${scope.owner}`);if(!latest)return {scope:scope.epoch,rows:[]};return importProjection(await importBatch(scope,latest),scope);}),
+  commitImport:(id,choices)=>exclusive(async()=>{
+   const scope=await actor(),batch=await importBatch(scope,id);if(!Array.isArray(choices)||choices.length!==batch.rows.length||choices.some(value=>!['server','local'].includes(value)))throw new BackendError('input');const fingerprint=JSON.stringify(choices);if(batch.choices&&batch.choices!==fingerprint)throw new BackendError('reconcile_required');batch.choices=fingerprint;const slot=`yp-import-v1:${scope.owner}:${id}`;await storage.write(batch,slot);
+   for(let index=0;index<batch.rows.length;index++){const row=batch.rows[index];if(row.result)continue;if(row.error||row.blocked||choices[index]==='server'){row.result=row.error?'invalid':row.blocked?'blocked':'skipped';await storage.write(batch,slot);continue;}
+    try{await applyImportRow(row,scope);row.result='imported';}catch(error){if(error.kind!=='reconcile_required')throw error;row.result='conflict';}
+    await check(scope);await storage.write(batch,slot);
+   }
+   batch.completed=true;await storage.write(batch,slot);return importProjection(batch,scope);
+  }),
   pull:()=>exclusive(async()=>{const scope=await actor();return pull.step(scope);}),
   conflicts:after=>exclusive(async()=>{
    const scope=await actor(),page=await storage.entries(`yp-operation-v1:${scope.owner}:`,{after:after??null,limit:12}),items=[];

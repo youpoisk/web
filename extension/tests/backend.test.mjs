@@ -141,3 +141,18 @@ test('uncached offline intents remain visible after worker restart in current an
 test('offline later on cached current is shown even when absent from the cached server watchlist',async()=>{
  const f=fixture();await f.create().current(yt);assert.deepEqual((await f.create().library()).videos,{});f.offline();await f.create().update(f.video,{later:true});const page=await f.create().library();assert.deepEqual(page.videos,{});assert.equal(page.pendingVideos[yt].pending,true);assert.equal(page.pendingVideos[yt].later,true);
 });
+
+test('import preview writes no server data, defaults can keep server and repeated commit never duplicates',async()=>{
+ const f=fixture(),preview=await f.create().previewImport([{video:f.video,rating:8,review:'Imported review'}]);assert.equal(f.writes.length,0);assert.equal(preview.rows[0].existing,true);assert.equal(preview.choices,null);const kept=await f.create().commitImport(preview.id,['server']);assert.equal(kept.rows[0].result,'skipped');assert.equal(f.writes.length,0);
+ const next=await f.create().previewImport([{video:f.video,rating:8,review:'Imported review'}]);const done=await f.create().commitImport(next.id,['local']);assert.equal(done.rows[0].result,'imported');assert.equal(f.writes.length,2);await f.create().commitImport(next.id,['local']);assert.equal(f.writes.length,2);await assert.rejects(f.create().commitImport(next.id,['server']),e=>e.kind==='reconcile_required');assert.equal((await f.create().current(yt)).videos[yt].review,'Imported review');
+});
+test('import crash after server effect retries exact key/body and crash after ACK uses receipt marker',async()=>{
+ for(const loseJournal of [false,true]){const f=fixture(),preview=await f.create().previewImport([{video:f.video,rating:8}]);if(!loseJournal)f.failClear();else{let lost=false;const write=f.storage.write;f.storage.write=async(value,key)=>{if(!lost&&key.startsWith('yp-import-v1:')&&value.rows?.[0].result==='imported'){lost=true;throw Error('journal')};return write(value,key)}}
+  await assert.rejects(f.create().commitImport(preview.id,['local']));f.advance();const done=await f.create().commitImport(preview.id,['local']);assert.equal(done.rows[0].result,'imported');assert.equal(f.writes.length,loseJournal?1:2);if(!loseJournal)assert.deepEqual(f.writes[0],f.writes[1]);
+ }
+});
+test('import uses preview revisions, blocks existing pending and never resumes under another epoch',async()=>{
+ const f=fixture(),preview=await f.create().previewImport([{video:f.video,rating:8}]);f.serverState({rating:10,revision:2});const result=await f.create().commitImport(preview.id,['local']);assert.equal(result.rows[0].result,'conflict');assert.equal(f.writes[0].body.expected_revision,1);assert.equal((await f.create().current(yt)).videos[yt].rating,10);const count=f.writes.length;await f.create().commitImport(preview.id,['local']);assert.equal(f.writes.length,count);
+ const g=fixture();g.offline();await g.create().update(g.video,{rating:7});g.offline(false);const blocked=await g.create().previewImport([{video:g.video,rating:8}]);assert.equal(blocked.rows[0].blocked,true);assert.equal((await g.create().commitImport(blocked.id,['local'])).rows[0].result,'blocked');assert.equal(g.writes.length,0);
+ const h=fixture(),owned=await h.create().previewImport([{video:h.video,rating:8}]);h.switchEpoch();await assert.rejects(h.create().commitImport(owned.id,['local']),e=>e.kind==='reconcile_required');assert.equal(h.writes.length,0);
+});

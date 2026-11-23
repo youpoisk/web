@@ -243,3 +243,11 @@ Unknown-base deferred intent uses expected_revision0 (instead of silently fetchi
 
 EXT011 reviewfix: unknown/uncached pending video restored from validated owner+epoch staged metadata on offline GET (and online404 while queued); no fake aggregate0. Separate trusted pending-watchlist section pages12, deduped against servercards; new offline later survives restart even absent cachedpage. Content cannot read pendinglibrary. 86testsPASS.
 
+
+- [x] EXT-011: 9aa02fc+c8c1e73 independentreviewPASS;83→86tests, pendingunknown/restart fixed. Реальные данные/авторизация сохранены, UIбраузерныйвизуальныйконтроль ограничен доступными инструментами.
+### EXT-012 — explicit legacy import
+Preview12/sourcepage, scoped targetaccount, keep-server default for existing rows, explicitlocalreplace only. Invalid/demo IDs rejected, channelaliases/recommendedflag not sent. Local import_id/immutable choices/rowresults survive restart; fixed rowcommand keys and server receipts prevent duplicate effect after lostresponse/ACK/journalfailure. Pending-existing object blocked, previewrevision pinned; changedserver→conflict. Partial state/review results shown explicitly, sourcelegacy neverdeleted. Runtime commands trustedonly, contentdenied, loginneverimports.
+90extensiontestsPASS +realAPI previewreadonly/commit/repeat-no-effect/QArestore/logoutPASS, MozillaLint0warnings. Independentreview before EXT013.
+### Спорные вопросы — DEC-EXT-012-ROW-API
+Вопрос: нужен ли отдельный bulk preview/commit API из первоначального YP-066 для импорта старой библиотеки расширения? Выбор: preview/commit coordinator в trusted worker, по12строк, поверх существующих server-command API с expected_revision, Idempotency-Key и lease. Причина: повторно не реализовывать проверенную транзакционную логику state/review, при этом сервер повторно проверяет каждую строку и хранит её идемпотентную квитанцию. Граница: import_id и общий журнал прогресса локальны этому профилю; отдельного серверного batch import_id/endpoint нет, прогресс между устройствами не переносится. YP-066 bulkserver API не объявляется реализованным; при необходимости общего серверного журнала это отдельное расширение. Полный backuplegacy остаётся наустройстве, автоматическойпубликации/DMрассылкинедобавлено; импортированные оценки/рецензии видны пообычнойprivacy.
+

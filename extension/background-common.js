@@ -10,12 +10,14 @@ globalThis.YPWorker=(()=>{
    if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!allowed.includes(k))||required.some(k=>!Object.hasOwn(value,k)))throw Error('Некорректная команда');
   }
   function validate(command){
-   fields(command,['type','videoId','video','patch','options','login','password','after','scope','ref','choice','expected'],['type']);
-   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],GET_PENDING_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope'],QUEUE_CONFLICTS:['type','after'],QUEUE_RESOLVE:['type','scope','ref','choice','expected']};
+   fields(command,['type','videoId','video','patch','options','login','password','after','scope','ref','choice','expected','id','choices'],['type']);
+   const shapes={GET_CURRENT_VIDEO_STATE:['type','videoId'],UPDATE_CURRENT_VIDEO:['type','video','patch','scope'],GET_ACCOUNT_LIBRARY:['type','after'],GET_PENDING_LIBRARY:['type','after'],OPTIONS:['type','options'],AUTH_STATUS:['type'],AUTH_LOGIN:['type','login','password'],AUTH_LOGOUT:['type'],SYNC_STATUS:['type'],SYNC_NOW:['type','scope'],QUEUE_CONFLICTS:['type','after'],QUEUE_RESOLVE:['type','scope','ref','choice','expected'],IMPORT_PREVIEW:['type','after','scope'],IMPORT_STATUS:['type','id'],IMPORT_COMMIT:['type','id','choices','scope']};
    if(!Object.hasOwn(shapes,command.type))throw Error('Неизвестная команда');
-   fields(command,shapes[command.type],shapes[command.type].filter(k=>!['after','scope'].includes(k)));
+   fields(command,shapes[command.type],shapes[command.type].filter(k=>!['after','scope'].includes(k)&&!(command.type==='IMPORT_STATUS'&&k==='id')));
    if(command.after!==undefined&&(typeof command.after!=='string'||command.after.length>512))throw Error('Некорректный курсор');
    if(command.type==='GET_CURRENT_VIDEO_STATE'&&!/^[\w-]{11}$/.test(command.videoId))throw Error('Некорректный ID видео');
+   if(command.type==='IMPORT_COMMIT'&&(!Array.isArray(command.choices)||command.choices.length>12||command.choices.some(value=>!['server','local'].includes(value))))throw Error('Некорректный выбор импорта');
+   if(command.id!==undefined&&(typeof command.id!=='string'||!/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/.test(command.id)))throw Error('Некорректный импорт');
    if(command.type==='QUEUE_RESOLVE'){fields(command.expected,['revision','key','intent'],['revision','key','intent']);if(!Number.isSafeInteger(command.expected.revision)||command.expected.revision<0||typeof command.expected.key!=='string'||command.expected.key.length>64||typeof command.expected.intent!=='string'||command.expected.intent.length>10000)throw Error('Некорректная версия сверки');}
    if(command.type==='QUEUE_RESOLVE'&&(typeof command.ref!=='string'||command.ref.length>256||!['server','local'].includes(command.choice)))throw Error('Некорректное решение конфликта');
    if(command.type==='UPDATE_CURRENT_VIDEO'){
@@ -86,6 +88,15 @@ globalThis.YPWorker=(()=>{
       if(request.type!=='AUTH_STATUS')broadcast().catch(()=>{});return result;
      }
      let state=await read();const auth=session?await authState():null;
+     if(request.type.startsWith('IMPORT_')){
+      if(auth?.state!=='authenticated')throw Object.assign(new Error('Authentication required'),{kind:'authentication'});
+      if(request.type==='IMPORT_STATUS')return backend.importStatus(request.id);
+      if(request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});
+      if(request.type==='IMPORT_COMMIT'){const result=await backend.commitImport(request.id,request.choices);broadcast().catch(()=>{});return result;}
+      if(request.after!==undefined&&!/^(0|[1-9][0-9]{0,6})$/.test(request.after))throw Error('Некорректная страница импорта');
+      const ids=Object.keys(state.videos),offset=Number(request.after??0);ids.sort();const inputs=ids.slice(offset,offset+12).map(id=>{const saved=state.videos[id];try{if(!/^[\w-]{11}$/.test(id)||saved.id!==id)throw Error('invalid');return {...YPCore.metadata(saved),video:YPCore.metadata(saved),rating:saved.rating,later:saved.later,review:saved.review,mark:saved.mark};}catch{return {error:'Запись не является сохранением реального видео YouTube'};}});
+      return backend.previewImport(inputs,offset+12<ids.length?String(offset+12):null);
+     }
      if(request.type==='QUEUE_CONFLICTS'||request.type==='QUEUE_RESOLVE'){
       if(auth?.state!=='authenticated')throw Object.assign(new Error('Authentication required'),{kind:'authentication'});
       if(request.type==='QUEUE_CONFLICTS')return {...await backend.conflicts(request.after),scope:auth.epoch};
