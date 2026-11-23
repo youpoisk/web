@@ -5,6 +5,7 @@
   function videoId(value) {
     try { const u=new URL(value); return u.origin==='https://www.youtube.com' && !u.username && !u.password && u.pathname==='/watch' && /^[\w-]{11}$/.test(u.searchParams.get('v')||'') ? u.searchParams.get('v') : null; } catch { return null; }
   }
+  function siteVideoUrl(id){if(!/^[\w-]{11}$/.test(id||''))throw Error('Некорректный ID видео');return new URL('#/video/'+id,globalThis.YPConfig.siteOrigin).href;}
   function channelUrl(value) {
     try { const u=new URL(value,'https://www.youtube.com'); return u.origin==='https://www.youtube.com' && !u.username && !u.password && /^\/(channel\/UC[\w-]{22}|@[\p{L}\p{N}_.%\-]{1,150})\/?$/u.test(u.pathname) ? u.origin+u.pathname.replace(/\/$/,'') : ''; } catch { return ''; }
   }
@@ -60,5 +61,5 @@
   }
   function sameAuth(current,incoming,epoch){return current?.state==='authenticated'&&incoming?.state==='authenticated'&&typeof current.owner==='string'&&current.owner===incoming.owner&&current.epoch===epoch&&incoming.epoch===epoch;}
   function sameVideoAuth(current,incoming,scope){return current?.state==='authenticated'&&incoming?.state==='authenticated'&&typeof scope==='string'&&current.scope===scope&&incoming.scope===scope;}
-  globalThis.YPCore={empty,videoId,channelUrl,metadata,options,apply,deferDelete,sameAuth,sameVideoAuth};
+  globalThis.YPCore={empty,videoId,siteVideoUrl,channelUrl,metadata,options,apply,deferDelete,sameAuth,sameVideoAuth};
 })();

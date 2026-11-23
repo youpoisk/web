@@ -1,6 +1,6 @@
 # EXT-001: контракт расширения и backend
 
-Статус: спецификация интеграции. Runtime пока local v1; следующие этапы подключают контракт по очереди. Снимок API: backend4ddb58b, OpenAPI73операции. Chrome MV3 остаётся основным target; Firefox — отдельная dev-сборка по запросу заказчика. /shorts не поддерживается.
+Статус: runtime v2 реализован через EXT-015. OpenAPI76операций; sync API из backend077f86f, ограничения snapshot обновлены47d53d0. Firefox и Chrome имеют отдельные чистые сборки; реальные Firefox/API smoke пройдены, installed Chrome и live YouTube visual smoke остаются выпускными gates. /shorts не поддерживается.
 
 ## Границы и идентификаторы
 

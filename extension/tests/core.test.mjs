@@ -150,3 +150,8 @@ test('late UI pages cannot merge across account change or expiry even if an old 
 test('delayed content update cannot restore authenticated UI after expiry with unchanged scope',()=>{
  const before={state:'authenticated',scope:'epoch-a'},expired={state:'session-expired',scope:'epoch-a'},late={...before};assert.equal(core.sameVideoAuth(before,late,'epoch-a'),true);assert.equal(core.sameVideoAuth(expired,late,'epoch-a'),false);assert.equal(core.sameVideoAuth(before,expired,'epoch-a'),false);assert.equal(core.sameVideoAuth({...before,scope:'epoch-b'},late,'epoch-a'),false);
 });
+
+test('site review navigation uses baked origin and canonical video id only',()=>{
+ assert.equal(core.siteVideoUrl(video.id),'http://127.0.0.1:5173/#/video/aqz-KE-bpKQ');
+ for(const id of ['../settings','https://evil.test','bad',''])assert.throws(()=>core.siteVideoUrl(id));
+});
