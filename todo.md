@@ -323,3 +323,13 @@ Follow-up reviewer PASS: оба P2 закрыты в70bfd25/b70eac1, новых 
 
 ### EXT-019 — review fix: draft ABA
 Reviewer P2: очистка→новый draft повторяли version1, старый preview мог подтвердить не показанную оценку. Теперь очистка сохраняет monotonic tombstone (version+1), новый draft продолжает revision; удалённый draft не доступен для preview/confirm. Regression старого preview после clear/recreate отклоняется до API и не удаляет новый draft. Coverage gate PASS.
+
+### EXT-019 — review closure и integration gate
+Reviewer follow-up d2cda48 PASS, P2 закрыт, новых MEDIUM+ нет. Full real API/Firefox gate PASS: .artifacts/extension-verification/b5fd9b99-aeb9-4af0-a863-13fe6d8a1d15 (до tombstone fix, отдельно покрытого regression). Канал без trusted provider proof остаётся local-only; production provider-confirmed end-to-end в выпускном checklist.
+
+### EXT-020 — пакет без публикации по ответу заказчика
+Подготовлено: чистые development Firefox/Chrome ZIP, deterministic ZIP STORE с fixed timestamp/sortedUTF8 entries/CRC32, SHA256 архивов и файлов, release.json с sourcecommit/dirty marker, listing/privacy/release-checklist. Независимый .NET ZIP reader сверяет каждый распакованный файл с хешами clean build; две сборки дают byte-identical ZIP. prepare script ничего не подписывает/публикует. Production args строго требуют обаHTTPS origins, которых пока нет. README актуализирован. Extension coverage gate и web build PASS.
+**Статус EXT-020: подготовительная часть выполнена; фактическая публикация открыта/отложена пользователем.** Store approval, production HTTPS URLs/hostedprivacy, publisheraccount, installedChrome/manualYouTube/providerproof E2E не выполнены и перечислены в extension/docs/release-checklist.md. Load baseline10k/500 вне расширения также не выдаётся за пройденный.
+
+### Спорные вопросы — DEC-EXT-020-NO-PUBLISH
+Вопрос: чем заменить отсутствующие production URLs? Ничем: по явному ответу заказчика выпускаются только dev preparation artifacts; адреса/публикация не выдумываются. Имена prod placeholders существуют лишь в примере команды. Финальный Store release не помечается завершённым наличием ZIP.
