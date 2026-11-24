@@ -52,7 +52,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   }catch(error){
    if(error instanceof ApiError&&error.kind==='http'){
     if(error.status===429||error.status>=500){const until=Math.max(pending.nextAttemptAt,now()+(error.retryAfterSeconds??0)*1000);if(error.status===429)await storage.commit([[slot,{...pending,nextAttemptAt:until}],[`yp-rate-limit-v1:${scope.owner}`,{until}]]);else await storage.write({...pending,nextAttemptAt:until},slot);}
-    else if(error.status!==401){await storage.write({...pending,state:[409,410,422].includes(error.status)?'conflict':'rejected',errorStatus:error.status},slot);throw new BackendError('reconcile_required');}
+    else if(error.status!==401){await storage.write({...pending,state:[409,410,422].includes(error.status)?'conflict':'rejected',errorStatus:error.status,errorCode:error.code},slot);throw new BackendError(error.status===422&&['review_links_not_allowed','review_abusive_language'].includes(error.code)?error.code:'reconcile_required');}
    }
    throw error;
   }
@@ -122,7 +122,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
  async function flushIntents(scope){
   const cursorKey=`yp-intent-cursor-v1:${scope.owner}`,saved=await storage.read(cursorKey),after=saved?.epoch===scope.epoch?saved.after:null;
   const page=await storage.entries(`yp-intent-v1:${scope.owner}:`,{after:after??null,limit:12});
-  let sent=0;for(const [slot,row]of page.items){if(row.version!==1||row.owner!==scope.owner||row.epoch!==scope.epoch)continue;try{if(await flushIntent({slot,row},scope))sent++;}catch(error){if(error.kind==='reconcile_required'||error.kind==='retry_later')continue;throw error;}}
+  let sent=0;for(const [slot,row]of page.items){if(row.version!==1||row.owner!==scope.owner||row.epoch!==scope.epoch)continue;try{if(await flushIntent({slot,row},scope))sent++;}catch(error){if(['reconcile_required','retry_later','review_links_not_allowed','review_abusive_language'].includes(error.kind))continue;throw error;}}
   await storage.write({epoch:scope.epoch,after:page.next},cursorKey);return sent;
  }
  async function conflictRecord(ref,scope){

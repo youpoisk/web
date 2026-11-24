@@ -55,7 +55,7 @@ export function VideoReviewPanel({ client, writer, videoId }: {
         const fresh = await reload(true);
         if (stamp === generation.current && fresh) setMessage('Версия рецензии обновлена. Ваш черновик сохранён: проверьте текст и сохраните ещё раз.');
       } else {
-        setMessage(error instanceof ApiError && error.status === 401 ? 'Для сохранения нужен действующий вход в аккаунт.' : 'Не удалось подтвердить сохранение. Повторите попытку или обновите рецензию.');
+        setMessage(error instanceof ApiError && error.code === 'review_links_not_allowed' ? 'В рецензии нельзя сохранять ссылки. Черновик сохранён — уберите ссылку.' : error instanceof ApiError && error.code === 'review_abusive_language' ? 'В рецензии обнаружены оскорбления. Исправьте текст; черновик сохранён.' : error instanceof ApiError && error.status === 401 ? 'Для сохранения нужен действующий вход в аккаунт.' : 'Не удалось подтвердить сохранение. Повторите попытку или обновите рецензию.');
       }
     } finally {
       if (stamp === generation.current) { busy.current = false; setSaving(false); }
