@@ -49,7 +49,7 @@ export interface paths {
         };
         /**
          * Append-only role and block change log
-         * @description Append-only role and block change log. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.
+         * @description Append-only role and block change log. Staff only: guests and other roles receive 404. Blocked users cannot send messages or save nonempty reviews. Moderators cannot change roles or block staff. Operations are re-authorized transactionally.
          */
         get: operations["adminAccountAudit"];
         put?: never;
@@ -129,7 +129,7 @@ export interface paths {
         };
         /**
          * Account counts and website presence within five minutes
-         * @description Account counts and website presence within five minutes. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.
+         * @description Account counts and website presence within five minutes. Staff only: guests and other roles receive 404. Blocked users cannot send messages or save nonempty reviews. Moderators cannot change roles or block staff. Operations are re-authorized transactionally.
          */
         get: operations["adminStats"];
         put?: never;
@@ -149,7 +149,7 @@ export interface paths {
         };
         /**
          * List accounts with roles and block flags
-         * @description List accounts with roles and block flags. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.
+         * @description List accounts with roles and block flags. Staff only: guests and other roles receive 404. Blocked users cannot send messages or save nonempty reviews. Moderators cannot change roles or block staff. Operations are re-authorized transactionally.
          */
         get: operations["adminUsers"];
         put?: never;
@@ -175,7 +175,7 @@ export interface paths {
         head?: never;
         /**
          * Change role or block flag with revision check; preserve last active unblocked admin
-         * @description Change role or block flag with revision check; preserve last active unblocked admin. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.
+         * @description Change role or block flag with revision check; preserve last active unblocked admin. Staff only: guests and other roles receive 404. Blocked users cannot send messages or save nonempty reviews. Moderators cannot change roles or block staff. Operations are re-authorized transactionally.
          */
         patch: operations["adminChangeUser"];
         trace?: never;
@@ -1184,7 +1184,7 @@ export interface paths {
         put?: never;
         /**
          * Batch visible administrator badges
-         * @description Authenticated viewer; up to 50 unique user IDs. Returns only active administrators not mutually blocked. Missing, inactive and blocked IDs have no badge. Display only, never an authorization grant.
+         * @description Up to50 visible active identities: administrator, moderator and administrative-block markers. Mutual personal blocks filter all markers. Display only; not authorization.
          */
         post: operations["getUserBadges"];
         delete?: never;
@@ -1616,7 +1616,7 @@ export interface components {
             expected_revision: number;
             is_blocked?: boolean;
             /** @enum {string} */
-            role?: "user" | "admin";
+            role?: "user" | "moderator" | "admin";
         };
         /** @description A report with only the single reported item as evidence (never a whole conversation). */
         AdminReport: {
@@ -2314,6 +2314,8 @@ export interface components {
         };
         UserBadges: {
             administrators: string[];
+            blocked: string[];
+            moderators: string[];
         };
         UserMark: {
             /** @enum {string} */

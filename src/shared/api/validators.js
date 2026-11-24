@@ -695,7 +695,7 @@ function validate56(data, { instancePath = "", parentData, parentDataProperty, r
 }
 validate56.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_AdminChange = validate58;
-var schema24 = { "type": "object", "properties": { "expected_revision": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }, "role": { "type": "string", "enum": ["user", "admin"] }, "is_blocked": { "type": "boolean" } }, "required": ["expected_revision"], "additionalProperties": false };
+var schema24 = { "type": "object", "properties": { "expected_revision": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }, "role": { "type": "string", "enum": ["user", "moderator", "admin"] }, "is_blocked": { "type": "boolean" } }, "required": ["expected_revision"], "additionalProperties": false };
 function validate58(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -754,7 +754,7 @@ function validate58(data, { instancePath = "", parentData, parentDataProperty, r
                 validate58.errors = [{ instancePath: instancePath + "/role", schemaPath: "#/properties/role/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
                 return false;
               }
-              if (!(data1 === "user" || data1 === "admin")) {
+              if (!(data1 === "user" || data1 === "moderator" || data1 === "admin")) {
                 validate58.errors = [{ instancePath: instancePath + "/role", schemaPath: "#/properties/role/enum", keyword: "enum", params: { allowedValues: schema24.properties.role.enum }, message: "must be equal to one of the allowed values" }];
                 return false;
               }
@@ -13811,13 +13811,13 @@ function validate231(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.administrators === void 0 && (missing0 = "administrators")) {
+      if (data.administrators === void 0 && (missing0 = "administrators") || data.moderators === void 0 && (missing0 = "moderators") || data.blocked === void 0 && (missing0 = "blocked")) {
         validate231.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "administrators")) {
+          if (!(key0 === "administrators" || key0 === "moderators" || key0 === "blocked")) {
             validate231.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -13880,6 +13880,137 @@ function validate231(data, { instancePath = "", parentData, parentDataProperty, 
               } else {
                 validate231.errors = [{ instancePath: instancePath + "/administrators", schemaPath: "#/properties/administrators/type", keyword: "type", params: { type: "array" }, message: "must be array" }];
                 return false;
+              }
+            }
+            var valid0 = _errs2 === errors;
+          } else {
+            var valid0 = true;
+          }
+          if (valid0) {
+            if (data.moderators !== void 0) {
+              let data2 = data.moderators;
+              const _errs6 = errors;
+              if (errors === _errs6) {
+                if (Array.isArray(data2)) {
+                  if (data2.length > 50) {
+                    validate231.errors = [{ instancePath: instancePath + "/moderators", schemaPath: "#/properties/moderators/maxItems", keyword: "maxItems", params: { limit: 50 }, message: "must NOT have more than 50 items" }];
+                    return false;
+                  } else {
+                    var valid3 = true;
+                    const len1 = data2.length;
+                    for (let i2 = 0; i2 < len1; i2++) {
+                      let data3 = data2[i2];
+                      const _errs8 = errors;
+                      if (errors === _errs8) {
+                        if (errors === _errs8) {
+                          if (typeof data3 === "string") {
+                            if (!formats0.test(data3)) {
+                              validate231.errors = [{ instancePath: instancePath + "/moderators/" + i2, schemaPath: "#/properties/moderators/items/format", keyword: "format", params: { format: "uuid" }, message: 'must match format "uuid"' }];
+                              return false;
+                            }
+                          } else {
+                            validate231.errors = [{ instancePath: instancePath + "/moderators/" + i2, schemaPath: "#/properties/moderators/items/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+                            return false;
+                          }
+                        }
+                      }
+                      var valid3 = _errs8 === errors;
+                      if (!valid3) {
+                        break;
+                      }
+                    }
+                    if (valid3) {
+                      let i3 = data2.length;
+                      let j1;
+                      if (i3 > 1) {
+                        const indices1 = {};
+                        for (; i3--; ) {
+                          let item1 = data2[i3];
+                          if (typeof item1 !== "string") {
+                            continue;
+                          }
+                          if (typeof indices1[item1] == "number") {
+                            j1 = indices1[item1];
+                            validate231.errors = [{ instancePath: instancePath + "/moderators", schemaPath: "#/properties/moderators/uniqueItems", keyword: "uniqueItems", params: { i: i3, j: j1 }, message: "must NOT have duplicate items (items ## " + j1 + " and " + i3 + " are identical)" }];
+                            return false;
+                            break;
+                          }
+                          indices1[item1] = i3;
+                        }
+                      }
+                    }
+                  }
+                } else {
+                  validate231.errors = [{ instancePath: instancePath + "/moderators", schemaPath: "#/properties/moderators/type", keyword: "type", params: { type: "array" }, message: "must be array" }];
+                  return false;
+                }
+              }
+              var valid0 = _errs6 === errors;
+            } else {
+              var valid0 = true;
+            }
+            if (valid0) {
+              if (data.blocked !== void 0) {
+                let data4 = data.blocked;
+                const _errs10 = errors;
+                if (errors === _errs10) {
+                  if (Array.isArray(data4)) {
+                    if (data4.length > 50) {
+                      validate231.errors = [{ instancePath: instancePath + "/blocked", schemaPath: "#/properties/blocked/maxItems", keyword: "maxItems", params: { limit: 50 }, message: "must NOT have more than 50 items" }];
+                      return false;
+                    } else {
+                      var valid5 = true;
+                      const len2 = data4.length;
+                      for (let i4 = 0; i4 < len2; i4++) {
+                        let data5 = data4[i4];
+                        const _errs12 = errors;
+                        if (errors === _errs12) {
+                          if (errors === _errs12) {
+                            if (typeof data5 === "string") {
+                              if (!formats0.test(data5)) {
+                                validate231.errors = [{ instancePath: instancePath + "/blocked/" + i4, schemaPath: "#/properties/blocked/items/format", keyword: "format", params: { format: "uuid" }, message: 'must match format "uuid"' }];
+                                return false;
+                              }
+                            } else {
+                              validate231.errors = [{ instancePath: instancePath + "/blocked/" + i4, schemaPath: "#/properties/blocked/items/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+                              return false;
+                            }
+                          }
+                        }
+                        var valid5 = _errs12 === errors;
+                        if (!valid5) {
+                          break;
+                        }
+                      }
+                      if (valid5) {
+                        let i5 = data4.length;
+                        let j2;
+                        if (i5 > 1) {
+                          const indices2 = {};
+                          for (; i5--; ) {
+                            let item2 = data4[i5];
+                            if (typeof item2 !== "string") {
+                              continue;
+                            }
+                            if (typeof indices2[item2] == "number") {
+                              j2 = indices2[item2];
+                              validate231.errors = [{ instancePath: instancePath + "/blocked", schemaPath: "#/properties/blocked/uniqueItems", keyword: "uniqueItems", params: { i: i5, j: j2 }, message: "must NOT have duplicate items (items ## " + j2 + " and " + i5 + " are identical)" }];
+                              return false;
+                              break;
+                            }
+                            indices2[item2] = i5;
+                          }
+                        }
+                      }
+                    }
+                  } else {
+                    validate231.errors = [{ instancePath: instancePath + "/blocked", schemaPath: "#/properties/blocked/type", keyword: "type", params: { type: "array" }, message: "must be array" }];
+                    return false;
+                  }
+                }
+                var valid0 = _errs10 === errors;
+              } else {
+                var valid0 = true;
               }
             }
           }
@@ -48502,7 +48633,7 @@ function validate691(data, { instancePath = "", parentData, parentDataProperty, 
                 validate691.errors = [{ instancePath: instancePath + "/role", schemaPath: "#/properties/role/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
                 return false;
               }
-              if (!(data1 === "user" || data1 === "admin")) {
+              if (!(data1 === "user" || data1 === "moderator" || data1 === "admin")) {
                 validate691.errors = [{ instancePath: instancePath + "/role", schemaPath: "#/properties/role/enum", keyword: "enum", params: { allowedValues: schema24.properties.role.enum }, message: "must be equal to one of the allowed values" }];
                 return false;
               }
@@ -49189,13 +49320,13 @@ function validate701(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.administrators === void 0 && (missing0 = "administrators")) {
+      if (data.administrators === void 0 && (missing0 = "administrators") || data.moderators === void 0 && (missing0 = "moderators") || data.blocked === void 0 && (missing0 = "blocked")) {
         validate701.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
         const _errs1 = errors;
         for (const key0 in data) {
-          if (!(key0 === "administrators")) {
+          if (!(key0 === "administrators" || key0 === "moderators" || key0 === "blocked")) {
             validate701.errors = [{ instancePath, schemaPath: "#/additionalProperties", keyword: "additionalProperties", params: { additionalProperty: key0 }, message: "must NOT have additional properties" }];
             return false;
             break;
@@ -49258,6 +49389,137 @@ function validate701(data, { instancePath = "", parentData, parentDataProperty, 
               } else {
                 validate701.errors = [{ instancePath: instancePath + "/administrators", schemaPath: "#/properties/administrators/type", keyword: "type", params: { type: "array" }, message: "must be array" }];
                 return false;
+              }
+            }
+            var valid0 = _errs2 === errors;
+          } else {
+            var valid0 = true;
+          }
+          if (valid0) {
+            if (data.moderators !== void 0) {
+              let data2 = data.moderators;
+              const _errs6 = errors;
+              if (errors === _errs6) {
+                if (Array.isArray(data2)) {
+                  if (data2.length > 50) {
+                    validate701.errors = [{ instancePath: instancePath + "/moderators", schemaPath: "#/properties/moderators/maxItems", keyword: "maxItems", params: { limit: 50 }, message: "must NOT have more than 50 items" }];
+                    return false;
+                  } else {
+                    var valid3 = true;
+                    const len1 = data2.length;
+                    for (let i2 = 0; i2 < len1; i2++) {
+                      let data3 = data2[i2];
+                      const _errs8 = errors;
+                      if (errors === _errs8) {
+                        if (errors === _errs8) {
+                          if (typeof data3 === "string") {
+                            if (!formats0.test(data3)) {
+                              validate701.errors = [{ instancePath: instancePath + "/moderators/" + i2, schemaPath: "#/properties/moderators/items/format", keyword: "format", params: { format: "uuid" }, message: 'must match format "uuid"' }];
+                              return false;
+                            }
+                          } else {
+                            validate701.errors = [{ instancePath: instancePath + "/moderators/" + i2, schemaPath: "#/properties/moderators/items/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+                            return false;
+                          }
+                        }
+                      }
+                      var valid3 = _errs8 === errors;
+                      if (!valid3) {
+                        break;
+                      }
+                    }
+                    if (valid3) {
+                      let i3 = data2.length;
+                      let j1;
+                      if (i3 > 1) {
+                        const indices1 = {};
+                        for (; i3--; ) {
+                          let item1 = data2[i3];
+                          if (typeof item1 !== "string") {
+                            continue;
+                          }
+                          if (typeof indices1[item1] == "number") {
+                            j1 = indices1[item1];
+                            validate701.errors = [{ instancePath: instancePath + "/moderators", schemaPath: "#/properties/moderators/uniqueItems", keyword: "uniqueItems", params: { i: i3, j: j1 }, message: "must NOT have duplicate items (items ## " + j1 + " and " + i3 + " are identical)" }];
+                            return false;
+                            break;
+                          }
+                          indices1[item1] = i3;
+                        }
+                      }
+                    }
+                  }
+                } else {
+                  validate701.errors = [{ instancePath: instancePath + "/moderators", schemaPath: "#/properties/moderators/type", keyword: "type", params: { type: "array" }, message: "must be array" }];
+                  return false;
+                }
+              }
+              var valid0 = _errs6 === errors;
+            } else {
+              var valid0 = true;
+            }
+            if (valid0) {
+              if (data.blocked !== void 0) {
+                let data4 = data.blocked;
+                const _errs10 = errors;
+                if (errors === _errs10) {
+                  if (Array.isArray(data4)) {
+                    if (data4.length > 50) {
+                      validate701.errors = [{ instancePath: instancePath + "/blocked", schemaPath: "#/properties/blocked/maxItems", keyword: "maxItems", params: { limit: 50 }, message: "must NOT have more than 50 items" }];
+                      return false;
+                    } else {
+                      var valid5 = true;
+                      const len2 = data4.length;
+                      for (let i4 = 0; i4 < len2; i4++) {
+                        let data5 = data4[i4];
+                        const _errs12 = errors;
+                        if (errors === _errs12) {
+                          if (errors === _errs12) {
+                            if (typeof data5 === "string") {
+                              if (!formats0.test(data5)) {
+                                validate701.errors = [{ instancePath: instancePath + "/blocked/" + i4, schemaPath: "#/properties/blocked/items/format", keyword: "format", params: { format: "uuid" }, message: 'must match format "uuid"' }];
+                                return false;
+                              }
+                            } else {
+                              validate701.errors = [{ instancePath: instancePath + "/blocked/" + i4, schemaPath: "#/properties/blocked/items/type", keyword: "type", params: { type: "string" }, message: "must be string" }];
+                              return false;
+                            }
+                          }
+                        }
+                        var valid5 = _errs12 === errors;
+                        if (!valid5) {
+                          break;
+                        }
+                      }
+                      if (valid5) {
+                        let i5 = data4.length;
+                        let j2;
+                        if (i5 > 1) {
+                          const indices2 = {};
+                          for (; i5--; ) {
+                            let item2 = data4[i5];
+                            if (typeof item2 !== "string") {
+                              continue;
+                            }
+                            if (typeof indices2[item2] == "number") {
+                              j2 = indices2[item2];
+                              validate701.errors = [{ instancePath: instancePath + "/blocked", schemaPath: "#/properties/blocked/uniqueItems", keyword: "uniqueItems", params: { i: i5, j: j2 }, message: "must NOT have duplicate items (items ## " + j2 + " and " + i5 + " are identical)" }];
+                              return false;
+                              break;
+                            }
+                            indices2[item2] = i5;
+                          }
+                        }
+                      }
+                    }
+                  } else {
+                    validate701.errors = [{ instancePath: instancePath + "/blocked", schemaPath: "#/properties/blocked/type", keyword: "type", params: { type: "array" }, message: "must be array" }];
+                    return false;
+                  }
+                }
+                var valid0 = _errs10 === errors;
+              } else {
+                var valid0 = true;
               }
             }
           }

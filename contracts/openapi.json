@@ -8302,7 +8302,7 @@
       "get": {
         "operationId": "adminStats",
         "summary": "Account counts and website presence within five minutes",
-        "description": "Account counts and website presence within five minutes. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.",
+        "description": "Account counts and website presence within five minutes. Staff only: guests and other roles receive 404. Blocked users cannot send messages or save nonempty reviews. Moderators cannot change roles or block staff. Operations are re-authorized transactionally.",
         "tags": [
           "Administration"
         ],
@@ -8391,7 +8391,7 @@
       "get": {
         "operationId": "adminUsers",
         "summary": "List accounts with roles and block flags",
-        "description": "List accounts with roles and block flags. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.",
+        "description": "List accounts with roles and block flags. Staff only: guests and other roles receive 404. Blocked users cannot send messages or save nonempty reviews. Moderators cannot change roles or block staff. Operations are re-authorized transactionally.",
         "tags": [
           "Administration"
         ],
@@ -8526,7 +8526,7 @@
       "patch": {
         "operationId": "adminChangeUser",
         "summary": "Change role or block flag with revision check; preserve last active unblocked admin",
-        "description": "Change role or block flag with revision check; preserve last active unblocked admin. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.",
+        "description": "Change role or block flag with revision check; preserve last active unblocked admin. Staff only: guests and other roles receive 404. Blocked users cannot send messages or save nonempty reviews. Moderators cannot change roles or block staff. Operations are re-authorized transactionally.",
         "tags": [
           "Administration"
         ],
@@ -8635,7 +8635,7 @@
       "get": {
         "operationId": "adminAccountAudit",
         "summary": "Append-only role and block change log",
-        "description": "Append-only role and block change log. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.",
+        "description": "Append-only role and block change log. Staff only: guests and other roles receive 404. Blocked users cannot send messages or save nonempty reviews. Moderators cannot change roles or block staff. Operations are re-authorized transactionally.",
         "tags": [
           "Administration"
         ],
@@ -8825,7 +8825,7 @@
       "post": {
         "operationId": "getUserBadges",
         "summary": "Batch visible administrator badges",
-        "description": "Authenticated viewer; up to 50 unique user IDs. Returns only active administrators not mutually blocked. Missing, inactive and blocked IDs have no badge. Display only, never an authorization grant.",
+        "description": "Up to50 visible active identities: administrator, moderator and administrative-block markers. Mutual personal blocks filter all markers. Display only; not authorization.",
         "tags": [
           "Accounts"
         ],
@@ -12491,6 +12491,7 @@
             "type": "string",
             "enum": [
               "user",
+              "moderator",
               "admin"
             ]
           },
@@ -12619,10 +12620,30 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "moderators": {
+            "type": "array",
+            "maxItems": 50,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "blocked": {
+            "type": "array",
+            "maxItems": 50,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         },
         "required": [
-          "administrators"
+          "administrators",
+          "moderators",
+          "blocked"
         ]
       },
       "UserBadgeQuery": {

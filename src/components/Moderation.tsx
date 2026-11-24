@@ -140,6 +140,6 @@ export function ModerationRoute({ client }: { client: Pick<ApiClient, 'request'>
 /** Sidebar link shown only to staff. */
 export function ModerationLink({ client, active }: { client: Pick<ApiClient, 'request'>; active: boolean }) {
   const { role } = useStaffRole(client);
-  if(role==='admin'){const config=authConfig((import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env,location);return <a className="settings-link" href={(import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env.DEV?'/ap':config.apiOrigin+'/ap'}><ShieldCheck size={18}/>Администрирование</a>;}
+  if(role==='admin'||role==='moderator'){const config=authConfig((import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env,location);return <a className="settings-link" href={(import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env.DEV?'/ap':config.apiOrigin+'/ap'}><ShieldCheck size={18}/>Администрирование</a>;}
   return role ? <a className={active ? 'settings-link active' : 'settings-link'} href="#/moderation">Модерация</a> : null;
 }
