@@ -1,4 +1,4 @@
-import{UserName}from'./UserName.tsx';
+import{UserName,ReviewText}from'./UserName.tsx';
 import { Avatar } from './Avatar.tsx';
 import{LoadMore}from'./LoadMore.tsx';
 import React, { useEffect, useRef, useState } from 'react';
@@ -13,7 +13,7 @@ function FeedAuthor({ item: it, client }: { item: FeedItem; client: Pick<ApiClie
       <div><a href={`#/user/${it.user.id}`}><strong><bdi><UserName client={client} userId={it.user.id} name={it.user.name||it.user.login}/></bdi></strong></a><p className="muted small">{it.review !== null && it.rating !== null ? 'оценил и написал рецензию' : it.review !== null ? 'написал рецензию' : 'оценил видео'} · {new Date(it.changed_at).toLocaleDateString('ru-RU')}</p></div>
       {it.rating !== null && <b className="friend-score"><span className="rating-value">{it.rating}</span>/10</b>}
     </div>
-    {it.review !== null && <p className="own-review-text" dir="auto">{it.review}</p>}
+    {it.review !== null && <p className="own-review-text" dir="auto"><ReviewText client={client} userId={it.user.id} text={it.review}/></p>}
     {it.review_id && <ReportButton client={client} kind="review" targetId={it.review_id} label="Пожаловаться на рецензию"/>}
   </div>;
 }

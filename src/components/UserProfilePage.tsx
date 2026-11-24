@@ -1,4 +1,4 @@
-import{UserName}from'./UserName.tsx';
+import{UserName,ReviewText}from'./UserName.tsx';
 import { Avatar } from './Avatar.tsx';
 import{ProfileStats}from'./ProfileStats.tsx';
 import{FriendshipControls}from'./FriendshipControls.tsx';
@@ -93,8 +93,8 @@ export function UserProfilePage({ client, userId, embedded=false, filter='all' }
       <div>
         <a className="card-title" href={`#/video/${it.video.youtube_video_id}`}>{it.video.title ?? 'Название пока неизвестно'}</a>
         {it.video.channel && <p className="small muted">{it.video.channel.name ?? 'Канал без названия'}</p>}
-        <p className="small">{it.mark && <><span className={`mark-badge mark-${it.mark}`}>{MARK_LABELS[it.mark]}</span>{' '}</>}{it.rating !== null && <><span className="muted">Оценка{name ? ` ${name}` : ''}: </span><b className="friend-score"><span className="rating-value">{it.rating}</span>/10</b></>}{it.rating !== null && ' · '}<span className="muted">{new Date(it.changed_at).toLocaleDateString('ru-RU')}</span></p>
-        {it.review !== null && <p className="own-review-text">{it.review}</p>}
+        <p className="small">{it.mark && <><span className={`mark-badge mark-${it.mark}`}>{MARK_LABELS[it.mark]}</span>{' '}</>}{it.rating !== null && <><span className="muted">Оценка{name&&<> <UserName client={client} userId={userId} name={name}/></>}: </span><b className="friend-score"><span className="rating-value">{it.rating}</span>/10</b></>}{it.rating !== null && ' · '}<span className="muted">{new Date(it.changed_at).toLocaleDateString('ru-RU')}</span></p>
+        {it.review !== null && <p className="own-review-text"><ReviewText client={client} userId={userId} text={it.review}/></p>}
         {it.review_id && profile?.relation !== 'self' && <ReportButton client={client} kind="review" targetId={it.review_id} label="Пожаловаться на рецензию"/>}
       </div>
     </article>)}</div>

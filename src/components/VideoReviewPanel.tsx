@@ -1,12 +1,14 @@
+import{ReviewText,useUserStatus}from'./UserName.tsx';
 import{DeleteButton}from'./DeleteButton.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { conflicted, loadReview, type StateWriter, type VideoReview } from '../shared/library/lists.ts';
 
 /** Own server-backed review. Parent keys this editor by viewer and video. */
-export function VideoReviewPanel({ client, writer, videoId }: {
-  client: Pick<ApiClient, 'request'>; writer: StateWriter; videoId: string;
+export function VideoReviewPanel({ client, writer, videoId, ownerId }: {
+  client: Pick<ApiClient, 'request'>; writer: StateWriter; videoId: string; ownerId:string;
 }) {
+  const ownerStatus=useUserStatus(client,ownerId);
   const [review, setReview] = useState<VideoReview | null>(null);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
@@ -65,11 +67,11 @@ export function VideoReviewPanel({ client, writer, videoId }: {
     <h2>Рецензии</h2>
     <p className="muted">Ваша рецензия хранится в аккаунте. Рецензии других пользователей доступны в их профилях и рекомендациях с учётом приватности.</p>
     {loading && <p role="status">Загружаем рецензию…</p>}
-    {review?.text != null && <div className="review"><strong>Ваша сохранённая рецензия</strong><p className="own-review-text">{review.text}</p></div>}
-    <textarea aria-label="Текст рецензии" value={draft} disabled={loading || saving || loadError || !review} onChange={e => setDraft(e.target.value)} placeholder="Поделитесь впечатлениями о видео"/>
-    <p className="small muted">{length} / 1000 символов</p>
+    {review?.text != null && <div className="review"><strong>Ваша сохранённая рецензия</strong><p className="own-review-text"><ReviewText client={client} userId={ownerId} text={review.text}/></p></div>}
+    {ownerStatus?.blocked===false&&<textarea aria-label="Текст рецензии" value={draft} disabled={loading || saving || loadError || !review} onChange={e => setDraft(e.target.value)} placeholder="Поделитесь впечатлениями о видео"/>}
+    {ownerStatus?.blocked===false&&<p className="small muted">{length} / 1000 символов</p>}
     <div className="actions">
-      <button className="primary" disabled={loading || saving || loadError || !review || length < 1 || length > 1000 || normalized === review.text} onClick={() => void write(normalized)}>{saving ? 'Сохраняем…' : 'Сохранить рецензию'}</button>
+      {ownerStatus?.blocked===false&&<button className="primary" disabled={loading || saving || loadError || !review || length < 1 || length > 1000 || normalized === review.text} onClick={() => void write(normalized)}>{saving ? 'Сохраняем…' : 'Сохранить рецензию'}</button>}
       {review?.text != null && <DeleteButton disabled={loading || saving || loadError} onDelete={() => write(null)}>Удалить рецензию</DeleteButton>}
       {loadError && <button className="text-button" disabled={loading || saving} onClick={() => void reload(review !== null)}>Повторить загрузку</button>}
     </div>
