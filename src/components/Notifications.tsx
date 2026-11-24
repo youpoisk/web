@@ -2,37 +2,13 @@ import{UserName}from'./UserName.tsx';
 import { Avatar } from './Avatar.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
-import { NOTIFICATIONS_CHANGED, loadNotifications, loadUnreadNotifications, markAllNotificationsRead, markNotificationRead, notificationTarget, notificationText, type NotificationItem } from '../shared/library/lists.ts';
+import { NOTIFICATIONS_CHANGED, loadNotifications, markAllNotificationsRead, markNotificationRead, notificationTarget, notificationText, type NotificationItem } from '../shared/library/lists.ts';
 
 const when = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-const BADGE_POLL_MS = 60000;
 const changed = () => window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
 
-/** Header badge: polls while the tab is visible and refreshes on changes. */
-export function NotificationBadge({ client }: { client: Pick<ApiClient, 'request'> }) {
-  const [count, setCount] = useState(0);
-  const generation = useRef(0), busy = useRef(false), again = useRef(false);
-  useEffect(() => {
-    const stamp = ++generation.current, ctl = new AbortController();
-    // A change during a request queues one more read, so the newest count wins.
-    const load = () => {
-      if (document.visibilityState !== 'visible') return;
-      if (busy.current) { again.current = true; return; }
-      busy.current = true; again.current = false;
-      loadUnreadNotifications(client, ctl.signal).then(n => { if (stamp === generation.current) setCount(n); }).catch(() => {}).finally(() => {
-        if (stamp !== generation.current) return;
-        busy.current = false;
-        if (again.current) load();
-      });
-    };
-    load();
-    const timer = setInterval(load, BADGE_POLL_MS);
-    window.addEventListener(NOTIFICATIONS_CHANGED, load);
-    document.addEventListener('visibilitychange', load);
-    return () => { generation.current++; ctl.abort(); busy.current = false; again.current = false; clearInterval(timer); window.removeEventListener(NOTIFICATIONS_CHANGED, load); document.removeEventListener('visibilitychange', load); };
-  }, [client]);
-  return count > 0 ? <><i className="notification-dot" aria-hidden="true"/><span className="sr-only">, непрочитанных: {count}</span></> : null;
-}
+/** Counter is owned by the shared minute activity poll; no extra HTTP loop. */
+export function NotificationBadge({count=0}:{count?:number}){return count>0?<><i className="notification-dot" aria-hidden="true"/><span className="sr-only">, непрочитанных: {count}</span></>:null;}
 
 /** Account-keyed by the parent. Late responses after unmount are dropped. */
 export function NotificationsList({ client, open }: { client: Pick<ApiClient, 'request'>; open: (route: string, tab?: string) => void }) {

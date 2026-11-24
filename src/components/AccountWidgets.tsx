@@ -2,24 +2,23 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { changeMyName, loadNavigationCounts, NOTIFICATIONS_CHANGED, type NavigationCounts, type OwnProfile } from '../shared/library/lists.ts';
 
-export function useNavigationCounts(client: Pick<ApiClient,'request'> | null, owner: string | null) {
-  const [snapshot,setSnapshot]=useState<{owner:string;counts:NavigationCounts}|null>(null);
-  const generation=useRef(0);
-  useEffect(()=>{
-    const stamp=++generation.current,ctl=new AbortController();let busy=false,again=false;
-    setSnapshot(null);
-    const load=()=>{
-      if(!client||!owner||document.visibilityState!=='visible')return;
-      if(busy){again=true;return;}busy=true;again=false;
-      loadNavigationCounts(client,ctl.signal).then(counts=>{if(stamp===generation.current)setSnapshot({owner,counts});})
-        .catch(()=>{if(stamp===generation.current)setSnapshot(null);})
-        .finally(()=>{if(stamp===generation.current){busy=false;if(again)load();}});
-    };
-    load();const timer=setInterval(load,30000);
-    window.addEventListener(NOTIFICATIONS_CHANGED,load);document.addEventListener('visibilitychange',load);
-    return()=>{generation.current++;ctl.abort();clearInterval(timer);window.removeEventListener(NOTIFICATIONS_CHANGED,load);document.removeEventListener('visibilitychange',load);};
-  },[client,owner]);
-  return client&&owner&&snapshot?.owner===owner?snapshot.counts:null;
+type Activity={unread_conversations:number;incoming_friend_requests:number;outgoing_friend_requests:number;unread_notifications:number};
+/** One minute poll reads only lightweight activity; profile totals are event driven. */
+export function useNavigationCounts(client:Pick<ApiClient,'request'>|null,owner:string|null){
+ const[snapshot,setSnapshot]=useState<{owner:string;counts:NavigationCounts}|null>(null);
+ const[activity,setActivity]=useState<{owner:string;counts:Activity}|null>(null);
+ const generation=useRef(0);
+ useEffect(()=>{const stamp=++generation.current,ctl=new AbortController();let fullBusy=false,fullAgain=false,activityBusy=false,activityAgain=false,lastFull=0;setSnapshot(null);setActivity(null);
+ const live=()=>stamp===generation.current&&!ctl.signal.aborted;
+ const allowed=()=>!!client&&!!owner&&document.visibilityState==='visible'&&live();
+ const full=(force=false)=>{if(!allowed())return;if(fullBusy){fullAgain=fullAgain||force;return;}if(!force&&Date.now()-lastFull<5000)return;fullBusy=true;lastFull=Date.now();void loadNavigationCounts(client!,ctl.signal).then(counts=>{if(live())setSnapshot({owner:owner!,counts})}).catch(()=>{if(live())setSnapshot(null)}).finally(()=>{fullBusy=false;if(live()&&fullAgain){fullAgain=false;full(true)}})};
+ const poll=()=>{if(!allowed())return;if(activityBusy){activityAgain=true;return;}activityBusy=true;void client!.request('getActivityCounts',{signal:ctl.signal}).then(counts=>{if(live())setActivity({owner:owner!,counts})}).catch(()=>{if(live())setActivity(null)}).finally(()=>{activityBusy=false;if(live()&&activityAgain){activityAgain=false;poll()}})};
+ const refresh=()=>{full();poll()};const changed=()=>{full(true);poll()};const route=()=>{if(['#/profile','#/watchlist','#/ratings'].includes(location.hash))full()};
+ refresh();const timer=setInterval(poll,60000);window.addEventListener(NOTIFICATIONS_CHANGED,changed);document.addEventListener('visibilitychange',refresh);window.addEventListener('focus',refresh);window.addEventListener('hashchange',route);
+ return()=>{generation.current++;ctl.abort();clearInterval(timer);window.removeEventListener(NOTIFICATIONS_CHANGED,changed);document.removeEventListener('visibilitychange',refresh);window.removeEventListener('focus',refresh);window.removeEventListener('hashchange',route)};
+ },[client,owner]);
+ const totals=client&&owner&&snapshot?.owner===owner?snapshot.counts:null;const current=client&&owner&&activity?.owner===owner?activity.counts:null;
+ return {totals:totals?{...totals,...current}:null,activity:current};
 }
 
 export function NavigationCount({count,label,showZero=false}:{count:number|undefined;label:string;showZero?:boolean}){
