@@ -61,24 +61,27 @@ globalThis.YPWorker=(()=>{
    try{await api.runtime.sendMessage({type:'YP_CHANGED'});}catch{/* no open extension page */}
   }
   // Events wake the durable queue; deadlines live in IDB, not in worker timers.
-  let recoveryQueued=false;
-  async function recover(){
-   if(!backend?.recover||!session||recoveryQueued)return;
+  const IDLE_POLL='yp-idle-poll-v1';
+  let recoveryQueued=false,recoveryAgain=false;
+  async function recover(idle=false){
+   if(!backend?.recover||!session)return;if(recoveryQueued){if(!idle)recoveryAgain=true;return;}
    recoveryQueued=true;let continuePull=false;
    const work=writes.then(async()=>{
-    if((await session.status()).state!=='authenticated')return;
+    if(idle&&session.peek){const auth=await session.peek(),saved=await storage.read(IDLE_POLL);if(saved?.version===1&&saved.owner===auth.owner&&saved.epoch===auth.epoch&&auth.state==='authenticated'&&Number.isFinite(saved.until)&&saved.until>Date.now()&&saved.until<=Date.now()+300000)return;}
+    const auth=await session.status();if(auth.state!=='authenticated')return;
     let after=undefined,sent=0;for(let page=0;page<10;page++){const result=await backend.recover(after);sent+=result.sent;after=result.next;if(!after)break;}
     const pulled=backend.pull?await backend.pull():null;continuePull=pulled?.complete===false||pulled?.reset===true||pulled?.cleanupPending===true;
     if(sent||pulled?.changed)await broadcast();
+    if(backend.queueStatus){const queue=await backend.queueStatus();await storage.write(queue.pending===0&&!queue.more&&!continuePull?{version:1,owner:auth.owner,epoch:auth.epoch,until:Date.now()+180000+Math.floor(Math.random()*60001)}:null,IDLE_POLL);}
    });
-   writes=work.catch(()=>{});try{await work;}finally{recoveryQueued=false;if(continuePull)setTimeout(wake,0);}
+   writes=work.catch(()=>{});try{await work;}finally{recoveryQueued=false;if(continuePull||recoveryAgain){recoveryAgain=false;setTimeout(wake,0);}}
   }
-  const wake=()=>{void recover().catch(()=>{});};
+  const wake=(idle=false)=>{void recover(idle).catch(()=>{});};
   if(api.alarms&&backend?.recover){
-   api.alarms.onAlarm.addListener(alarm=>{if(alarm.name==='yp-outbox')wake();});
+   api.alarms.onAlarm.addListener(alarm=>{if(alarm.name==='yp-outbox')wake(true);});
    Promise.resolve(api.alarms.create('yp-outbox',{periodInMinutes:1})).catch(()=>{});
-   api.runtime.onStartup?.addListener(wake);api.runtime.onInstalled?.addListener(wake);
-   api.windows?.onFocusChanged?.addListener(id=>{if(id!==-1)wake();});wake();
+   api.runtime.onStartup?.addListener(()=>wake());api.runtime.onInstalled?.addListener(()=>wake());
+   api.windows?.onFocusChanged?.addListener(id=>{if(id!==-1)wake();});wake(true);
   }
   api.runtime.onMessage.addListener((command,sender,respond)=>{
    if(typeof command?.type!=='string'||command.type==='YP_CHANGED'||!command.type.startsWith('YP_'))return;
@@ -87,6 +90,7 @@ globalThis.YPWorker=(()=>{
     validate(request);await authorize(request,sender);
     const operation=writes.then(async()=>{
      let access=await authorize(request,sender);
+      if(['UPDATE_CURRENT_VIDEO','QUEUE_RESUME','IMPORT_COMMIT','CHANNEL_CONFIRM','AUTH_LOGIN','AUTH_LOGOUT','SYNC_NOW'].includes(request.type))await storage.write(null,IDLE_POLL);
      if(request.type.startsWith('AUTH_')){
       if(!session)throw Error('Авторизация недоступна');
       if(request.type==='AUTH_LOGOUT'&&backend?.queueStatus){const auth=await authState();if(request.scope!==undefined&&request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});if(auth.state==='authenticated'){let queue=await backend.queueStatus();if(queue.pending+queue.blocked>0){if(request.scope!==auth.epoch||!['sync','keep','discard'].includes(request.pendingAction))throw Object.assign(new Error('Choose pending action'),{kind:'pending_choice_required'});if(request.pendingAction==='discard')await backend.discardPending();if(request.pendingAction==='sync'){for(let page=0;page<10;page++){const result=await backend.recover();if(!result.next)break;}queue=await backend.queueStatus();if(queue.pending+queue.blocked>0)throw Object.assign(new Error('Queue not sent'),{kind:'pending_choice_required'});}}}}
@@ -150,7 +154,7 @@ globalThis.YPWorker=(()=>{
      }
      return project({...state,auth},access);
     });
-    writes=operation.catch(()=>{});if(request.type==='GET_ACCOUNT_LIBRARY'||request.type==='AUTH_LOGIN')operation.finally(wake).catch(()=>{});return await operation;
+    writes=operation.catch(()=>{});if(['GET_ACCOUNT_LIBRARY','AUTH_LOGIN','UPDATE_CURRENT_VIDEO','QUEUE_RESUME','IMPORT_COMMIT'].includes(request.type))operation.finally(()=>wake()).catch(()=>{});return await operation;
    })().then(data=>{try{respond({ok:true,data})}catch{/* UI closed */}},async error=>{
     if(session?.peek){try{observeAuth(await session.peek());}catch{}}
     const code=error?.name==='QuotaExceededError'?'quota':error?.kind??'unavailable';
