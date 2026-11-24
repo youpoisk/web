@@ -1,3 +1,4 @@
+import{invalidateAvatar}from'./Avatar.tsx';
 import{UserName}from'./UserName.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
@@ -37,7 +38,7 @@ export function BlocksPanel({ client }: { client: Client }) {
     if (busy.current || reading.current) return;
     const stamp = generation.current; busy.current = true; setSaving(true); setMessage('');
     try {
-      await setBlocked(client, id, false);
+      await setBlocked(client, id, false);invalidateAvatar();
       if (stamp !== generation.current) return;
       setItems(prev => prev.filter(x => x.user.id !== id));
       setMessage('');
@@ -71,7 +72,7 @@ export function BlockControl({ client, userId, onBlocked, inline = false }: { cl
     if (busy.current) return;
     const stamp = generation.current; busy.current = true; setSaving(true); setMessage('');
     try {
-      await setBlocked(client, userId, true);
+      await setBlocked(client, userId, true);invalidateAvatar();
       if (stamp === generation.current) onBlocked();
     } catch (failure) { if (stamp === generation.current) setMessage(failureMessage(failure)); }
     finally { if (stamp === generation.current) { busy.current = false; setSaving(false); } }

@@ -1,0 +1,9 @@
+import{ApiError}from'../api/client.ts';
+type Job={valid:boolean;promise:Promise<string|null>};
+function wait(promise:Promise<string|null>,signal?:AbortSignal):Promise<string|null>{if(!signal)return promise;return new Promise((resolve,reject)=>{const abort=()=>reject(new ApiError('aborted'));signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();promise.then(resolve,reject).finally(()=>signal.removeEventListener('abort',abort))})}
+/** Memory-only signed links; never persist or share between clients/auth scopes. */
+export function createAvatarLinkCache(load:(id:string)=>Promise<string|null>,scope:()=>string,now:()=>number=Date.now){
+ const cache=new Map<string,{value:string|null;until:number}>(),pending=new Map<string,Job>();let owner=scope();
+ function invalidate(id?:string){if(id!==undefined){cache.delete(id);const job=pending.get(id);if(job)job.valid=false;pending.delete(id)}else{cache.clear();for(const job of pending.values())job.valid=false;pending.clear()}}
+ return{invalidate,async read(id:string,signal?:AbortSignal){if(signal?.aborted)throw new ApiError('aborted');const captured=scope();if(captured!==owner){invalidate();owner=captured}const cached=cache.get(id);if(cached&&cached.until>now())return cached.value;let job=pending.get(id);if(!job){const current:Job={valid:true,promise:Promise.resolve(null)};current.promise=load(id).then(value=>{if(current.valid&&captured===scope()){cache.set(id,{value,until:now()+(value===null?3000:30000)});if(cache.size>128)cache.delete(cache.keys().next().value!)}return value}).finally(()=>{if(pending.get(id)===current)pending.delete(id)});job=current;pending.set(id,job)}const value=await wait(job.promise,signal);if(signal?.aborted)throw new ApiError('aborted');if(!job.valid||captured!==scope())throw new ApiError('stale_session');return value}};
+}

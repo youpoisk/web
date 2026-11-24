@@ -112,7 +112,7 @@ export class ApiClient {
     this.#timeout = config.timeoutMs ?? 15000;
     if (!Number.isSafeInteger(this.#timeout) || this.#timeout < 1 || this.#timeout > 120000) throw new ApiError('configuration');
   }
-  get avatarScope(): string { return scopeKey(this.#session()); }
+  get avatarScope(): string { const current=this.#session();return current.state+':'+scopeKey(current); }
   /** Avatar image I/O (YP-100): the only non-JSON bodies. A signed-in
    * session is required; the Bearer token is sent like every private call. */
   async #raw(method: 'GET' | 'PUT', path: string, init: { body?: Blob; contentType?: string; accept: string; cache: RequestCache; limit: number; revision: number; signal?: AbortSignal }): Promise<RawReply> {
