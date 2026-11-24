@@ -1,0 +1,5 @@
+import React from 'react';
+import './ErrorScreen.css';
+export function ErrorScreen({status=404}:{status?:number}){return <section className="error-screen" role="alert"><div className="error-card"><a className="error-brand" href="#/">you<span>poisk</span></a><div className="error-scene" aria-hidden="true"><span>{status}</span><i>▶</i></div><h1>{status===404?'Эта страница не нашлась':'Что-то пошло не так'}</h1><p>{status===404?'Возможно, ссылка устарела или страница недоступна. Хорошие видео всё ещё здесь.':'Не удалось открыть страницу. Попробуйте обновить её немного позже.'}</p><a className="primary" href={status===404?'#/':'./'}>К рекомендациям ↗</a></div></section>}
+/** Never show thrown messages, component stacks or response bodies in the UI. */
+export class ErrorBoundary extends React.Component<{children:React.ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return{failed:true}};render(){return this.state.failed?<ErrorScreen status={500}/>:this.props.children;}}
