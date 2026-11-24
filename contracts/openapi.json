@@ -6621,7 +6621,7 @@
       "get": {
         "operationId": "listReports",
         "summary": "Moderation queue",
-        "description": "Reports and minimal moderation (YP-083.2). Staff only (admin or moderator role, granted by the operator; no API grants roles): others get 403 forbidden. Newest first, filtered by status (default open). Evidence is only the single reported item.",
+        "description": "Reports and minimal moderation (YP-083.2). Staff only (admin or moderator role, administrators may manage roles via /v1/admin/users): others get 403 forbidden. Newest first, filtered by status (default open). Evidence is only the single reported item.",
         "tags": [
           "PersonalState"
         ],
@@ -8239,6 +8239,529 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VideoSearchPage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/stats": {
+      "get": {
+        "operationId": "adminStats",
+        "summary": "Account counts and website presence within five minutes",
+        "description": "Account counts and website presence within five minutes. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.",
+        "tags": [
+          "Administration"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Account counts and website presence within five minutes",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStats"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/users": {
+      "get": {
+        "operationId": "adminUsers",
+        "summary": "List accounts with roles and block flags",
+        "description": "List accounts with roles and block flags. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.",
+        "tags": [
+          "Administration"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "user",
+                "admin",
+                "moderator"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "blocked",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List accounts with roles and block flags",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/users/{id}": {
+      "patch": {
+        "operationId": "adminChangeUser",
+        "summary": "Change role or block flag with revision check; preserve last active unblocked admin",
+        "description": "Change role or block flag with revision check; preserve last active unblocked admin. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.",
+        "tags": [
+          "Administration"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Change role or block flag with revision check; preserve last active unblocked admin",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminChange"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/account-audit": {
+      "get": {
+        "operationId": "adminAccountAudit",
+        "summary": "Append-only role and block change log",
+        "description": "Append-only role and block change log. Admin only: guests and other roles receive 404. is_blocked is a persisted flag; restrictions are deliberately deferred. Operations are re-authorized transactionally.",
+        "tags": [
+          "Administration"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Append-only role and block change log",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminActionPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/presence": {
+      "post": {
+        "operationId": "recordMyPresence",
+        "summary": "Record visible website presence, coalesced to once per minute",
+        "description": "Record visible website presence, coalesced to once per minute",
+        "tags": [
+          "Sessions"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Revoke the current device family",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }
@@ -11739,6 +12262,251 @@
             }
           }
         }
+      },
+      "AdminStats": {
+        "type": "object",
+        "properties": {
+          "total_users": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "blocked_users": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "online_users": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "administrators": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "open_reports": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "online_window_seconds": {
+            "type": "integer",
+            "const": 300
+          }
+        },
+        "required": [
+          "total_users",
+          "blocked_users",
+          "online_users",
+          "administrators",
+          "open_reports",
+          "as_of",
+          "online_window_seconds"
+        ],
+        "additionalProperties": false
+      },
+      "AdminUser": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "login": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "admin",
+              "moderator"
+            ]
+          },
+          "is_blocked": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "disabled",
+              "deleting",
+              "deleted"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "login",
+          "name",
+          "role",
+          "is_blocked",
+          "status",
+          "revision",
+          "created_at",
+          "last_seen_at"
+        ],
+        "additionalProperties": false
+      },
+      "AdminChange": {
+        "type": "object",
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "admin"
+            ]
+          },
+          "is_blocked": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expected_revision"
+        ],
+        "additionalProperties": false
+      },
+      "AdminAction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "target_user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previous_role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "admin",
+              "moderator"
+            ]
+          },
+          "new_role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "admin",
+              "moderator"
+            ]
+          },
+          "previous_blocked": {
+            "type": "boolean"
+          },
+          "new_blocked": {
+            "type": "boolean"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "panel",
+              "bootstrap"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "actor_id",
+          "target_user_id",
+          "previous_role",
+          "new_role",
+          "previous_blocked",
+          "new_blocked",
+          "source",
+          "created_at"
+        ],
+        "additionalProperties": false
+      },
+      "AdminUserPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/AdminUser"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "AdminActionPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/AdminAction"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {

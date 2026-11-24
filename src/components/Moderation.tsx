@@ -1,3 +1,4 @@
+import { authConfig } from '../shared/auth/runtime.ts';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { REPORT_REASONS, createReport, loadAudit, loadStaffRole, loadReports, moderationError, reportError, resolveReport, type AdminReport, type AuditEntry, type ReportKind, type ReportReason } from '../shared/library/lists.ts';
@@ -43,7 +44,7 @@ const person = (u: { login: string | null; status: string }) => <><bdi>{u.login 
 export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'request'>; role: 'admin' | 'moderator' }) {
   const [view, setView] = useState<Status | 'audit'>('open');
   const [items, setItems] = useState<AdminReport[]>([]), [audit, setAudit] = useState<AuditEntry[]>([]), [next, setNext] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true), [error, setError] = useState(''), [notice, setNotice] = useState(''), [confirm, setConfirm] = useState<{ report: AdminReport; action: 'dismiss' | 'hide' | 'suspend' } | null>(null);
+  const [loading, setLoading] = useState(true), [error, setError] = useState(''), [notice, setNotice] = useState(''), [confirm, setConfirm] = useState<{ report: AdminReport; action: 'dismiss' | 'hide' } | null>(null);
   const generation = useRef(0), busy = useRef(false), [saving, setSaving] = useState(false);
   async function load(after: string | null, signal?: AbortSignal) {
     const stamp = generation.current; setLoading(true); setError('');
@@ -97,10 +98,9 @@ export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'requ
       {r.status === 'open' && <div className="actions">
         <button className="secondary" disabled={saving} onClick={() => setConfirm({ report: r, action: 'dismiss' })}>Отклонить</button>
         {r.target_kind === 'review' && <button className="secondary" disabled={saving} onClick={() => setConfirm({ report: r, action: 'hide' })}>Скрыть рецензию</button>}
-        <button className="secondary" disabled={saving} onClick={() => setConfirm({ report: r, action: 'suspend' })}>Заблокировать аккаунт</button>
       </div>}
       {confirm?.report.id === r.id && <div className="notice" role="group" aria-label="Подтверждение решения">
-        <p>{confirm.action === 'suspend' ? <>Заблокировать {person(r.target_user)}? Все его сессии будут завершены, вернуть доступ может только оператор.</> : confirm.action === 'hide' ? 'Скрыть эту рецензию от всех?' : 'Отклонить жалобу без мер?'}</p>
+        <p>{confirm.action === 'hide' ? 'Скрыть эту рецензию от всех?' : 'Отклонить жалобу без мер?'}</p>
         <div className="actions"><button className="primary" disabled={saving} onClick={() => void resolve()}>{saving ? 'Выполняем…' : 'Подтвердить'}</button><button className="secondary" disabled={saving} onClick={() => setConfirm(null)}>Отмена</button></div>
         <p className="small" role="status">{saving ? 'Решение отправляется…' : ''}</p>
       </div>}
@@ -138,5 +138,6 @@ export function ModerationRoute({ client }: { client: Pick<ApiClient, 'request'>
 /** Sidebar link shown only to staff. */
 export function ModerationLink({ client, active }: { client: Pick<ApiClient, 'request'>; active: boolean }) {
   const { role } = useStaffRole(client);
+  if(role==='admin'){const config=authConfig((import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env,location);return <a className="settings-link" href={(import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env.DEV?'/ap':config.apiOrigin+'/ap'}>Администрирование</a>;}
   return role ? <a className={active ? 'settings-link active' : 'settings-link'} href="#/moderation">Модерация</a> : null;
 }
