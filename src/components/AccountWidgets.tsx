@@ -1,3 +1,6 @@
+import{createTabActivity}from'../shared/users/tab-activity.ts';
+import{schema_ActivityCounts}from'../shared/api/validators.js';
+import{authConfig}from'../shared/auth/runtime.ts';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { changeMyName, loadNavigationCounts, NOTIFICATIONS_CHANGED, type NavigationCounts, type OwnProfile } from '../shared/library/lists.ts';
@@ -7,18 +10,20 @@ type Activity={unread_conversations:number;incoming_friend_requests:number;outgo
 export function useNavigationCounts(client:Pick<ApiClient,'request'>|null,owner:string|null){
  const[snapshot,setSnapshot]=useState<{owner:string;counts:NavigationCounts}|null>(null);
  const[activity,setActivity]=useState<{owner:string;counts:Activity}|null>(null);
- const generation=useRef(0);
- useEffect(()=>{const stamp=++generation.current,ctl=new AbortController();let fullBusy=false,fullAgain=false,activityBusy=false,activityAgain=false,lastFull=0;setSnapshot(null);setActivity(null);
+ const generation=useRef(0);const[leader,setLeader]=useState(false);
+ useEffect(()=>{const stamp=++generation.current,ctl=new AbortController();let fullBusy=false,fullAgain=false,activityBusy=false,activityAgain=false,lastFull=0;setSnapshot(null);setActivity(null);let shared:ReturnType<typeof createTabActivity<Activity>>|undefined;
  const live=()=>stamp===generation.current&&!ctl.signal.aborted;
  const allowed=()=>!!client&&!!owner&&document.visibilityState==='visible'&&live();
  const full=(force=false)=>{if(!allowed())return;if(fullBusy){fullAgain=fullAgain||force;return;}if(!force&&Date.now()-lastFull<5000)return;fullBusy=true;lastFull=Date.now();void loadNavigationCounts(client!,ctl.signal).then(counts=>{if(live())setSnapshot({owner:owner!,counts})}).catch(()=>{if(live())setSnapshot(null)}).finally(()=>{fullBusy=false;if(live()&&fullAgain){fullAgain=false;full(true)}})};
- const poll=()=>{if(!allowed())return;if(activityBusy){activityAgain=true;return;}activityBusy=true;void client!.request('getActivityCounts',{signal:ctl.signal}).then(counts=>{if(live())setActivity({owner:owner!,counts})}).catch(()=>{if(live())setActivity(null)}).finally(()=>{activityBusy=false;if(live()&&activityAgain){activityAgain=false;poll()}})};
- const refresh=()=>{full();poll()};const changed=()=>{full(true);poll()};const route=()=>{if(['#/profile','#/watchlist','#/ratings'].includes(location.hash))full()};
- refresh();const timer=setInterval(poll,60000);window.addEventListener(NOTIFICATIONS_CHANGED,changed);document.addEventListener('visibilitychange',refresh);window.addEventListener('focus',refresh);window.addEventListener('hashchange',route);
- return()=>{generation.current++;ctl.abort();clearInterval(timer);window.removeEventListener(NOTIFICATIONS_CHANGED,changed);document.removeEventListener('visibilitychange',refresh);window.removeEventListener('focus',refresh);window.removeEventListener('hashchange',route)};
+ const poll=()=>{if(!allowed())return;if(shared){shared.refresh();return;}if(activityBusy){activityAgain=true;return;}activityBusy=true;void client!.request('getActivityCounts',{signal:ctl.signal}).then(counts=>{if(live())setActivity({owner:owner!,counts})}).catch(()=>{if(live())setActivity(null)}).finally(()=>{activityBusy=false;if(live()&&activityAgain){activityAgain=false;poll()}})};
+ const refresh=()=>{full();if(shared)shared.visibility();else poll()};const changed=()=>{full(true);poll()};const route=()=>{if(['#/profile','#/watchlist','#/ratings'].includes(location.hash))full()};
+ const scoped=client as (Pick<ApiClient,'request'>&Partial<Pick<ApiClient,'avatarScope'>>)|null;
+ if(scoped?.avatarScope&&typeof BroadcastChannel!=='undefined'&&typeof navigator!=='undefined'&&navigator.locks){const api=authConfig((import.meta as unknown as{env?:Record<string,string|boolean|undefined>}).env??{},location).apiOrigin;const scope=()=>{try{return api+':'+scoped.avatarScope}catch{return ''}};const name='yp.activity.v1:'+scope();shared=createTabActivity<Activity>({scope,visible:()=>document.visibilityState==='visible',claim:async(signal,run)=>{await navigator.locks.request(name,{signal},run)},channel:new BroadcastChannel(name),read:signal=>client!.request('getActivityCounts',{signal}),valid:(v):v is Activity=>schema_ActivityCounts(v),receive:counts=>{if(live())setActivity(counts?{owner:owner!,counts}:null)},leader:value=>{if(live())setLeader(value)},later:(fn,delay)=>setTimeout(fn,delay),cancel:timer=>clearTimeout(timer as ReturnType<typeof setTimeout>),random:Math.random});}else setLeader(!!client&&!!owner);
+ refresh();const timer=shared?null:setInterval(poll,60000);window.addEventListener(NOTIFICATIONS_CHANGED,changed);document.addEventListener('visibilitychange',refresh);window.addEventListener('focus',refresh);window.addEventListener('hashchange',route);
+ return()=>{generation.current++;ctl.abort();shared?.close();if(timer!==null)clearInterval(timer);window.removeEventListener(NOTIFICATIONS_CHANGED,changed);document.removeEventListener('visibilitychange',refresh);window.removeEventListener('focus',refresh);window.removeEventListener('hashchange',route)};
  },[client,owner]);
  const totals=client&&owner&&snapshot?.owner===owner?snapshot.counts:null;const current=client&&owner&&activity?.owner===owner?activity.counts:null;
- return {totals:totals?{...totals,...current}:null,activity:current};
+ return {totals:totals?{...totals,...current}:null,activity:current,leader};
 }
 
 export function NavigationCount({count,label,showZero=false}:{count:number|undefined;label:string;showZero?:boolean}){
