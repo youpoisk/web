@@ -90,7 +90,7 @@ globalThis.YPWorker=(()=>{
     validate(request);await authorize(request,sender);
     const operation=writes.then(async()=>{
      let access=await authorize(request,sender);
-      if(['UPDATE_CURRENT_VIDEO','QUEUE_RESUME','IMPORT_COMMIT','CHANNEL_CONFIRM','AUTH_LOGIN','AUTH_LOGOUT','SYNC_NOW'].includes(request.type))await storage.write(null,IDLE_POLL);
+      if(['UPDATE_CURRENT_VIDEO','QUEUE_RESUME','QUEUE_RESOLVE','IMPORT_COMMIT','CHANNEL_CONFIRM','AUTH_LOGIN','AUTH_LOGOUT','SYNC_NOW'].includes(request.type))await storage.write(null,IDLE_POLL);
      if(request.type.startsWith('AUTH_')){
       if(!session)throw Error('Авторизация недоступна');
       if(request.type==='AUTH_LOGOUT'&&backend?.queueStatus){const auth=await authState();if(request.scope!==undefined&&request.scope!==auth.epoch)throw Object.assign(new Error('Stale scope'),{kind:'stale'});if(auth.state==='authenticated'){let queue=await backend.queueStatus();if(queue.pending+queue.blocked>0){if(request.scope!==auth.epoch||!['sync','keep','discard'].includes(request.pendingAction))throw Object.assign(new Error('Choose pending action'),{kind:'pending_choice_required'});if(request.pendingAction==='discard')await backend.discardPending();if(request.pendingAction==='sync'){for(let page=0;page<10;page++){const result=await backend.recover();if(!result.next)break;}queue=await backend.queueStatus();if(queue.pending+queue.blocked>0)throw Object.assign(new Error('Queue not sent'),{kind:'pending_choice_required'});}}}}
@@ -154,7 +154,7 @@ globalThis.YPWorker=(()=>{
      }
      return project({...state,auth},access);
     });
-    writes=operation.catch(()=>{});if(['GET_ACCOUNT_LIBRARY','AUTH_LOGIN','UPDATE_CURRENT_VIDEO','QUEUE_RESUME','IMPORT_COMMIT'].includes(request.type))operation.finally(()=>wake()).catch(()=>{});return await operation;
+    writes=operation.catch(()=>{});if(['GET_ACCOUNT_LIBRARY','AUTH_LOGIN','UPDATE_CURRENT_VIDEO','QUEUE_RESUME','QUEUE_RESOLVE','IMPORT_COMMIT'].includes(request.type))operation.finally(()=>wake()).catch(()=>{});return await operation;
    })().then(data=>{try{respond({ok:true,data})}catch{/* UI closed */}},async error=>{
     if(session?.peek){try{observeAuth(await session.peek());}catch{}}
     const code=error?.name==='QuotaExceededError'?'quota':error?.kind??'unavailable';
