@@ -1,3 +1,4 @@
+import{UserName}from'./UserName.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { loadBlocks, setBlocked, type Block } from '../shared/library/lists.ts';
@@ -51,7 +52,7 @@ export function BlocksPanel({ client }: { client: Client }) {
     {error && <p role="alert">Не удалось загрузить список. <button disabled={loading || saving} onClick={() => read(failedAfter)}>Повторить</button></p>}
     {!loading && !error && !items.length && <p className="notice">Вы никого не заблокировали.</p>}
     {items.map(it => <article className="review" key={it.user.id}>
-      <h3>{it.user.name || it.user.login || 'Недоступный пользователь'}</h3>
+      <h3><UserName client={client} userId={it.user.id} name={it.user.name||it.user.login||'Недоступный пользователь'}/></h3>
       {it.user.login && <p className="muted">@{it.user.login}</p>}
       <p className="small muted">Заблокирован {new Date(it.since).toLocaleDateString('ru-RU')}</p>
       <button className="secondary" disabled={loading || saving} onClick={() => void remove(it.user.id)}>Разблокировать</button>

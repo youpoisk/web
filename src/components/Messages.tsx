@@ -1,3 +1,4 @@
+import{UserName}from'./UserName.tsx';
 import { Avatar } from './Avatar.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { MessageCircle, RefreshCw } from 'lucide-react';
@@ -44,8 +45,8 @@ export function ConversationsList({ client }: { client: Pick<ApiClient, 'request
       <a className="primary" href="#/friends">Перейти к друзьям</a>
     </div>}
     {items.map(it => <a className={`conversation-line${it.unread_count ? ' unread' : ''}`} key={it.id} href={`#/messages/${it.user.id}`}>
-      <Avatar client={client} userId={it.user.id} name={it.user.name || it.user.login} className="avatar small-avatar"/>
-      <span className="conversation-text"><strong>{it.user.name || it.user.login}</strong><span className="small muted"><bdi dir="auto">{preview(it.last_message)}</bdi></span></span>
+      <Avatar client={client} userId={it.user.id} name={it.user.name||it.user.login} className="avatar small-avatar"/>
+      <span className="conversation-text"><strong><UserName client={client} userId={it.user.id} name={it.user.name||it.user.login}/></strong><span className="small muted"><bdi dir="auto">{preview(it.last_message)}</bdi></span></span>
       <span className="small muted">{when(it.last_message.created_at)}</span>
       {it.unread_count > 0 && <span className="unread-badge"><span className="sr-only">Непрочитанных: </span>{it.unread_count}</span>}
     </a>)}
@@ -136,7 +137,7 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
   const lastMine = [...items].reverse().find(m => m.mine);
   const title = user ? user.name || user.login : 'Переписка';
   return <section className="panel chat" aria-busy={loading} aria-labelledby="chat-title">
-    <div className="chat-head"><a href="#/messages">← Все переписки</a><h2 id="chat-title">{user ? <a href={`#/user/${userId}`}>{title} <span className="small muted">@{user.login}</span></a> : title}</h2></div>
+    <div className="chat-head"><a href="#/messages">← Все переписки</a><h2 id="chat-title">{user ? <a href={`#/user/${userId}`}><UserName client={client} userId={userId} name={title}/> <span className="small muted">@{user.login}</span></a> : title}</h2></div>
     {loading && <p role="status">Загружаем переписку…</p>}
     {error && <p role="alert">{error} <button className="text-button" onClick={() => { setLoading(true); void refresh(); }}>Повторить</button></p>}
     {older && <button className="secondary" disabled={olderLoading} onClick={() => void loadOlder()}>{olderLoading ? 'Загружаем…' : 'Показать ранние сообщения'}</button>}

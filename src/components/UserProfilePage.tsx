@@ -1,3 +1,4 @@
+import{UserName}from'./UserName.tsx';
 import { Avatar } from './Avatar.tsx';
 import{ProfileStats}from'./ProfileStats.tsx';
 import{FriendshipControls}from'./FriendshipControls.tsx';
@@ -65,7 +66,7 @@ export function UserProfilePage({ client, userId, embedded=false, filter='all' }
         {profile && <Avatar client={client} userId={profile.user.id} name={profile.user.name || profile.user.login} className="avatar profile-avatar"/>}
         <div className="profile-identity-text">
           <div className="eyebrow">ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ</div>
-          <h1>{profile ? name : 'Профиль'}</h1>
+          <h1>{profile ? <UserName client={client} userId={userId} name={name}/> : 'Профиль'}</h1>
           {profile && <p className="muted profile-login">@{profile.user.login}{profile.relation === 'friend' ? ' · у вас в друзьях' : profile.relation === 'self' ? ' · это вы' : ''}</p>}
         </div>
       </div>

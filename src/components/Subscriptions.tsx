@@ -1,3 +1,4 @@
+import{UserName}from'./UserName.tsx';
 import { PeopleListSearch } from './PeopleListSearch.tsx';
 import { Avatar } from './Avatar.tsx';
 import React, { useEffect, useRef, useState } from 'react';
@@ -49,8 +50,8 @@ export function SubscriptionsList({ client, direction, search = '' }: { search?:
     {error && <p role="alert">Не удалось загрузить список. <button disabled={loading || saving} onClick={() => void load(failedAfter)}>Повторить</button></p>}
     {!searchTerm && !loading && !error && !items.length && <p className="notice">{direction === 'following' ? 'Вы пока ни на кого не подписаны. Откройте профиль интересного автора и нажмите «Подписаться».' : 'У вас пока нет подписчиков.'}</p>}
     <div className="people-grid">{visible.map(it => <article className="panel person-card" key={it.user.id}>
-      <Avatar client={client} userId={it.user.id} name={it.user.name || it.user.login} className="avatar person-avatar"/>
-      <h2>{it.user.name || it.user.login}</h2><p className="muted">@{it.user.login} · подписка с {new Date(it.since).toLocaleDateString('ru-RU')}</p>
+      <Avatar client={client} userId={it.user.id} name={it.user.name||it.user.login} className="avatar person-avatar"/>
+      <h2><UserName client={client} userId={it.user.id} name={it.user.name||it.user.login}/></h2><p className="muted">@{it.user.login} · подписка с {new Date(it.since).toLocaleDateString('ru-RU')}</p>
       <div className="actions person-card-actions"><a className="secondary" href={`#/user/${it.user.id}`}>Открыть профиль</a>{direction === 'following' && <button className="secondary" disabled={loading || saving} onClick={() => void remove(it.user.id)}>Отписаться</button>}</div>
     </article>)}</div>
     {!searchTerm && next && <button className="secondary" disabled={loading || saving} onClick={() => void loadMore()}>Показать ещё</button>}

@@ -1,3 +1,5 @@
+import{UserName}from'./UserName.tsx';
+import{ShieldCheck}from'lucide-react';
 import { authConfig } from '../shared/auth/runtime.ts';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
@@ -38,7 +40,7 @@ const STATUS_LABEL: Record<Status, string> = { open: 'Открытые', dismiss
 const REASON_LABEL = Object.fromEntries(REPORT_REASONS) as Record<string, string>;
 const KIND_LABEL: Record<string, string> = { user: 'Пользователь', review: 'Рецензия', message: 'Сообщение' };
 const ACTION_LABEL: Record<string, string> = { dismiss: 'Отклонил жалобу', hide: 'Скрыл рецензию', suspend: 'Заблокировал аккаунт' };
-const person = (u: { login: string | null; status: string }) => <><bdi>{u.login ? '@' + u.login : 'удалённый аккаунт'}</bdi>{u.status === 'disabled' ? ' (заблокирован)' : ''}</>;
+const person = (u: { id:string;login: string | null; status: string },client:Pick<ApiClient,'request'>) => <><UserName client={client} userId={u.id} name={u.login ? '@' + u.login : 'удалённый аккаунт'}/>{u.status === 'disabled' ? ' (заблокирован)' : ''}</>;
 
 /** Staff page. Account-keyed by the parent; the server enforces the role. */
 export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'request'>; role: 'admin' | 'moderator' }) {
@@ -90,8 +92,8 @@ export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'requ
     {view !== 'audit' && !loading && !error && !items.length && <p className="notice">Жалоб нет.</p>}
     {view === 'audit' && !loading && !error && !audit.length && <p className="notice">Журнал пуст.</p>}
     {view !== 'audit' && items.map(r => <article className="review" key={r.id}>
-      <h3>{KIND_LABEL[r.target_kind]}: {person(r.target_user)}</h3>
-      <p className="small muted">Причина: {REASON_LABEL[r.reason] ?? r.reason} · от {person(r.reporter)} · {when(r.created_at)}</p>
+      <h3>{KIND_LABEL[r.target_kind]}: {person(r.target_user,client)}</h3>
+      <p className="small muted">Причина: {REASON_LABEL[r.reason] ?? r.reason} · от {person(r.reporter,client)} · {when(r.created_at)}</p>
       {r.details && <p><bdi dir="auto">«{r.details}»</bdi></p>}
       {r.review && <blockquote><p className="small muted">Рецензия к видео «<bdi>{r.review.title ?? r.review.youtube_video_id}</bdi>»{r.review.moderation_status === 'hidden' ? ' · скрыта' : ''}</p>{r.review.text && <p><bdi dir="auto">{r.review.text}</bdi></p>}</blockquote>}
       {r.message && <blockquote><p className="small muted">Сообщение от {when(r.message.created_at)}</p>{r.message.body && <p><bdi dir="auto">{r.message.body}</bdi></p>}{r.message.has_video && <p className="small muted">С приложенным видео</p>}</blockquote>}
@@ -106,7 +108,7 @@ export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'requ
       </div>}
     </article>)}
     {view === 'audit' && audit.map(a => <article className="review" key={a.id}>
-      <p><strong>{person(a.actor)}</strong> — {ACTION_LABEL[a.action] ?? a.action}: {KIND_LABEL[a.target_kind]} {person(a.target_user)}</p>
+      <p><strong>{person(a.actor,client)}</strong> — {ACTION_LABEL[a.action] ?? a.action}: {KIND_LABEL[a.target_kind]} {person(a.target_user,client)}</p>
       <p className="small muted">{when(a.created_at)}</p>
     </article>)}
     {next && <button className="secondary" disabled={loading} onClick={() => void load(next)}>Показать ещё</button>}
@@ -138,6 +140,6 @@ export function ModerationRoute({ client }: { client: Pick<ApiClient, 'request'>
 /** Sidebar link shown only to staff. */
 export function ModerationLink({ client, active }: { client: Pick<ApiClient, 'request'>; active: boolean }) {
   const { role } = useStaffRole(client);
-  if(role==='admin'){const config=authConfig((import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env,location);return <a className="settings-link" href={(import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env.DEV?'/ap':config.apiOrigin+'/ap'}>Администрирование</a>;}
+  if(role==='admin'){const config=authConfig((import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env,location);return <a className="settings-link" href={(import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env.DEV?'/ap':config.apiOrigin+'/ap'}><ShieldCheck size={18}/>Администрирование</a>;}
   return role ? <a className={active ? 'settings-link active' : 'settings-link'} href="#/moderation">Модерация</a> : null;
 }

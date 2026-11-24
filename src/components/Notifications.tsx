@@ -1,3 +1,4 @@
+import{UserName}from'./UserName.tsx';
 import { Avatar } from './Avatar.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApiClient } from '../shared/api/client.ts';
@@ -84,7 +85,7 @@ export function NotificationsList({ client, open }: { client: Pick<ApiClient, 'r
       {items.map(n => <li key={n.id} className={n.read ? 'notification' : 'notification unread'}>
         <button className="notification-button" onClick={() => void follow(n)}>
           <Avatar client={client} userId={n.actor.id} name={n.actor.name || n.actor.login} className="avatar small-avatar"/>
-          <span className="notification-text"><span>{!n.read && <span className="sr-only">Новое: </span>}<bdi dir="auto">{notificationText(n)}</bdi></span><span className="small muted">{when(n.occurred_at)}</span></span>
+          <span className="notification-text"><span>{!n.read && <span className="sr-only">Новое: </span>}<bdi dir="auto">{(()=>{const name=n.actor.name||n.actor.login;const text=notificationText(n);const at=text.indexOf(name);return at<0?text:<>{text.slice(0,at)}<UserName client={client} userId={n.actor.id} name={name}/>{text.slice(at+name.length)}</>})()}</bdi></span><span className="small muted">{when(n.occurred_at)}</span></span>
         </button>
       </li>)}
     </ul>

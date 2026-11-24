@@ -1,0 +1,6 @@
+/** Batch only visible identities; no persistent role cache or authorization decisions. */
+export function createBadgeLoader(request:(ids:string[])=>Promise<{administrators:string[]}>,now:()=>number=Date.now){
+ const cache=new Map<string,{admin:boolean;until:number}>();const pending=new Map<string,Promise<boolean>>();const queue=new Map<string,{resolve:(value:boolean)=>void;reject:(reason:unknown)=>void}>();let active=0,scheduled=false;
+ function drain(){while(active<2&&queue.size){const group=[...queue.entries()].slice(0,50);for(const[id]of group)queue.delete(id);active++;void request(group.map(([id])=>id)).then(result=>{const admins=new Set(result.administrators);for(const[id,job]of group){const admin=admins.has(id);cache.set(id,{admin,until:now()+60000});if(cache.size>256)cache.delete(cache.keys().next().value!);job.resolve(admin);}},failure=>{for(const[,job]of group)job.reject(failure)}).finally(()=>{for(const[id]of group)pending.delete(id);active--;drain()});}}
+ return {load(id:string):Promise<boolean>{const hit=cache.get(id);if(hit&&hit.until>now())return Promise.resolve(hit.admin);const existing=pending.get(id);if(existing)return existing;const promise=new Promise<boolean>((resolve,reject)=>queue.set(id,{resolve,reject}));pending.set(id,promise);if(!scheduled){scheduled=true;setTimeout(()=>{scheduled=false;drain()},16);}return promise;}};
+}
