@@ -38,15 +38,15 @@ export function ReportButton({ client, kind, targetId, label = 'Пожалова
 type Status = 'open' | 'dismissed' | 'actioned';
 const STATUS_LABEL: Record<Status, string> = { open: 'Открытые', dismissed: 'Отклонённые', actioned: 'С мерами' };
 const REASON_LABEL = Object.fromEntries(REPORT_REASONS) as Record<string, string>;
-const KIND_LABEL: Record<string, string> = { user: 'Пользователь', review: 'Рецензия', channel_review:'Отзыв о канале',message: 'Сообщение' };
-const ACTION_LABEL: Record<string, string> = { dismiss: 'Отклонил жалобу', hide: 'Скрыл рецензию', suspend: 'Заблокировал аккаунт' };
+const KIND_LABEL: Record<string, string> = { user: 'Пользователь', review: 'Рецензия', channel_review:'Отзыв о канале',message: 'Сообщение',avatar:'Аватар' };
+const ACTION_LABEL: Record<string, string> = { remove_avatar:'Удалил аватар',dismiss: 'Отклонил жалобу', hide: 'Скрыл рецензию', suspend: 'Заблокировал аккаунт' };
 const person = (u: { id:string;login: string | null; status: string },client:Pick<ApiClient,'request'>) => <><UserName client={client} userId={u.id} name={u.login ? '@' + u.login : 'удалённый аккаунт'}/>{u.status === 'disabled' ? ' (заблокирован)' : ''}</>;
 
 /** Staff page. Account-keyed by the parent; the server enforces the role. */
 export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'request'>; role: 'admin' | 'moderator' }) {
   const [view, setView] = useState<Status | 'audit'>('open');
   const [items, setItems] = useState<AdminReport[]>([]), [audit, setAudit] = useState<AuditEntry[]>([]), [next, setNext] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true), [error, setError] = useState(''), [notice, setNotice] = useState(''), [confirm, setConfirm] = useState<{ report: AdminReport; action: 'dismiss' | 'hide' } | null>(null);
+  const [loading, setLoading] = useState(true), [error, setError] = useState(''), [notice, setNotice] = useState(''), [confirm, setConfirm] = useState<{ report: AdminReport; action: 'dismiss' | 'hide' | 'remove_avatar' } | null>(null);
   const generation = useRef(0), busy = useRef(false), [saving, setSaving] = useState(false);
   async function load(after: string | null, signal?: AbortSignal) {
     const stamp = generation.current; setLoading(true); setError('');
@@ -97,13 +97,15 @@ export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'requ
       {r.details && <p><bdi dir="auto">«{r.details}»</bdi></p>}
       {r.review && <blockquote><p className="small muted">Рецензия к видео «<bdi>{r.review.title ?? r.review.youtube_video_id}</bdi>»{r.review.moderation_status === 'hidden' ? ' · скрыта' : ''}</p>{r.review.text && <p><bdi dir="auto">{r.review.text}</bdi></p>}</blockquote>}
       {r.channel_review&&<blockquote><p>{r.channel_review.name??'Канал'}</p><p>{r.channel_review.text??'Отзыв удалён'}</p></blockquote>}
+      {r.avatar && <p className="small muted">{r.avatar.available ? 'Аватар доступен для просмотра в панели администрирования /ap.' : 'Аватар уже заменён или удалён.'}</p>}
       {r.message && <blockquote><p className="small muted">Сообщение от {when(r.message.created_at)}</p>{r.message.body && <p><bdi dir="auto">{r.message.body}</bdi></p>}{r.message.has_video && <p className="small muted">С приложенным видео</p>}</blockquote>}
       {r.status === 'open' && <div className="actions">
+        {r.target_kind==='avatar' && r.avatar?.available && <button className="secondary" disabled={saving} onClick={()=>setConfirm({report:r,action:'remove_avatar'})}>Удалить аватар</button>}
         <button className="secondary" disabled={saving} onClick={() => setConfirm({ report: r, action: 'dismiss' })}>Отклонить</button>
         {(r.target_kind === 'review'||r.target_kind==='channel_review') && <button className="secondary" disabled={saving} onClick={() => setConfirm({ report: r, action: 'hide' })}>Скрыть рецензию</button>}
       </div>}
       {confirm?.report.id === r.id && <div className="notice" role="group" aria-label="Подтверждение решения">
-        <p>{confirm.action === 'hide' ? 'Скрыть эту рецензию от всех?' : 'Отклонить жалобу без мер?'}</p>
+        <p>{confirm.action === 'remove_avatar' ? 'Удалить именно этот аватар? Заменённая картинка останется.' : confirm.action === 'hide' ? 'Скрыть эту рецензию от всех?' : 'Отклонить жалобу без мер?'}</p>
         <div className="actions"><button className="primary" disabled={saving} onClick={() => void resolve()}>{saving ? 'Выполняем…' : 'Подтвердить'}</button><button className="secondary" disabled={saving} onClick={() => setConfirm(null)}>Отмена</button></div>
         <p className="small" role="status">{saving ? 'Решение отправляется…' : ''}</p>
       </div>}
@@ -144,3 +146,5 @@ export function ModerationLink({ client, active }: { client: Pick<ApiClient, 're
   if(role==='admin'||role==='moderator'){const config=authConfig((import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env,location);return <a className="settings-link" href={(import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env.DEV?'/ap':config.apiOrigin+'/ap'}><ShieldCheck size={18}/>Администрирование</a>;}
   return role ? <a className={active ? 'settings-link active' : 'settings-link'} href="#/moderation">Модерация</a> : null;
 }
+
+export function AvatarReportButton({client,userId}:{client:Pick<ApiClient,'request'>;userId:string}){const[available,setAvailable]=useState<string|null>(null);useEffect(()=>{const ctl=new AbortController();setAvailable(null);void client.request('getAvatarLink',{path:{id:userId},signal:ctl.signal}).then(()=>{if(!ctl.signal.aborted)setAvailable(userId)}).catch(()=>{});return()=>ctl.abort()},[client,userId]);return available===userId?<ReportButton key={userId} inline client={client} kind="avatar" targetId={userId} label="На аватар"/>:null;}

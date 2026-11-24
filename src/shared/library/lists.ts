@@ -449,7 +449,7 @@ export function notificationTarget(n: NotificationItem): { route: string; tab?: 
 
 // Reports and moderation (YP-083.2). Staff roles come from the operator; the
 // site only shows tools the server confirms.
-export type ReportKind = 'user' | 'review' | 'channel_review' | 'message';
+export type ReportKind = 'avatar' | 'user' | 'review' | 'channel_review' | 'message';
 export type ReportReason = 'spam' | 'abuse' | 'inappropriate' | 'other';
 export type AdminReport = components['schemas']['AdminReport'];
 export type AuditEntry = components['schemas']['AuditEntry'];
@@ -468,7 +468,7 @@ export async function loadReports(client: Pick<ApiClient, 'request'>, status: 'o
   const page = await client.request('listReports', { query, signal });
   return { items: page.items, next: page.next_cursor ?? null };
 }
-export async function resolveReport(client: Pick<ApiClient, 'request'>, id: string, action: 'dismiss' | 'hide' | 'suspend'): Promise<AdminReport> {
+export async function resolveReport(client: Pick<ApiClient, 'request'>, id: string, action: 'dismiss' | 'hide' | 'suspend' | 'remove_avatar'): Promise<AdminReport> {
   return client.request('resolveReport', { path: { id }, body: { action } });
 }
 export async function loadAudit(client: Pick<ApiClient, 'request'>, after: string | null, signal?: AbortSignal): Promise<{ items: AuditEntry[]; next: string | null }> {

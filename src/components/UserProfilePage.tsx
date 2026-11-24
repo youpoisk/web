@@ -7,7 +7,7 @@ import{UserMarksList}from'./UserMarksList.tsx';
 import {BlockControl} from './Blocks.tsx';
 import {FollowControls} from './Subscriptions.tsx';
 import React, { useEffect, useRef, useState } from 'react';
-import { ReportButton } from './Moderation.tsx';
+import { ReportButton, AvatarReportButton } from './Moderation.tsx';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { MARK_LABELS, NOTIFICATIONS_CHANGED, profileRecommendations, loadUserProfile, loadUserRecommendations, type Recommendation, type UserProfile } from '../shared/library/lists.ts';
 
@@ -76,7 +76,7 @@ export function UserProfilePage({ client, userId, embedded=false, filter='all' }
       {profile.relation!=='self'&&<FriendshipControls client={client} userId={userId} friend={profile.relation==='friend'} onChanged={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setRevision(v=>v+1)}}/>}
       <FollowControls inline client={client} userId={userId} canFollow={profile.relation!=='self'} onChanged={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setRevision(v=>v+1)}}/>
       {profile.relation === 'friend' && <a className="secondary" href={`#/messages/${userId}`}>Написать сообщение</a>}
-      {profile.relation !== 'self' && <span className="profile-actions-end"><ReportButton inline client={client} kind="user" targetId={userId} label="Пожаловаться"/><BlockControl inline client={client} userId={userId} onBlocked={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setError('');location.hash='#/settings'}}/></span>}
+      {profile.relation !== 'self' && <span className="profile-actions-end"><AvatarReportButton client={client} userId={userId}/><ReportButton inline client={client} kind="user" targetId={userId} label="Пожаловаться"/><BlockControl inline client={client} userId={userId} onBlocked={()=>{generation.current++;setProfile(null);setItems([]);setNext(null);setError('');location.hash='#/settings'}}/></span>}
     </div>}
     </>}
     {profile && !marksView && (!profile.ratings_visible || !profile.reviews_visible) && <p className="notice">

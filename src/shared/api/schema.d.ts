@@ -100,6 +100,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/reports/{id}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current reported avatar evidence (staff only)
+         * @description Returns only the still-current image bound to this complaint. Replacement or deletion returns404. No historical images are retained. Staff authentication required; no-store.
+         */
+        get: operations["getReportedAvatar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/reports/{id}/resolve": {
         parameters: {
             query?: never;
@@ -1664,6 +1684,7 @@ export interface components {
         };
         /** @description A report with only the single reported item as evidence (never a whole conversation). */
         AdminReport: {
+            avatar?: components["schemas"]["AvatarEvidence"];
             channel_review?: components["schemas"]["ChannelReviewEvidence"];
             /** Format: date-time */
             created_at: string;
@@ -1680,7 +1701,7 @@ export interface components {
             /** Format: uuid */
             target_id: string;
             /** @enum {string} */
-            target_kind: "user" | "review" | "message" | "channel_review";
+            target_kind: "user" | "review" | "message" | "channel_review" | "avatar";
             target_user: components["schemas"]["StaffUser"];
         };
         AdminReportPage: {
@@ -1737,6 +1758,9 @@ export interface components {
         AuditPage: {
             items: components["schemas"]["AuditEntry"][];
             next_cursor?: string;
+        };
+        AvatarEvidence: {
+            available: boolean;
         };
         AvatarLink: {
             avatar_url: string;
@@ -2263,7 +2287,7 @@ export interface components {
             /** Format: uuid */
             user_id: string;
         } & unknown;
-        /** @description Report something you can see: an active user, a visible review (same audience rules as the author's profile) or a message sent to you. details are trimmed; empty means none. */
+        /** @description Report something you can see: an active user, a visible review (same audience rules as the author's profile) or a message sent to you. details are trimmed; empty means none. For avatar, target_id is the owner UUID; the server binds the complaint to the current immutable media ID, never a later replacement. */
         ReportCreate: {
             details?: string | null;
             /** @enum {string} */
@@ -2271,11 +2295,11 @@ export interface components {
             /** Format: uuid */
             target_id: string;
             /** @enum {string} */
-            target_kind: "user" | "review" | "message" | "channel_review";
+            target_kind: "user" | "review" | "message" | "channel_review" | "avatar";
         };
         ReportResolve: {
             /** @enum {string} */
-            action: "dismiss" | "hide" | "suspend";
+            action: "dismiss" | "hide" | "suspend" | "remove_avatar";
         };
         ReportResult: {
             created: boolean;
@@ -2775,6 +2799,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getReportedAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reported PNG, no-store */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

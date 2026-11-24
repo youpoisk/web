@@ -9242,6 +9242,71 @@
           }
         }
       }
+    },
+    "/v1/admin/reports/{id}/avatar": {
+      "get": {
+        "operationId": "getReportedAvatar",
+        "summary": "Current reported avatar evidence (staff only)",
+        "description": "Returns only the still-current image bound to this complaint. Replacement or deletion returns404. No historical images are retained. Staff authentication required; no-store.",
+        "tags": [
+          "Moderation"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reported PNG, no-store",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -11869,7 +11934,7 @@
       },
       "ReportCreate": {
         "type": "object",
-        "description": "Report something you can see: an active user, a visible review (same audience rules as the author's profile) or a message sent to you. details are trimmed; empty means none.",
+        "description": "Report something you can see: an active user, a visible review (same audience rules as the author's profile) or a message sent to you. details are trimmed; empty means none. For avatar, target_id is the owner UUID; the server binds the complaint to the current immutable media ID, never a later replacement.",
         "properties": {
           "target_kind": {
             "type": "string",
@@ -11877,7 +11942,8 @@
               "user",
               "review",
               "message",
-              "channel_review"
+              "channel_review",
+              "avatar"
             ]
           },
           "target_id": {
@@ -12072,7 +12138,8 @@
               "user",
               "review",
               "message",
-              "channel_review"
+              "channel_review",
+              "avatar"
             ]
           },
           "target_id": {
@@ -12135,6 +12202,9 @@
           },
           "channel_review": {
             "$ref": "#/components/schemas/ChannelReviewEvidence"
+          },
+          "avatar": {
+            "$ref": "#/components/schemas/AvatarEvidence"
           }
         },
         "required": [
@@ -12181,7 +12251,8 @@
             "enum": [
               "dismiss",
               "hide",
-              "suspend"
+              "suspend",
+              "remove_avatar"
             ]
           }
         },
@@ -13075,6 +13146,18 @@
           "name",
           "text",
           "moderation_status"
+        ],
+        "additionalProperties": false
+      },
+      "AvatarEvidence": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available"
         ],
         "additionalProperties": false
       }
