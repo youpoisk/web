@@ -8919,6 +8919,329 @@
           }
         }
       }
+    },
+    "/v1/me/channels/{id}/review": {
+      "get": {
+        "operationId": "getChannelReview",
+        "summary": "Read my channel review",
+        "description": "Read my channel review. Signed-in viewers; verified canonical channels only. Same reviews privacy as profiles and mutual personal blocks. Online-only expected_revision writes, text:null deletes; no offline queue or video feed post is created. Content policy v1 and administrative communication bans apply; unchanged hidden moderation remains hidden.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read my review of a video",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoReview"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putChannelReview",
+        "summary": "Save or delete my channel review",
+        "description": "Save or delete my channel review. Signed-in viewers; verified canonical channels only. Same reviews privacy as profiles and mutual personal blocks. Online-only expected_revision writes, text:null deletes; no offline queue or video feed post is created. Content policy v1 and administrative communication bans apply; unchanged hidden moderation remains hidden.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Set or delete my review of a video",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoReview"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/channels/{id}/reviews": {
+      "get": {
+        "operationId": "listChannelReviews",
+        "summary": "Visible channel reviews, newest first",
+        "description": "Visible channel reviews, newest first. Signed-in viewers; verified canonical channels only. Same reviews privacy as profiles and mutual personal blocks. Online-only expected_revision writes, text:null deletes; no offline queue or video feed post is created. Content policy v1 and administrative communication bans apply; unchanged hidden moderation remains hidden.",
+        "tags": [
+          "PersonalState"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12,
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List my rated videos",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelReviewPage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -11553,7 +11876,8 @@
             "enum": [
               "user",
               "review",
-              "message"
+              "message",
+              "channel_review"
             ]
           },
           "target_id": {
@@ -11747,7 +12071,8 @@
             "enum": [
               "user",
               "review",
-              "message"
+              "message",
+              "channel_review"
             ]
           },
           "target_id": {
@@ -11807,6 +12132,9 @@
                 "type": "null"
               }
             ]
+          },
+          "channel_review": {
+            "$ref": "#/components/schemas/ChannelReviewEvidence"
           }
         },
         "required": [
@@ -11892,7 +12220,8 @@
             "enum": [
               "user",
               "review",
-              "message"
+              "message",
+              "channel_review"
             ]
           },
           "target_id": {
@@ -12664,6 +12993,90 @@
         "required": [
           "user_ids"
         ]
+      },
+      "ChannelReviewItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user": {
+            "$ref": "#/components/schemas/FriendUser"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user",
+          "text",
+          "changed_at"
+        ],
+        "additionalProperties": false
+      },
+      "ChannelReviewPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "$ref": "#/components/schemas/ChannelReviewItem"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "ChannelReviewEvidence": {
+        "type": "object",
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "moderation_status": {
+            "type": "string",
+            "enum": [
+              "visible",
+              "hidden"
+            ]
+          }
+        },
+        "required": [
+          "channel_id",
+          "name",
+          "text",
+          "moderation_status"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {

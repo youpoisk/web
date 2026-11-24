@@ -1,12 +1,13 @@
+import{ChannelReviews}from'./ChannelReviews.tsx';
 import{DeleteButton}from'./DeleteButton.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
 import { conflicted, loadChannel, loadChannelRating, type ChannelCard, type ChannelState, type StateWriter } from '../shared/library/lists.ts';
 
 /** Parent keys by viewer and canonical channel ID; no local score migration. */
-export function ChannelPage({ publicClient, client, writer, channelId }: {
+export function ChannelPage({ publicClient, client, writer, channelId,ownerId=null }: {
   publicClient: Pick<ApiClient, 'request'>; client: Pick<ApiClient, 'request'> | null;
-  writer: StateWriter | null; channelId: string;
+  writer: StateWriter | null; channelId: string;ownerId?:string|null;
 }) {
   const [card, setCard] = useState<ChannelCard | null>(null);
   const [own, setOwn] = useState<ChannelState | null>(null);
@@ -87,6 +88,7 @@ export function ChannelPage({ publicClient, client, writer, channelId }: {
           <div className="score-row">{Array.from({ length: 10 }, (_, i) => <button key={i} aria-pressed={own?.rating === i + 1} className={own?.rating === i + 1 ? 'chosen' : ''} disabled={loading || saving || !own} onClick={() => void rate(i + 1)}>{i + 1}</button>)}</div>
           {own?.rating != null && <DeleteButton className="text-button" disabled={loading || saving} onDelete={() => rate(null)}>Удалить оценку канала</DeleteButton>}
         </div> : <p><a href="#/login">Войдите</a>, чтобы оценить канал.</p>}
+      {card.identity_verified&&<ChannelReviews key={channelId} client={client} channelId={channelId} ownerId={ownerId}/>}
     </>}
     <div className="actions"><button className="secondary" disabled={loading || saving} onClick={() => { if (busy.current || loading) return; setMessage(''); void refresh(); }}>Обновить данные</button><a href="#/">К видео</a></div>
     {message && <p role="status">{message}</p>}

@@ -360,6 +360,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/channels/{id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Visible channel reviews, newest first
+         * @description Visible channel reviews, newest first. Signed-in viewers; verified canonical channels only. Same reviews privacy as profiles and mutual personal blocks. Online-only expected_revision writes, text:null deletes; no offline queue or video feed post is created. Content policy v1 and administrative communication bans apply; unchanged hidden moderation remains hidden.
+         */
+        get: operations["listChannelReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -506,6 +526,30 @@ export interface paths {
          * @description Only confirmed UC/unmerged identity permits server rating. Provisional handle/UC claims remain local-only until trusted resolution. Composite video-channel context is not implemented by this standalone operation.
          */
         put: operations["putChannelRating"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/channels/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read my channel review
+         * @description Read my channel review. Signed-in viewers; verified canonical channels only. Same reviews privacy as profiles and mutual personal blocks. Online-only expected_revision writes, text:null deletes; no offline queue or video feed post is created. Content policy v1 and administrative communication bans apply; unchanged hidden moderation remains hidden.
+         */
+        get: operations["getChannelReview"];
+        /**
+         * Save or delete my channel review
+         * @description Save or delete my channel review. Signed-in viewers; verified canonical channels only. Same reviews privacy as profiles and mutual personal blocks. Online-only expected_revision writes, text:null deletes; no offline queue or video feed post is created. Content policy v1 and administrative communication bans apply; unchanged hidden moderation remains hidden.
+         */
+        put: operations["putChannelReview"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1620,6 +1664,7 @@ export interface components {
         };
         /** @description A report with only the single reported item as evidence (never a whole conversation). */
         AdminReport: {
+            channel_review?: components["schemas"]["ChannelReviewEvidence"];
             /** Format: date-time */
             created_at: string;
             details: string | null;
@@ -1635,7 +1680,7 @@ export interface components {
             /** Format: uuid */
             target_id: string;
             /** @enum {string} */
-            target_kind: "user" | "review" | "message";
+            target_kind: "user" | "review" | "message" | "channel_review";
             target_user: components["schemas"]["StaffUser"];
         };
         AdminReportPage: {
@@ -1686,7 +1731,7 @@ export interface components {
             /** Format: uuid */
             target_id: string;
             /** @enum {string} */
-            target_kind: "user" | "review" | "message";
+            target_kind: "user" | "review" | "message" | "channel_review";
             target_user: components["schemas"]["StaffUser"];
         };
         AuditPage: {
@@ -1780,6 +1825,26 @@ export interface components {
              */
             expected_revision: number;
             rating: number | null;
+        };
+        ChannelReviewEvidence: {
+            /** Format: uuid */
+            channel_id: string;
+            /** @enum {string} */
+            moderation_status: "visible" | "hidden";
+            name: string | null;
+            text: string | null;
+        };
+        ChannelReviewItem: {
+            /** Format: date-time */
+            changed_at: string;
+            /** Format: uuid */
+            id: string;
+            text: string;
+            user: components["schemas"]["FriendUser"];
+        };
+        ChannelReviewPage: {
+            items: components["schemas"]["ChannelReviewItem"][];
+            next_cursor?: string;
         };
         ChannelState: {
             rating: number | null;
@@ -2206,7 +2271,7 @@ export interface components {
             /** Format: uuid */
             target_id: string;
             /** @enum {string} */
-            target_kind: "user" | "review" | "message";
+            target_kind: "user" | "review" | "message" | "channel_review";
         };
         ReportResolve: {
             /** @enum {string} */
@@ -3415,6 +3480,59 @@ export interface operations {
             };
         };
     };
+    listChannelReviews: {
+        parameters: {
+            query?: {
+                after?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description List my rated videos */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelReviewPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     getMe: {
         parameters: {
             query?: never;
@@ -3882,6 +4000,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChannelStateResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getChannelReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read my review of a video */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoReview"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    putChannelReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Set or delete my review of a video */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoReview"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

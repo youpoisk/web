@@ -449,7 +449,7 @@ export function notificationTarget(n: NotificationItem): { route: string; tab?: 
 
 // Reports and moderation (YP-083.2). Staff roles come from the operator; the
 // site only shows tools the server confirms.
-export type ReportKind = 'user' | 'review' | 'message';
+export type ReportKind = 'user' | 'review' | 'channel_review' | 'message';
 export type ReportReason = 'spam' | 'abuse' | 'inappropriate' | 'other';
 export type AdminReport = components['schemas']['AdminReport'];
 export type AuditEntry = components['schemas']['AuditEntry'];
