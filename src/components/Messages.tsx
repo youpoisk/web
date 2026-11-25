@@ -1,3 +1,4 @@
+import{createChatPolling}from'../shared/library/chat-polling.ts';
 import{UserName}from'./UserName.tsx';
 import { Avatar } from './Avatar.tsx';
 import React, { useEffect, useRef, useState } from 'react';
@@ -8,7 +9,7 @@ import { MAX_MESSAGE_LENGTH, loadConversations, loadMessages, markConversationRe
 
 const when = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const preview = (m: Message) => (m.mine ? 'Вы: ' : '') + (m.body ?? (m.video ? `видео «${m.video.title ?? m.video.youtube_video_id}»` : ''));
-const POLL_MS = 15000;
+
 
 /** Account-keyed by the parent. Late responses after unmount are dropped. */
 export function ConversationsList({ client }: { client: Pick<ApiClient, 'request'> }) {
@@ -65,10 +66,7 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
   const loaded = useRef<Message[]>([]), initialized = useRef(false), olderBusy = useRef(false), polling = useRef(false);
   // The ref mirrors the rendered list so async merges never use a stale copy.
   const apply = (incoming: Message[]) => { loaded.current = mergeMessages(loaded.current, incoming); setItems(loaded.current); };
-  // A poll tick is skipped while a refresh (possibly a long gap fill) runs.
-  function poll(signal: AbortSignal) {
-    if (document.visibilityState === 'visible' && !polling.current) void refresh(signal);
-  }
+  const schedule=useRef<ReturnType<typeof createChatPolling>|null>(null),observed=useRef({read:0,canSend:false});
   async function refresh(signal?: AbortSignal) {
     const stamp = generation.current, read = ++serial.current;
     polling.current = true;
@@ -85,6 +83,7 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
         collected = [...collected, ...more.items];
         gap = more.items.length ? messageGap(loaded.current, collected) : null;
       }
+      if(collected.some(item=>item.seq>(loaded.current.at(-1)?.seq??0))||page.other_read_seq!==observed.current.read||page.can_send!==observed.current.canSend)schedule.current?.activity();observed.current={read:page.other_read_seq,canSend:page.can_send};
       setUser({ login: page.user.login, name: page.user.name }); setCanSend(page.can_send); setOtherRead(page.other_read_seq); setError('');
       apply(collected);
       if (!initialized.current) { initialized.current = true; setOlder(page.next_before ?? null); }
@@ -101,11 +100,11 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
   useEffect(() => {
     generation.current++; readUpTo.current = 0; pending.current = null; loaded.current = []; initialized.current = false; polling.current = false;
     setItems([]); setUser(null); setOlder(null); setLoading(true); setError(''); setText(''); setNotice('');
-    const ctl = new AbortController(); void refresh(ctl.signal);
-    const timer = setInterval(() => poll(ctl.signal), POLL_MS);
-    const onVisible = () => poll(ctl.signal);
-    document.addEventListener('visibilitychange', onVisible);
-    return () => { generation.current++; ctl.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', onVisible); };
+    const ctl=new AbortController();observed.current={read:0,canSend:false};
+    const scheduler=createChatPolling({read:()=>refresh(ctl.signal),visible:()=>document.visibilityState==='visible',now:Date.now,later:(fn,delay)=>setTimeout(fn,delay),cancel:timer=>clearTimeout(timer as ReturnType<typeof setTimeout>)});schedule.current=scheduler;
+    const onVisible=()=>scheduler.refresh();
+    document.addEventListener('visibilitychange',onVisible);window.addEventListener('focus',onVisible);
+    return()=>{generation.current++;ctl.abort();scheduler.close();schedule.current=null;document.removeEventListener('visibilitychange',onVisible);window.removeEventListener('focus',onVisible)};
   }, [client, userId]);
   async function loadOlder() {
     if (!older || olderBusy.current) return;
@@ -126,7 +125,7 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
     try {
       const message = await sendMessage(client, userId, attempt.key, attempt.text);
       if (stamp !== generation.current) return;
-      pending.current = null; setText(current => current === attempt.text ? '' : current); apply([message]);
+      pending.current = null;schedule.current?.activity(); setText(current => current === attempt.text ? '' : current); apply([message]);
     } catch (failure) {
       if (stamp !== generation.current) return;
       if (failure instanceof ApiError && [403, 404, 409, 422].includes(failure.status)) pending.current = null;
@@ -139,12 +138,12 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
   return <section className="panel chat" aria-busy={loading} aria-labelledby="chat-title">
     <div className="chat-head"><a href="#/messages">← Все переписки</a><h2 id="chat-title">{user ? <a href={`#/user/${userId}`}><UserName client={client} userId={userId} name={title}/> <span className="small muted">@{user.login}</span></a> : title}</h2></div>
     {loading && <p role="status">Загружаем переписку…</p>}
-    {error && <p role="alert">{error} <button className="text-button" onClick={() => { setLoading(true); void refresh(); }}>Повторить</button></p>}
+    {error && <p role="alert">{error} <button className="text-button" onClick={() => { setLoading(true); schedule.current?.refresh(); }}>Повторить</button></p>}
     {older && <button className="secondary" disabled={olderLoading} onClick={() => void loadOlder()}>{olderLoading ? 'Загружаем…' : 'Показать ранние сообщения'}</button>}
     {!loading && !error && !items.length && <p className="notice">Сообщений пока нет.</p>}
     <ol className="messages-list" aria-label="Сообщения">
       {items.map(m => <li className={`message${m.mine ? ' mine' : ''}`} key={m.seq}>
-        <span className="sr-only">{m.mine ? 'Вы' : title}: </span>
+        <span className="sr-only">{m.mine?'Вы':<UserName client={client} userId={userId} name={title}/>}:</span>
         {m.body && <p><bdi dir="auto">{m.body}</bdi></p>}
         {m.video && <a href={`#/video/${m.video.youtube_video_id}`}>▶ <bdi dir="auto">{m.video.title ?? m.video.youtube_video_id}</bdi></a>}
         {!m.mine && <ReportButton client={client} kind="message" targetId={m.id}/>}
@@ -154,7 +153,7 @@ export function ChatThread({ client, userId }: { client: Pick<ApiClient, 'reques
     {user && !canSend && <p className="notice">Писать можно только друзьям. История переписки сохраняется.</p>}
     {user && canSend && <form className="chat-compose" onSubmit={e => { e.preventDefault(); void send(); }}>
       <label className="sr-only" htmlFor="chat-text">Сообщение</label>
-      <textarea id="chat-text" value={text} maxLength={MAX_MESSAGE_LENGTH} rows={3} placeholder="Сообщение" onChange={e => setText(e.target.value)}
+      <textarea id="chat-text" value={text} maxLength={MAX_MESSAGE_LENGTH} rows={3} placeholder="Сообщение" onChange={e => {setText(e.target.value);schedule.current?.activity()}}
         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void send(); } }}/>
       <div className="actions"><span className="small muted">{[...text].length}/{MAX_MESSAGE_LENGTH} · Ctrl+Enter — отправить</span><button className="primary" type="submit" disabled={sending || !text.trim()}>{sending ? 'Отправляем…' : 'Отправить'}</button></div>
     </form>}
