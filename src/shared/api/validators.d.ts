@@ -491,6 +491,7 @@ export declare const searchVideos_parameter_2: (value: unknown) => boolean;
 export declare const searchVideos_parameter_3: (value: unknown) => boolean;
 export declare const searchVideos_parameter_4: (value: unknown) => boolean;
 export declare const searchVideos_parameter_5: (value: unknown) => boolean;
+export declare const searchVideos_parameter_6: (value: unknown) => boolean;
 export declare const searchVideos_response_200: (value: unknown) => boolean;
 export declare const searchVideos_response_403: (value: unknown) => boolean;
 export declare const searchVideos_response_default: (value: unknown) => boolean;

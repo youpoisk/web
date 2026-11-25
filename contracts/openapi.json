@@ -1940,6 +1940,16 @@
               "default": 30
             },
             "description": "Bounded page size; unknown/repeated/malformed query keys rejected."
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "required": false,
+            "description": "Exact internal channel UUID; title/name is never used as channel identity. Public cards only.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {

@@ -7111,6 +7111,8 @@ export interface operations {
             query?: {
                 /** @description Opaque previous next_cursor, no duplicate keys. */
                 after?: string;
+                /** @description Exact internal channel UUID; title/name is never used as channel identity. Public cards only. */
+                channel?: string;
                 /** @description Bounded page size; unknown/repeated/malformed query keys rejected. */
                 limit?: number;
                 /** @description Whether a video needs any or all of the tags. */

@@ -542,3 +542,5 @@ test('loadUserMarks reads the separate marks list', async () => {
   assert.deepEqual(calls, [['listUserMarks', { id: 'u1' }, { limit: 12 }], ['listUserMarks', { id: 'u1' }, { limit: 12, after: 'm1' }]]);
 });
 
+
+test('channel videos use exact UUID and twelve-row keyset pages',async()=>{const calls=[];const client={request:async(op,options)=>{calls.push([op,options]);return {items:[item()],next_cursor:'next'};}};const ctl=new AbortController();const channelId='00000000-0000-4000-8000-0000000000c1';const page=await searchCatalog(client,{text:'',tags:[],match:'any',sort:'new',channelId},'previous',ctl.signal);assert.equal(page.next,'next');assert.deepEqual(calls[0],['searchVideos',{query:{limit:12,sort:'new',channel:channelId,after:'previous'},signal:ctl.signal}]);});
