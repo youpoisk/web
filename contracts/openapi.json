@@ -9455,6 +9455,209 @@
           }
         }
       }
+    },
+    "/v1/admin/videos/{youtube_id}/visibility": {
+      "put": {
+        "operationId": "setVideoVisibility",
+        "summary": "Hide or restore a video globally",
+        "description": "Admin and moderator only; hidden video is unavailable to all viewers on public and private content routes, lists, messages and synchronized state. Durable YouTube identity deny-list survives metadata cleanup and reimport. Does not erase personal content. Restore is explicit.",
+        "tags": [
+          "Administration"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "youtube_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "minLength": 11,
+              "maxLength": 11
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visibility changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoVisibility"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VideoVisibilityChange"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/hidden-videos": {
+      "get": {
+        "operationId": "listHiddenVideos",
+        "summary": "List globally hidden video identities",
+        "description": "Admin and moderator only. YouTube identity ordered keyset pages of at most twelve. Only this moderation inventory may expose hidden video metadata.",
+        "tags": [
+          "Administration"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$",
+              "minLength": 11,
+              "maxLength": 11
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12,
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hidden videos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HiddenVideoPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -13398,6 +13601,99 @@
                 "type": "integer"
               }
             }
+          }
+        }
+      },
+      "VideoVisibility": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "youtube_video_id",
+          "hidden"
+        ],
+        "properties": {
+          "youtube_video_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{11}$",
+            "minLength": 11,
+            "maxLength": 11
+          },
+          "hidden": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VideoVisibilityChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "hidden"
+        ],
+        "properties": {
+          "hidden": {
+            "type": "boolean"
+          }
+        }
+      },
+      "HiddenVideo": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "youtube_video_id",
+          "video_id",
+          "title",
+          "actor_id",
+          "hidden_at"
+        ],
+        "properties": {
+          "youtube_video_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{11}$",
+            "minLength": 11,
+            "maxLength": 11
+          },
+          "video_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actor_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "hidden_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "HiddenVideoPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "$ref": "#/components/schemas/HiddenVideo"
+            }
+          },
+          "next_cursor": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{11}$",
+            "minLength": 11,
+            "maxLength": 11
           }
         }
       }

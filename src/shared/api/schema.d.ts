@@ -80,6 +80,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/hidden-videos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List globally hidden video identities
+         * @description Admin and moderator only. YouTube identity ordered keyset pages of at most twelve. Only this moderation inventory may expose hidden video metadata.
+         */
+        get: operations["listHiddenVideos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/reports": {
         parameters: {
             query?: never;
@@ -198,6 +218,26 @@ export interface paths {
          * @description Change role or block flag with revision check; preserve last active unblocked admin. Staff only: guests and other roles receive 404. Blocked users cannot send messages or save nonempty reviews. Moderators cannot change roles or block staff. Operations are re-authorized transactionally.
          */
         patch: operations["adminChangeUser"];
+        trace?: never;
+    };
+    "/v1/admin/videos/{youtube_id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Hide or restore a video globally
+         * @description Admin and moderator only; hidden video is unavailable to all viewers on public and private content routes, lists, messages and synchronized state. Durable YouTube identity deny-list survives metadata cleanup and reimport. Does not erase personal content. Restore is explicit.
+         */
+        put: operations["setVideoVisibility"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/auth/browser/code": {
@@ -2058,6 +2098,20 @@ export interface components {
             /** @constant */
             status: "ok";
         };
+        HiddenVideo: {
+            /** Format: uuid */
+            actor_id: string;
+            /** Format: date-time */
+            hidden_at: string;
+            title: string | null;
+            /** Format: uuid */
+            video_id: string | null;
+            youtube_video_id: string;
+        };
+        HiddenVideoPage: {
+            items: components["schemas"]["HiddenVideo"][];
+            next_cursor?: string;
+        };
         IdentityChange: {
             /** @description Same rules as PasswordChange.current_password. Never stored or retried by a client. */
             current_password: string;
@@ -2615,6 +2669,13 @@ export interface components {
             /** Format: uuid */
             target_id: string;
         };
+        VideoVisibility: {
+            hidden: boolean;
+            youtube_video_id: string;
+        };
+        VideoVisibilityChange: {
+            hidden: boolean;
+        };
         WebCredentials: {
             /** @description Opaque short-lived JWT; access only in memory. */
             access_token: string;
@@ -2801,6 +2862,55 @@ export interface operations {
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
             403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listHiddenVideos: {
+        parameters: {
+            query?: {
+                after?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Hidden videos */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HiddenVideoPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            404: {
                 headers: {
                     /** @description Seconds before retry on rate/busy responses. */
                     "Retry-After"?: string;
@@ -3096,6 +3206,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminUser"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            404: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    setVideoVisibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                youtube_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VideoVisibilityChange"];
+            };
+        };
+        responses: {
+            /** @description Visibility changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VideoVisibility"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

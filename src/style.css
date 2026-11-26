@@ -155,3 +155,4 @@ footer .footer-contact{display:flex;align-items:center;gap:10px;flex-wrap:wrap}f
 .home-hero .hero-copy>p{max-width:100%;overflow-wrap:anywhere}
 .home-hero .hero-art{position:relative;inset:auto;width:100%;height:auto;min-width:0;opacity:1}
 @media(max-width:640px){.home-hero{grid-template-columns:minmax(0,1fr);min-height:0}.home-hero .hero-copy{padding:24px}.home-hero .hero-copy h2{margin-top:20px;font-size:28px}.home-hero .hero-art{aspect-ratio:16/9}}
+.video-hide-dialog{width:calc(100% - 32px);max-width:460px;padding:28px;border:1px solid #dbe6ef;border-radius:18px;background:#fff;color:#172b3b;box-shadow:0 24px 80px #172b3b33}.video-hide-dialog::backdrop{background:#152b3e80}.video-hide-dialog>svg{color:#1da1f2}.video-hide-dialog h2{margin:16px 0 12px}.video-hide-dialog p{font-size:13px;color:#698294;line-height:1.8}.video-hide-dialog .actions{justify-content:flex-end;margin-top:24px}.video-hide-button{color:#a15a61}
