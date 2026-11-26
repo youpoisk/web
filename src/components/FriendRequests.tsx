@@ -1,3 +1,4 @@
+import {SearchFollowButton} from './SearchFollowButton.tsx';
 import{UserName}from'./UserName.tsx';
 import { Avatar } from './Avatar.tsx';
 import {PeopleListSearch,peopleSearchPlaceholder} from './PeopleListSearch.tsx';
@@ -128,7 +129,7 @@ export function PeopleSearch({ client }: { client: Pick<ApiClient, 'request'> })
     {items && items.map(it => <div className="person-line" key={it.user.id}>
       <Avatar client={client} userId={it.user.id} name={it.user.name||it.user.login} className="avatar small-avatar"/>
       <div><a href={`#/user/${it.user.id}`}><strong><UserName client={client} userId={it.user.id} name={it.user.name||it.user.login}/></strong></a><p className="small muted">@{it.user.login}{status[it.relation] ? ' · ' + status[it.relation] : ''}</p></div>
-      {it.relation === 'none' && <button className="secondary" disabled={busy !== null || loading} onClick={() => void send(it)}>Добавить в друзья</button>}
+      <div className="people-search-actions">{it.relation === 'none' && <button className="secondary" disabled={busy !== null || loading} onClick={() => void send(it)}>Добавить в друзья</button>}{it.relation !== 'self' && <SearchFollowButton client={client} userId={it.user.id}/>}</div>
     </div>)}
   </section>;
 }

@@ -141,3 +141,6 @@ footer .footer-contact{display:flex;align-items:center;gap:10px;flex-wrap:wrap}f
 @media(max-width:420px){.panel.favorite-tags{padding:18px}.favorite-tags-heading{gap:10px}.favorite-tags-heading h2{font-size:18px}.favorite-tags-icon{width:36px;height:36px}.favorite-tags .favorite-tags-footer .actions>button{flex:1 1 100%}.favorite-tags-load-error button{width:100%}}
 
 .masked-review{letter-spacing:.12em;color:#8196a6;overflow-wrap:anywhere}
+
+/* Independent friendship/subscription actions in global people search. */
+.person-line>.people-search-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto;flex-wrap:wrap;flex-shrink:0}.search-follow-control{display:flex;flex-direction:column;gap:5px;max-width:230px}.people-search-actions button{white-space:nowrap}@media(max-width:640px){.person-line:has(.people-search-actions){flex-wrap:wrap}.person-line>.people-search-actions{width:100%;justify-content:flex-start;margin-left:0}}
