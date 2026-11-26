@@ -53,7 +53,7 @@ globalThis.YPWorker=(()=>{
     if(!Object.hasOwn(state.videos,id))continue;const v=state.videos[id];if(!v)continue;
     videos[id]=pick(v);
    }
-   return {version:1,options,videos,...(state.queued?{queued:true}:{}),...(state.offline?{offline:true}:{}),...(state.cacheMiss?{cacheMiss:true}:{}),...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,pendingVideos:Object.fromEntries(Object.entries(state.pendingVideos??{}).map(([id,v])=>[id,pick(v)])),pendingNext:state.pendingNext??null,...(state.queue?{queue:state.queue}:{})}:{})};
+   return {version:1,options,videos,...(state.policy?{policy:state.policy}:{}),...(state.queued?{queued:true}:{}),...(state.offline?{offline:true}:{}),...(state.cacheMiss?{cacheMiss:true}:{}),...(state.auth?{auth:access.trusted?state.auth:{state:state.auth.state,scope:state.auth.epoch??null}}:{}),...(access.trusted?{next:state.next??null,pendingVideos:Object.fromEntries(Object.entries(state.pendingVideos??{}).map(([id,v])=>[id,pick(v)])),pendingNext:state.pendingNext??null,...(state.queue?{queue:state.queue}:{})}:{})};
   }
   async function broadcast(){
    let tabs=[];try{tabs=await api.tabs.query({url:'https://www.youtube.com/*'});}catch{/* closed browser surface */}
@@ -138,15 +138,17 @@ globalThis.YPWorker=(()=>{
      }
      if(request.type==='OPTIONS'){state=YPCore.apply(state,request);await storage.write(state);broadcast().catch(()=>{});return project({...state,auth},access);}
      if(auth?.state==='authenticated'){
+      const policy=backend.contentPolicy?await backend.contentPolicy():{available:true,excluded_terms:[]};
       let result;
       if(request.type==='UPDATE_CURRENT_VIDEO'){
        if(request.scope!==auth.epoch)throw Object.assign(new Error('Stale UI scope'),{kind:'stale'});
+       if(!YPCore.contentAllowed(request.video,policy))throw Object.assign(new Error('Content filtered'),{kind:'content_filtered'});
        const validated=YPCore.apply(YPCore.empty(),{type:'UPDATE',video:request.video,patch:request.patch});
        const patch={...request.patch};if(Object.hasOwn(patch,'review'))patch.review=validated.videos[request.video.id]?.review??null;
        result=await backend.update(request.video,patch);broadcast().catch(()=>{});
       }else result=request.type==='GET_PENDING_LIBRARY'?await backend.pendingLibrary(request.after):request.type==='GET_CURRENT_VIDEO_STATE'?await backend.current(request.videoId):await backend.library(request.after);
       if(access.trusted&&backend.queueStatus)result.queue=await backend.queueStatus();
-      access=await authorize(request,sender);return project({...state,...result,auth},access);
+      access=await authorize(request,sender);return project({...state,...result,auth,policy},access);
      }
      if(request.type==='UPDATE_CURRENT_VIDEO'){
       if(session)throw Object.assign(new Error('Authentication required'),{kind:'authentication'});
@@ -158,7 +160,7 @@ globalThis.YPWorker=(()=>{
    })().then(data=>{try{respond({ok:true,data})}catch{/* UI closed */}},async error=>{
     if(session?.peek){try{observeAuth(await session.peek());}catch{}}
     const code=error?.name==='QuotaExceededError'?'quota':error?.kind??'unavailable';
-    const messages={review_links_not_allowed:'В рецензии нельзя сохранять ссылки. Черновик сохранён — уберите ссылку.',review_abusive_language:'В рецензии обнаружены оскорбления. Исправьте текст; черновик сохранён.',quota:'Не удалось сохранить на устройстве: недостаточно места. Освободите место и повторите.',storage:'Хранилище расширения недоступно. Сохраните черновик и повторите после восстановления доступа.',protocol:'Сервер вернул некорректный ответ. Сохранение не подтверждено.',channel_unconfirmed:'Канал ещё не подтверждён сервером. Оценка остаётся только на устройстве.',preview_changed:'Данные изменились. Откройте сравнение заново.',stale:'Видео или аккаунт изменились. Повторите действие в текущем контексте.',pending_choice_required:'В очереди есть изменения. Выберите отправку, сохранение на устройстве или удаление очереди.',retry_later:'Команда ожидает повторной отправки.',authentication:'Войдите в аккаунт расширения.',reconcile_required:'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.'};
+    const messages={content_filtered:'Действия с этим видео недоступны по фильтрам сайта. Если нет связи, дождитесь проверки правил.',review_links_not_allowed:'В рецензии нельзя сохранять ссылки. Черновик сохранён — уберите ссылку.',review_abusive_language:'В рецензии обнаружены оскорбления. Исправьте текст; черновик сохранён.',quota:'Не удалось сохранить на устройстве: недостаточно места. Освободите место и повторите.',storage:'Хранилище расширения недоступно. Сохраните черновик и повторите после восстановления доступа.',protocol:'Сервер вернул некорректный ответ. Сохранение не подтверждено.',channel_unconfirmed:'Канал ещё не подтверждён сервером. Оценка остаётся только на устройстве.',preview_changed:'Данные изменились. Откройте сравнение заново.',stale:'Видео или аккаунт изменились. Повторите действие в текущем контексте.',pending_choice_required:'В очереди есть изменения. Выберите отправку, сохранение на устройстве или удаление очереди.',retry_later:'Команда ожидает повторной отправки.',authentication:'Войдите в аккаунт расширения.',reconcile_required:'Данные изменились или есть неподтверждённая команда. Нужна сверка перед повтором.'};
     try{respond({ok:false,code,error:messages[code]??'Не удалось выполнить действие. Проверьте текущую страницу, вход и соединение.'})}catch{/* UI closed */}
    });
    return true;

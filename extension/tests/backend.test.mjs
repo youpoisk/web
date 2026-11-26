@@ -13,6 +13,7 @@ function fixture(){
  async function fetch(url,init){
   if(offline)throw Error('offline');
   const path=new URL(url).pathname;
+  if(path==='/v1/me/content-policy')return json({revision:1,excluded_terms:['nude yoga']});
   if(path==='/v1/channels/'+owner)return json({id:owner,name:'Confirmed',youtube_channel_id:'UCabcdefghijklmnopqrstuv',url:'https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv',identity_verified:true,rating:{count:0,average:null}});
   if(path==='/v1/me/channels/'+owner+'/rating'&&init.method==='GET')return json({kind:'channel_state',target_id:owner,state:channelRating,change_seq:null});
   if(path==='/v1/videos/'+id)return json(card());
@@ -216,3 +217,6 @@ test('confirmed channel transfer conflicts have an explicit per-item resolution'
  const f=fixture(),b=f.create();f.confirmChannel();const preview=await b.channelPreview(yt);f.failHTTP(409);await assert.rejects(b.channelConfirm(yt,preview,7),e=>e.kind==='reconcile_required');f.failHTTP(0);const page=await b.conflicts();assert.equal(page.items[0].operation,'putChannelRating');assert.equal(page.items[0].local.rating,7);await b.resolve(page.items[0].ref,'local',page.items[0].expected);assert.equal((await b.channelPreview(yt)).rating,7);
 });
 test('review policy 422 preserves draft/intent and reports the exact safe reason without claiming success',async()=>{for(const code of ['review_links_not_allowed','review_abusive_language']){const f=fixture(),b=f.create();f.failHTTP(422,null,code);await assert.rejects(b.update(f.video,{review:'Rejected draft'}),e=>e.kind===code);const row=[...f.db.values()].find(v=>v.operation==='putVideoReview');assert.equal(row.errorCode,code);assert.equal(row.state,'conflict');const pending=(await b.conflicts()).items[0];assert.equal(pending.local.text,'Rejected draft');assert.equal(pending.server.text,'Existing review');const count=f.writes.length;await b.recover();assert.equal(f.writes.length,count);}});
+
+ test('content policy is cached for 60s, unavailable without fresh rules, and survives restart',async()=>{const f=fixture(),b=f.create();const p=await b.contentPolicy();assert.equal(p.available,true);assert.deepEqual(p.excluded_terms,['nude yoga']);f.offline();assert.equal((await f.create().contentPolicy()).available,true);f.advance(60001);assert.equal((await b.contentPolicy()).available,false);f.offline(false);assert.equal((await b.contentPolicy()).available,true);const switched=fixture();switched.switchOnAuthorize(2);await assert.rejects(switched.create().contentPolicy(),e=>e.kind==='stale');});
+ test('403 content filter retains rejected command without logout or duplicate retry',async()=>{const f=fixture(),b=f.create();f.failHTTP(403,null,'content_filtered');await assert.rejects(b.update(f.video,{review:'Review'}),e=>e.kind==='content_filtered');assert.equal(f.writes.length,1);await b.recover();assert.equal(f.writes.length,1);assert.ok([...f.db.values()].some(v=>v?.errorCode==='content_filtered'));});

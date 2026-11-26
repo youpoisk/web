@@ -20,11 +20,11 @@
   function cancelDeletes(){for(const cancel of [...pendingDeletes.values()])cancel();}
   function delayedDelete(button,action){if(pendingDeletes.has(button)){pendingDeletes.get(button)();return;}const scope=state?.auth?.scope,id=current?.id,original=button.textContent;let seconds=5;button.textContent='Отменить удаление (5 с)';button.classList.add('yp-deleting');const interval=setInterval(()=>{if(--seconds>0)button.textContent='Отменить удаление ('+seconds+' с)';},1000);const restore=()=>{clearInterval(interval);button.textContent=original;button.classList.remove('yp-deleting');pendingDeletes.delete(button);};const cancel=YPCore.deferDelete(()=>{restore();if(state?.auth?.scope===scope&&context()?.id===id)action();});pendingDeletes.set(button,()=>{cancel();restore();});}
   async function update(patch){
-    if(busy)return false;
+    if(busy||!YPCore.contentAllowed(context(),state?.policy)){notify('Действия с этим видео недоступны по фильтрам сайта.');return false;}
     const video=context();if(!video || video.id!==current?.id){schedule();return false;}
     cancelDeletes();busy=true;document.querySelectorAll('#yp-panel button').forEach(b=>b.disabled=true);
     try{const scope=state?.auth?.scope;const result=await YP.request('UPDATE',{video,patch,scope});if(!YPCore.sameVideoAuth(state?.auth,result.auth,scope))return false;state=result;if(!result.queued&&'review' in patch)drafts.delete(video.id);if(context()?.id===video.id){render();notify(result.queued?'Изменение ожидает отправки.':'Сохранено на сервере');}return !result.queued;}
-    catch(e){notify(e.message);return false;}finally{busy=false;document.querySelectorAll('#yp-panel button').forEach(b=>b.disabled=false);}
+    catch(e){notify(e.message);return false;}finally{busy=false;document.querySelectorAll('#yp-panel button').forEach(b=>b.disabled=!YPCore.contentAllowed(current,state?.policy));}
   }
   function scores(panel,value){
     const row=node('div','', 'yp-scores');
@@ -68,6 +68,7 @@
     if(state.options.enabled===false){document.getElementById('yp-panel')?.remove();return;}
     const panel=node('div');panel.id='yp-panel';panel.setAttribute('aria-label','Действия YouPoisk');
     const saved=state.videos[current.id]||{};
+    const allowed=YPCore.contentAllowed(current,state.policy);
     const rate=node('button','','yp-rate-trigger');const star=document.createElementNS('http://www.w3.org/2000/svg','svg');star.setAttribute('viewBox','0 0 24 24');star.setAttribute('aria-hidden','true');star.classList.add('yp-rate-icon');const starPath=document.createElementNS('http://www.w3.org/2000/svg','path');starPath.setAttribute('d','m12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.2-5.7-3-5.7 3 1.1-6.2L3.2 9.6l6.3-.9Z');star.append(starPath);rate.replaceChildren(star,node('span',saved.rating?String(saved.rating)+'/10':'Оценить','yp-rate-label'+(saved.rating?' yp-score-value':'')));if(saved.mark){const m=node('span',saved.mark==='watched'?'Просмотрено':'Неинтересно','yp-mark-chip');rate.append(m);}rate.type='button';rate.title='Оценка YouPoisk от 1 до 10';rate.setAttribute('aria-expanded','false');rate.setAttribute('aria-haspopup','dialog');
     const popover=node('div','', 'yp-rating-popover');popover.id='yp-rating-popover';popover.setAttribute('popover','auto');popover.setAttribute('role','dialog');popover.setAttribute('aria-label','Оценка YouPoisk');
     popover.append(node('strong','YouPoisk'),node('p',saved.ratingCount===undefined?'Общая оценка пока недоступна':saved.ratingCount?'Общая оценка: '+Number(saved.ratingAverage).toFixed(1).replace('.',',')+' · Оценок: '+saved.ratingCount:'Общих оценок пока нет'),node('p','Ваша оценка видео'));scores(popover,saved.rating);marks(popover,saved.mark||null);
@@ -101,7 +102,8 @@
     const status=node('div',saved.conflict?'Есть конфликт. Откройте значок расширения для сверки.':saved.pending?'Изменение ожидает отправки.':saved.offline||state.offline?'Нет связи. Показаны последние доступные данные.':'', 'yp-status');status.setAttribute('role','status');
     panel.append(rate,later,write,popover,editor,status);
     const old=document.getElementById('yp-panel');const reopen=!!old?.querySelector('#yp-review-popover:popover-open');const typing=old?.querySelector('#yp-review-popover textarea')===document.activeElement;if(old)old.replaceWith(panel);else {const likes=[...host.children].find(el=>el.matches('segmented-like-dislike-button-view-model, ytd-segmented-like-dislike-button-renderer')||el.querySelector('segmented-like-dislike-button-view-model, ytd-segmented-like-dislike-button-renderer'));if(likes)likes.after(panel);else host.prepend(panel);}matchNativeRatingButton(rate,host);
-    if(reopen)openEditor(typing);
+    if(!allowed){panel.querySelectorAll('button,textarea').forEach(b=>b.disabled=true);status.textContent='Действия с этим видео недоступны по фильтрам сайта.';}
+    if(reopen&&allowed)openEditor(typing);
   }
   async function refresh(){
     timer=null;const version=++generation;

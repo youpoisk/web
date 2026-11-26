@@ -170,3 +170,5 @@ test('channel alias identity never uses display names or merges different video 
  assert.equal(core.channelDraftKey(a,'A'),core.channelDraftKey({...a,channel:'Renamed'},'A'));
  assert.notEqual(core.channelDraftKey(a,'A'),core.channelDraftKey(a,'B'));assert.notEqual(core.channelDraftKey(a),core.channelDraftKey({...a,id:'q-gZ6dppLT0'}));assert.throws(()=>core.channelDraftKey({...a,channelUrl:''}));
 });
+
+test('metadata action policy matches normalized phrases and fails closed when unavailable',()=>{assert.equal(core.contentAllowed({title:'NUDE---Yoga'}, {excluded_terms:['nude yoga']}),false);assert.equal(core.contentAllowed({title:'Science',channel:'nude yoga'}, {excluded_terms:['nude yoga']}),false);assert.equal(core.contentAllowed({observation:{tags:['nude yoga']}}, {excluded_terms:['nude yoga']}),false);assert.equal(core.contentAllowed({title:'Science'}, {excluded_terms:['','!!!','nude yoga']}),true);assert.equal(core.contentAllowed({}, {available:false}),false);assert.equal(core.contentAllowed({}, null),true);});

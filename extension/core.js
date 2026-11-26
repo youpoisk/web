@@ -72,5 +72,11 @@
   }
   function sameAuth(current,incoming,epoch){return current?.state==='authenticated'&&incoming?.state==='authenticated'&&typeof current.owner==='string'&&current.owner===incoming.owner&&current.epoch===epoch&&incoming.epoch===epoch;}
   function sameVideoAuth(current,incoming,scope){return current?.state==='authenticated'&&incoming?.state==='authenticated'&&typeof scope==='string'&&current.scope===scope&&incoming.scope===scope;}
-  globalThis.YPCore={empty,channelDraftKey,descriptionTags,observation,videoId,siteVideoUrl,channelUrl,metadata,options,apply,deferDelete,sameAuth,sameVideoAuth};
+  function contentAllowed(video,policy){
+    if(policy?.available===false)return false;
+    const normalize=text=>String(text??'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim().replace(/\s+/g,' ');
+    const text=normalize([video?.title,video?.channel,...(video?.observation?.tags??[])].join(' '));
+    return !(policy?.excluded_terms??[]).some(term=>{const word=normalize(term);return word.length>0&&text.includes(word);});
+  }
+  globalThis.YPCore={contentAllowed,empty,channelDraftKey,descriptionTags,observation,videoId,siteVideoUrl,channelUrl,metadata,options,apply,deferDelete,sameAuth,sameVideoAuth};
 })();
