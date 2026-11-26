@@ -147,3 +147,11 @@ footer .footer-contact{display:flex;align-items:center;gap:10px;flex-wrap:wrap}f
 
 /* Live provider titles can contain long unbroken hashtags and channel handles. */
 .home-video-grid .video-card{min-width:0}.home-video-grid .card-title,.home-video-grid .card-meta{overflow-wrap:anywhere}.home-video-grid .poster{overflow:hidden}
+
+/* Keep the featured title and thumbnail in separate columns, including long titles. */
+.home-hero{display:grid;grid-template-columns:minmax(0,43fr) minmax(0,57fr)}
+.home-hero .hero-copy{width:auto;min-width:0;padding:30px;color:#fff}
+.home-hero .hero-copy h2{max-width:none;overflow-wrap:anywhere;font-size:clamp(24px,2.5vw,36px);line-height:1.16}
+.home-hero .hero-copy>p{max-width:100%;overflow-wrap:anywhere}
+.home-hero .hero-art{position:relative;inset:auto;width:100%;height:auto;min-width:0;opacity:1}
+@media(max-width:640px){.home-hero{grid-template-columns:minmax(0,1fr);min-height:0}.home-hero .hero-copy{padding:24px}.home-hero .hero-copy h2{margin-top:20px;font-size:28px}.home-hero .hero-art{aspect-ratio:16/9}}
