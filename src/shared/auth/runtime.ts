@@ -46,7 +46,7 @@ export function scrubCallback(browser: Pick<Browser, 'href' | 'replace'>): void 
 
 export function startupFailure(error: unknown): AuthView {
   const kind = error && typeof error === 'object' && 'kind' in error ? String((error as { kind: unknown }).kind) : '';
-  if (kind === 'configuration') return { status: 'error', user: null, message: 'Вход временно недоступен: сайт неверно настроен.' };
+  if (kind === 'configuration') return { status: 'error', user: null, message: 'Бэкенд пока не подключён. Вход и данные станут доступны после запуска сервера.' };
   if (kind === 'protocol') return { status: 'error', user: null, message: 'Данные входа на этом устройстве повреждены и были сброшены. Войдите снова.' };
   // A constructor error without a kind means the browser refused storage outright.
   if (kind === '') return failure({ kind: 'storage' });

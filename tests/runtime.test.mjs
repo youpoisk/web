@@ -44,7 +44,7 @@ test('scrubCallback removes only callback parameters and keeps the route', () =>
 });
 
 test('startup failures have distinct messages', () => {
-  assert.match(startupFailure(new AuthConfigError()).message, /настроен/);
+  assert.match(startupFailure(new AuthConfigError()).message, /подключён/);
   assert.match(startupFailure(kind('protocol')).message, /сброшены/);
   assert.match(startupFailure(kind('storage')).message, /хранение/);
   assert.match(startupFailure(new Error('SecurityError')).message, /хранение/);
