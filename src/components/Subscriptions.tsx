@@ -1,5 +1,5 @@
 import{UserName}from'./UserName.tsx';
-import { PeopleListSearch } from './PeopleListSearch.tsx';
+import { PeopleSearch } from './FriendRequests.tsx';
 import { Avatar } from './Avatar.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 import { ApiError, type ApiClient } from '../shared/api/client.ts';
@@ -102,6 +102,5 @@ export function FollowControls({ client, userId, canFollow, onChanged, inline = 
 }
 
 export function SubscriptionsPanel({client,view}:{client:Pick<ApiClient,'request'>;view:'all'|'following'|'followers'}){
- const [search,setSearch]=useState('');
- return <><PeopleListSearch value={search} onChange={setSearch}/>{view!=='followers'&&<section aria-label="Мои подписки"><h2>Мои подписки</h2><SubscriptionsList key="following" client={client} direction="following" search={search}/></section>}{view!=='following'&&<section aria-label="Подписчики"><h2>Подписчики</h2><SubscriptionsList key="followers" client={client} direction="followers" search={search}/></section>}</>;
+ return <><PeopleSearch client={client}/>{view!=='followers'&&<section aria-label="Мои подписки"><h2>Мои подписки</h2><SubscriptionsList key="following" client={client} direction="following"/></section>}{view!=='following'&&<section aria-label="Подписчики"><h2>Подписчики</h2><SubscriptionsList key="followers" client={client} direction="followers"/></section>}</>;
 }
