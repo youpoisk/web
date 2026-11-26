@@ -8,7 +8,7 @@
 ## Актуальный остаток MVP — 26.11.2026
 1. **YP-085 — backup/restore:** резервные копии вне DB volume, ключи переписок, репетиция восстановления с RPO/RTO ≤1ч и корректным учётом удалённых аккаунтов.
 2. **YP-071/086 — production API/БД:** VPS в выбранной заказчиком России, HTTPS/домен, production secrets, миграции, CORS и точный callback https://youpoisk.github.io/web/, подключение сайта и расширения. Публичный API пока отсутствует.
-3. **YP-091.U1 / YP-091/094 — YouTube:** заказчик создаёт ключ и добавляет локально; затем live collector/квоты/ошибки и приёмка настоящей подборки. Fake-provider не заменяет live проверку.
+3. **YP-091.U1 / YP-091/094 — YouTube:** YP-091.U1/091 завершены 26.11: ключ локально, live6тем/56видео/restart PASS. YP-094: live HTTP79/79 и guest desktop/mobile10/10 PASS; остались ручные авторизованные browser и нагрузка с worker100active.
 4. **YP-054 — каналы:** доказанное alias→UC сопоставление, безопасное слияние дублей и provider-confirmed E2E. Карточка, оценки и видео канала уже готовы.
 5. **YP-070/017/025, WEB-REC-003 — сквозная ручная приёмка:** реальные установленные расширения, сайт, две учётки и гость, privacy/offline/restart/import, мобильная вёрстка и доступность. HTTP journey33/33 уже PASS, он не заменяет всю browser-приёмку.
 6. **YP-076/087 — остаточные нагрузки на 100 одновременных пользователей:** массовый import+sync, конкурентные записи одного аккаунта, stress/spike и проверка на реальном VPS. 30min mixed100VU уже PASS; старая цель500active не является текущим release gate.
@@ -402,3 +402,6 @@ Backend API/DB healthy, frontend source200. В рабочем каталоге31
 
 ## Сверка статусов — 26.11.2026
 Закрыты устаревшие отметки по YP-055.1 и модерации аватаров; sitePages/CI и Firefox1.0.0 записаны как реально выполненные этапы. Backendproduction/подключённое расширение/Store не помечены выполненными. Основные источники: commits b41547b,c15c9a7, backend0254550/22352e0/650dd93; publicActions45762333841/45762333905 SUCCESS; docs/performance/load-100-20261125.md. Почта отложена по решению заказчика; YP-104/029 — после MVP. Предложенная10day retentionpolicy ранее отклонена и не включается в разрешённую реализацию.
+
+## YP-094 — live приёмка 26.11.2026
+Ключ подключён только к backend; 56 реальных рекомендаций. HTTP two-account79/79 и headless Edge guest1440/390 десять проверок PASS: badge/switch/reload/nooverflow/noerrors. Исправлены перенос длинных названий и clipping декоративных слоёв постеров. pnpm build PASS. Manual signed-in/installed browsers и full worker100active остаются открыты; это не полная release приёмка. Backend report docs/plans/site-recommendations-live-20261126.md.

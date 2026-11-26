@@ -144,3 +144,6 @@ footer .footer-contact{display:flex;align-items:center;gap:10px;flex-wrap:wrap}f
 
 /* Independent friendship/subscription actions in global people search. */
 .person-line>.people-search-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto;flex-wrap:wrap;flex-shrink:0}.search-follow-control{display:flex;flex-direction:column;gap:5px;max-width:230px}.people-search-actions button{white-space:nowrap}@media(max-width:640px){.person-line:has(.people-search-actions){flex-wrap:wrap}.person-line>.people-search-actions{width:100%;justify-content:flex-start;margin-left:0}}
+
+/* Live provider titles can contain long unbroken hashtags and channel handles. */
+.home-video-grid .video-card{min-width:0}.home-video-grid .card-title,.home-video-grid .card-meta{overflow-wrap:anywhere}.home-video-grid .poster{overflow:hidden}
