@@ -18,3 +18,20 @@ textarea.review{display:block;width:100%;margin:12px 0 0;padding:10px 12px;borde
 /* Guest popup contains only sign-in; signed-in tools appear only when needed. */
 .popup:not(.authenticated) .authenticated-only{display:none!important}.header-actions{display:flex;align-items:center;gap:12px}.logout{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;padding:7px;border-radius:50%;background:transparent;color:#657786}.logout:hover{background:#e8f5fe;color:#168bd0}.authenticated #account{margin:0;padding:0;border:0;background:transparent}#queue-status:empty,#conflicts-list:empty,#status:empty{display:none}.authenticated #queue-status:not(:empty){margin:0 0 16px}
 .header-actions .logout{order:2}
+
+/* Popup follows YouTube's active tab; fallback is the operating-system theme. */
+:root[data-yp-theme=light]{color-scheme:light}
+:root[data-yp-theme=dark]{color-scheme:dark;background:#0f0f0f;color:#f1f1f1}
+[data-yp-theme=dark] header,[data-yp-theme=dark] footer{background:#0f0f0f;border-color:#333}
+[data-yp-theme=dark] .logo-text{filter:brightness(0) invert(1)}
+[data-yp-theme=dark] #account,[data-yp-theme=dark] .queue-conflict{background:#181818;border-color:#3f3f3f}
+[data-yp-theme=dark] .authenticated #account{background:transparent;border:0}
+[data-yp-theme=dark] .secondary,[data-yp-theme=dark] .scores button{background:#272727;color:#f1f1f1;border-color:#454545}
+[data-yp-theme=dark] .scores .active,[data-yp-theme=dark] .scores button:hover{background:#1da1f2;color:white}
+[data-yp-theme=dark] #login-form input,[data-yp-theme=dark] input,[data-yp-theme=dark] select,[data-yp-theme=dark] textarea.review{background:#121212;border-color:#454545;color:#f1f1f1}
+[data-yp-theme=dark] .hint,[data-yp-theme=dark] .channel,[data-yp-theme=dark] .eyebrow,[data-yp-theme=dark] .tabs button,[data-yp-theme=dark] .row>span,[data-yp-theme=dark] footer span{color:#aaa}
+[data-yp-theme=dark] .tabs,[data-yp-theme=dark] .divider,[data-yp-theme=dark] #video-list article,[data-yp-theme=dark] #pending-section{border-color:#333}
+[data-yp-theme=dark] .tabs .active,[data-yp-theme=dark] .text{color:#3ea6ff}
+[data-yp-theme=dark] #video-state:not(:empty){background:#302714;color:#f3d28a}
+[data-yp-theme=dark] #mode{background:#173444;color:#7cccff}
+[data-yp-theme=dark] #status.error{color:#ff9b9b}

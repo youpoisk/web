@@ -86,3 +86,13 @@ async function showConflicts(after){
 $('conflicts-open').onclick=()=>showConflicts();$('conflicts-more').onclick=()=>showConflicts(conflictsCursor);
 
 $('pending-more').onclick=async()=>{if(busy||!signed()||!state.pendingNext)return;busy=true;const scope=renderedScope;try{const page=await YP.request('PENDING',{after:state.pendingNext});if(!YPCore.sameAuth(state?.auth,page.auth,scope))return;state={...state,pendingVideos:{...state.pendingVideos,...page.pendingVideos},pendingNext:page.pendingNext};render();}catch{message('Не удалось прочитать ожидающие видео.',true);}finally{busy=false;}};
+
+// Theme checks stay within the extension/tab: no API or account polling.
+const systemTheme=matchMedia('(prefers-color-scheme: dark)');let themeGeneration=0,themeTimer=null;
+function applyTheme(dark){document.documentElement.dataset.ypTheme=dark?'dark':'light';}
+async function syncTheme(){const stamp=++themeGeneration;let dark=systemTheme.matches;
+ try{if(YP.installed){const[active]=await YPAPI.tabs.query({active:true,currentWindow:true});if(active?.id&&/^https:\/\/www\.youtube\.com\//.test(active.url??'')){const result=await YPAPI.tabs.sendMessage(active.id,{type:'YP_THEME'});if(typeof result?.dark==='boolean')dark=result.dark;}}}catch{/* Tab unavailable: follow the system theme. */}
+ if(stamp===themeGeneration)applyTheme(dark);
+}
+function startThemeChecks(){clearInterval(themeTimer);void syncTheme();if(!document.hidden)themeTimer=setInterval(()=>void syncTheme(),1000);}
+systemTheme.addEventListener('change',()=>void syncTheme());document.addEventListener('visibilitychange',startThemeChecks);window.addEventListener('focus',()=>void syncTheme());window.addEventListener('pagehide',()=>{themeGeneration++;clearInterval(themeTimer)});applyTheme(systemTheme.matches);startThemeChecks();

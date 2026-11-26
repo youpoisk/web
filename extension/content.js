@@ -117,7 +117,8 @@
   const observer=new MutationObserver(records=>{if(records.every(r=>r.target.closest?.('#yp-panel')))return;if(!document.getElementById('yp-panel') || document.getElementById('yp-panel')?.parentElement!==menuHost() || context()?.id!==current?.id)schedule();});
   observer.observe(document.body,{childList:true,subtree:true});
   if(YP.installed)YPAPI.runtime.onMessage.addListener((message,_sender,respond)=>{
-    if(message.type==='YP_CONTEXT'){respond({video:context()});return;}
+    if(message.type==='YP_THEME'){if(_sender?.id!==YPAPI.runtime.id)return;respond({dark:document.documentElement.hasAttribute('dark')});return;}
+    if(message.type==='YP_CONTEXT'){respond({video:context(),dark:document.documentElement.hasAttribute('dark')});return;}
     if(message.type==='YP_CHANGED')schedule();
   });else YP.subscribe(schedule);
   schedule();
