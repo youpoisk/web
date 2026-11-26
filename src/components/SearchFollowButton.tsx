@@ -3,7 +3,7 @@ import {ApiError, type ApiClient} from '../shared/api/client.ts';
 import {loadRelationship, setFollowing} from '../shared/library/lists.ts';
 
 /** Friendship and a one-way subscription are independent actions. */
-export function SearchFollowButton({client,userId}:{client:Pick<ApiClient,'request'>;userId:string}){
+export function SearchFollowButton({client,userId,onChanged}:{client:Pick<ApiClient,'request'>;userId:string;onChanged?:()=>void}){
  const [following,setSubscribed]=useState<boolean|null>(null),[saving,setSaving]=useState(false),[error,setError]=useState('');
  const generation=useRef(0),busy=useRef(false);
  useEffect(()=>{
@@ -17,7 +17,7 @@ export function SearchFollowButton({client,userId}:{client:Pick<ApiClient,'reque
   const stamp=generation.current;busy.current=true;setSaving(true);setError('');
   try{
    if(following===null){const r=await loadRelationship(client,userId);if(stamp===generation.current)setSubscribed(r.following);}
-   else{await setFollowing(client,userId,!following);if(stamp===generation.current)setSubscribed(!following);}
+   else{await setFollowing(client,userId,!following);if(stamp===generation.current){setSubscribed(!following);onChanged?.();}}
   }catch(e){if(stamp===generation.current)setError(e instanceof ApiError&&e.status===429?'Слишком много действий. Повторите позже.':'Не удалось изменить подписку. Повторите попытку.');}
   finally{if(stamp===generation.current){busy.current=false;setSaving(false);}}
  }

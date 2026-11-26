@@ -102,5 +102,6 @@ export function FollowControls({ client, userId, canFollow, onChanged, inline = 
 }
 
 export function SubscriptionsPanel({client,view}:{client:Pick<ApiClient,'request'>;view:'all'|'following'|'followers'}){
- return <><PeopleSearch client={client}/>{view!=='followers'&&<section aria-label="Мои подписки"><h2>Мои подписки</h2><SubscriptionsList key="following" client={client} direction="following"/></section>}{view!=='following'&&<section aria-label="Подписчики"><h2>Подписчики</h2><SubscriptionsList key="followers" client={client} direction="followers"/></section>}</>;
+ const [followingRevision,setFollowingRevision]=useState(0);
+ return <><PeopleSearch client={client} onFollowingChanged={()=>setFollowingRevision(n=>n+1)}/>{view!=='followers'&&<section aria-label="Мои подписки"><h2>Мои подписки</h2><SubscriptionsList key={'following:'+followingRevision} client={client} direction="following"/></section>}{view!=='following'&&<section aria-label="Подписчики"><h2>Подписчики</h2><SubscriptionsList key="followers" client={client} direction="followers"/></section>}</>;
 }

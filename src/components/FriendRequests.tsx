@@ -81,7 +81,7 @@ export function FriendRequestsList({ client, direction }: { client: Pick<ApiClie
 }
 
 /** People search by login or name with the action that fits each relation. */
-export function PeopleSearch({ client }: { client: Pick<ApiClient, 'request'> }) {
+export function PeopleSearch({ client, onFollowingChanged }: { client: Pick<ApiClient, 'request'>; onFollowingChanged?:()=>void }) {
   const [text, setText] = useState('');
   const [items, setItems] = useState<Person[] | null>(null);
   const [loading, setLoading] = useState(false), [error, setError] = useState('');
@@ -129,7 +129,7 @@ export function PeopleSearch({ client }: { client: Pick<ApiClient, 'request'> })
     {items && items.map(it => <div className="person-line" key={it.user.id}>
       <Avatar client={client} userId={it.user.id} name={it.user.name||it.user.login} className="avatar small-avatar"/>
       <div><a href={`#/user/${it.user.id}`}><strong><UserName client={client} userId={it.user.id} name={it.user.name||it.user.login}/></strong></a><p className="small muted">@{it.user.login}{status[it.relation] ? ' · ' + status[it.relation] : ''}</p></div>
-      <div className="people-search-actions">{it.relation === 'none' && <button className="secondary" disabled={busy !== null || loading} onClick={() => void send(it)}>Добавить в друзья</button>}{it.relation !== 'self' && <SearchFollowButton client={client} userId={it.user.id}/>}</div>
+      <div className="people-search-actions">{it.relation === 'none' && <button className="secondary" disabled={busy !== null || loading} onClick={() => void send(it)}>Добавить в друзья</button>}{it.relation !== 'self' && <SearchFollowButton client={client} userId={it.user.id} onChanged={onFollowingChanged}/>}</div>
     </div>)}
   </section>;
 }
