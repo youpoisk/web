@@ -13,3 +13,6 @@ export function mergeHomeVideos(catalog:PublicCard[],recommended:RecommendationV
 
 /** The next reveal adds at most12 beyond the cards actually visible, even after short pages. */
 export function nextHomeVisible(visible:number,loaded:number):number{return Math.min(visible,loaded)+12;}
+
+/** Presentation only: retain the stored title and all other video surfaces. */
+export function homeHeroTitle(title:string):string{return title.replace(/(^|[^\p{L}\p{N}_])#[\p{L}\p{N}_][\p{L}\p{N}\p{M}_]*/gu,'$1').replace(/\s+/g,' ').trim()||'Видео';}
