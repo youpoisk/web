@@ -37,7 +37,7 @@
       "post": {
         "operationId": "registerAccount",
         "summary": "Register a new account",
-        "description": "Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open. A successful new web login atomically revokes all previous web sessions and their refresh families for this user. Extension sessions remain independent. Refresh and browser-code exchange reuse the existing session.",
+        "description": "Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open. A successful new web login atomically revokes all previous web sessions and their refresh families for this user. Extension sessions remain independent. Refresh and browser-code exchange reuse the existing session. All client types require a locally verified, unexpired single-use ALTCHA v2 proof before password hashing. Rejected proof: 422 invalid_captcha; verification storage unavailable: 503 captcha_unavailable. Fetch and solve a new challenge after any rejected attempt.",
         "tags": [
           "Accounts"
         ],
@@ -9406,6 +9406,55 @@
           }
         }
       }
+    },
+    "/v1/auth/registration-challenge": {
+      "get": {
+        "operationId": "registrationChallenge",
+        "summary": "Issue a local ALTCHA registration challenge",
+        "description": "No credentials required. Three-minute signed challenge. 20 requests per minute per direct peer, 8 inflight; Cache-Control no-store. No external service.",
+        "security": [],
+        "tags": [
+          "Accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "ALTCHA v2 challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationChallenge"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9584,6 +9633,12 @@
               "web",
               "extension"
             ]
+          },
+          "altcha": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "Base64 ALTCHA v2 proof; expires in 3 minutes and is consumed once per registration attempt."
           }
         },
         "required": [
@@ -9591,7 +9646,8 @@
           "email",
           "name",
           "password",
-          "client_type"
+          "client_type",
+          "altcha"
         ],
         "additionalProperties": false
       },
@@ -13292,6 +13348,58 @@
           "unread_notifications"
         ],
         "description": "Own lightweight activity counters with live active-account, session and bilateral block checks. Profile totals excluded; suitable for60s polling."
+      },
+      "RegistrationChallenge": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "parameters",
+          "signature"
+        ],
+        "properties": {
+          "signature": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "algorithm",
+              "nonce",
+              "salt",
+              "cost",
+              "keyLength",
+              "keyPrefix",
+              "expiresAt"
+            ],
+            "properties": {
+              "algorithm": {
+                "const": "PBKDF2/SHA-256"
+              },
+              "nonce": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{32}$"
+              },
+              "salt": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{32}$"
+              },
+              "cost": {
+                "const": 5000
+              },
+              "keyLength": {
+                "const": 32
+              },
+              "keyPrefix": {
+                "const": "00"
+              },
+              "expiresAt": {
+                "type": "integer"
+              }
+            }
+          }
+        }
       }
     },
     "parameters": {

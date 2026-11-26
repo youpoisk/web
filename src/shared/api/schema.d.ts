@@ -351,9 +351,29 @@ export interface paths {
         put?: never;
         /**
          * Register a new account
-         * @description Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open. A successful new web login atomically revokes all previous web sessions and their refresh families for this user. Extension sessions remain independent. Refresh and browser-code exchange reuse the existing session.
+         * @description Access15m, refresh family absolute7days. Web gets HttpOnly cookie and no JSON refresh; extension gets raw refresh only in trusted context. CORS/client origin pinned. This legacy web JSON credential transport does not by itself solve blocked third-party cookies; first-party broker/PKCE release gate remains open. A successful new web login atomically revokes all previous web sessions and their refresh families for this user. Extension sessions remain independent. Refresh and browser-code exchange reuse the existing session. All client types require a locally verified, unexpired single-use ALTCHA v2 proof before password hashing. Rejected proof: 422 invalid_captcha; verification storage unavailable: 503 captcha_unavailable. Fetch and solve a new challenge after any rejected attempt.
          */
         post: operations["registerAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/registration-challenge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Issue a local ALTCHA registration challenge
+         * @description No credentials required. Three-minute signed challenge. 20 requests per minute per direct peer, 8 inflight; Cache-Control no-store. No external service.
+         */
+        get: operations["registrationChallenge"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2295,6 +2315,8 @@ export interface components {
         };
         Refresh: components["schemas"]["WebRefresh"] | components["schemas"]["ExtensionRefresh"];
         Register: {
+            /** @description Base64 ALTCHA v2 proof; expires in 3 minutes and is consumed once per registration attempt. */
+            altcha: string;
             /** @enum {string} */
             client_type: "web" | "extension";
             /** @description Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred. */
@@ -2304,6 +2326,22 @@ export interface components {
             name: string;
             /** @description 8..128 Unicode code points, at most512 UTF8 bytes. Never trimmed/normalized/stored in client storage or an offline queue. Invalid Unicode JSON escapes are rejected. */
             password: string;
+        };
+        RegistrationChallenge: {
+            parameters: {
+                /** @constant */
+                algorithm: "PBKDF2/SHA-256";
+                /** @constant */
+                cost: 5000;
+                expiresAt: number;
+                /** @constant */
+                keyLength: 32;
+                /** @constant */
+                keyPrefix: "00";
+                nonce: string;
+                salt: string;
+            };
+            signature: string;
         };
         Relationship: {
             followed_by: boolean;
@@ -3499,6 +3537,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    registrationChallenge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description ALTCHA v2 challenge */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationChallenge"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

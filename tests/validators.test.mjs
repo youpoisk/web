@@ -11,7 +11,7 @@ test('every pinned operation has runtime request/response validators', () => {
   const spec = JSON.parse(readFileSync(new URL('../contracts/openapi.json', import.meta.url)));
   const operations = Object.entries(spec.paths).flatMap(([path, methods]) =>
     Object.entries(methods).map(([method, operation]) => ({ path, method, operation })));
-  assert.equal(operations.length, 93);
+  assert.equal(operations.length, 94);
   assert.equal(Object.keys(validators.contract).length, operations.length);
   for (const { path, method, operation } of operations) {
     const actual = validators.contract[operation.operationId];
@@ -38,7 +38,7 @@ test('Unicode mailbox responses preserve the existing server registration policy
     assert.equal(validators.schema_User(user), true);
     assert.equal(validators.schema_WebCredentials({ ...web, user }), true);
     assert.equal(validators.registerAccount_request({ login: 'test_user', name: 'Owner',
-      email, password: 'valid password', client_type: 'web' }), true);
+      email, password: 'valid password', client_type: 'web', altcha:'proof' }), true);
   }
   for (const email of ['missing-at', 'owner\n@example.com', '\u0000@example.com']) {
     assert.equal(validators.schema_User({ ...web.user, email }), false);
@@ -141,3 +141,13 @@ test('recommendation preference wire schema requires all fields and bounded uniq
 
 
 test('avatar complaint and removal are explicit contract variants',()=>{assert.equal(validators.schema_ReportCreate({target_kind:'avatar',target_id:uid,reason:'inappropriate'}),true);assert.equal(validators.schema_ReportResolve({action:'remove_avatar'}),true);assert.equal(validators.schema_AvatarEvidence({available:false}),true);assert.equal(validators.schema_AvatarEvidence({available:'yes'}),false);});
+
+test('registration contract requires bounded ALTCHA proof and a local v2 challenge shape',()=>{
+ const request={login:'test_user',name:'Owner',email:'owner@example.invalid',password:'valid password',client_type:'web'};
+ assert.equal(validators.registerAccount_request(request),false);
+ for(const altcha of ['', 'x'.repeat(4097)])assert.equal(validators.registerAccount_request({...request,altcha}),false);
+ assert.equal(validators.registerAccount_request({...request,altcha:'proof'}),true);
+ const challenge={parameters:{algorithm:'PBKDF2/SHA-256',cost:5000,keyLength:32,keyPrefix:'00',nonce:'a'.repeat(32),salt:'b'.repeat(32),expiresAt:2000000000},signature:'c'.repeat(64)};
+ assert.equal(validators.registrationChallenge_response_200(challenge),true);
+ assert.equal(validators.registrationChallenge_response_200({...challenge,parameters:{...challenge.parameters,cost:1}}),false);
+});
