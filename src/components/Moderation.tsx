@@ -9,15 +9,24 @@ const when = (iso: string) => new Date(iso).toLocaleString('ru-RU', { day: 'nume
 
 /** Inline report form. The server decides whether the target is reportable. */
 export function ReportButton({ client, kind, targetId, label = 'Пожаловаться', inline = false }: { client: Pick<ApiClient, 'request'>; kind: ReportKind; targetId: string; label?: string; inline?: boolean }) {
-  const [open, setOpen] = useState(false), [reason, setReason] = useState<ReportReason>('spam'), [details, setDetails] = useState('');
+  const [open, setOpen] = useState(false), [reason, setReason] = useState<ReportReason|'avatar'>('spam'), [details, setDetails] = useState('');
   const [sending, setSending] = useState(false), [notice, setNotice] = useState(''), [done, setDone] = useState(false);
   const mounted = useRef(true);
-  useEffect(() => () => { mounted.current = false; }, []);
+  const [avatarAvailable,setAvatarAvailable]=useState(false);
+  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
+  useEffect(()=>{
+    setAvatarAvailable(false);
+    if(!open||kind!=='user')return;
+    const ctl=new AbortController();
+    client.request('getAvatarLink',{path:{id:targetId},signal:ctl.signal}).then(()=>{if(!ctl.signal.aborted)setAvatarAvailable(true);}).catch(()=>{});
+    return()=>ctl.abort();
+  },[client,targetId,kind,open]);
   async function submit() {
     if (sending) return;
+    if(reason==='avatar'&&(kind!=='user'||!avatarAvailable)){setNotice('Аватар недоступен. Выберите другую причину.');return;}
     setSending(true); setNotice('');
     try {
-      await createReport(client, kind, targetId, reason, details);
+      await createReport(client, reason==='avatar'?'avatar':kind, targetId, reason==='avatar'?'inappropriate':reason, details);
       if (!mounted.current) return;
       setDone(true); setOpen(false);
       setNotice('');
@@ -25,9 +34,9 @@ export function ReportButton({ client, kind, targetId, label = 'Пожалова
     finally { if (mounted.current) setSending(false); }
   }
   return <span className={inline ? 'report-control report-inline' : 'report-control'}>
-    {!open && !done && <button type="button" className={inline ? 'secondary' : 'text-button'} onClick={() => setOpen(true)}>{label}</button>}
+    {!open && !done && <button type="button" className={inline ? 'secondary' : 'text-button'} onClick={() => {setReason('spam');setOpen(true);}}>{label}</button>}
     {open && <form className="report-form" aria-label="Жалоба" onSubmit={e => { e.preventDefault(); void submit(); }}>
-      <label>Причина<select value={reason} onChange={e => setReason(e.target.value as ReportReason)}>{REPORT_REASONS.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>
+      <label>Причина<select value={reason} onChange={e => setReason(e.target.value as ReportReason|'avatar')}>{REPORT_REASONS.map(([value, text]) => <option key={value} value={value}>{text}</option>)}{kind==='user'&&avatarAvailable&&<option value="avatar">Неприемлемый аватар</option>}</select></label>
       <label>Комментарий (необязательно)<textarea value={details} maxLength={500} rows={2} onChange={e => setDetails(e.target.value)}/></label>
       <div className="actions"><button className="primary" type="submit" disabled={sending}>{sending ? 'Отправляем…' : 'Отправить жалобу'}</button><button className="secondary" type="button" disabled={sending} onClick={() => { setOpen(false); setNotice(''); }}>Отмена</button></div>
     </form>}
@@ -40,7 +49,7 @@ const STATUS_LABEL: Record<Status, string> = { open: 'Открытые', dismiss
 const REASON_LABEL = Object.fromEntries(REPORT_REASONS) as Record<string, string>;
 const KIND_LABEL: Record<string, string> = { user: 'Пользователь', review: 'Рецензия', channel_review:'Отзыв о канале',message: 'Сообщение',avatar:'Аватар' };
 const ACTION_LABEL: Record<string, string> = { remove_avatar:'Удалил аватар',dismiss: 'Отклонил жалобу', hide: 'Скрыл рецензию', suspend: 'Заблокировал аккаунт' };
-const person = (u: { id:string;login: string | null; status: string },client:Pick<ApiClient,'request'>) => <><UserName client={client} userId={u.id} name={u.login ? '@' + u.login : 'удалённый аккаунт'}/>{u.status === 'disabled' ? ' (заблокирован)' : ''}</>;
+const person = (u: { id:string;login: string | null; status: string },client:Pick<ApiClient,'request'>) => <><a href={`#/user/${u.id}`}><UserName client={client} userId={u.id} name={u.login ? '@' + u.login : 'удалённый аккаунт'}/></a>{u.status === 'disabled' ? ' (заблокирован)' : ''}</>;
 
 /** Staff page. Account-keyed by the parent; the server enforces the role. */
 export function ModerationPage({ client, role }: { client: Pick<ApiClient, 'request'>; role: 'admin' | 'moderator' }) {
@@ -146,5 +155,3 @@ export function ModerationLink({ client, active }: { client: Pick<ApiClient, 're
   if(role==='admin'||role==='moderator'){const config=authConfig((import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env,location);return <a className="settings-link" href={(import.meta as unknown as {env:Record<string,string|boolean|undefined>}).env.DEV?'/ap':config.apiOrigin+'/ap'}><ShieldCheck size={18}/>Администрирование</a>;}
   return role ? <a className={active ? 'settings-link active' : 'settings-link'} href="#/moderation">Модерация</a> : null;
 }
-
-export function AvatarReportButton({client,userId}:{client:Pick<ApiClient,'request'>;userId:string}){const[available,setAvailable]=useState<string|null>(null);useEffect(()=>{const ctl=new AbortController();setAvailable(null);void client.request('getAvatarLink',{path:{id:userId},signal:ctl.signal}).then(()=>{if(!ctl.signal.aborted)setAvailable(userId)}).catch(()=>{});return()=>ctl.abort()},[client,userId]);return available===userId?<ReportButton key={userId} inline client={client} kind="avatar" targetId={userId} label="На аватар"/>:null;}
