@@ -11,7 +11,7 @@ test('every pinned operation has runtime request/response validators', () => {
   const spec = JSON.parse(readFileSync(new URL('../contracts/openapi.json', import.meta.url)));
   const operations = Object.entries(spec.paths).flatMap(([path, methods]) =>
     Object.entries(methods).map(([method, operation]) => ({ path, method, operation })));
-  assert.equal(operations.length, 98);
+  assert.equal(operations.length, 99);
   assert.equal(Object.keys(validators.contract).length, operations.length);
   for (const { path, method, operation } of operations) {
     const actual = validators.contract[operation.operationId];

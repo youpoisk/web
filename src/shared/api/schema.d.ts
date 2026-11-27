@@ -420,6 +420,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Channels with rated or reviewed videos
+         * @description Guest-compatible directory; anonymous ratings count as in public aggregates. Reviews obey viewer audience, blocks and moderation. Hidden videos and merged channels excluded before pagination. Stable created_at/id order, pages of at most12; no shared cache.
+         */
+        get: operations["getChannelDirectory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/channels/{id}": {
         parameters: {
             query?: never;
@@ -1969,6 +1989,16 @@ export interface components {
             url?: string;
             youtube_channel_id: string | null;
         } & unknown;
+        ChannelDirectoryPage: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                identity_verified: boolean;
+                name: string | null;
+                videos_count: number;
+            }[];
+            next_cursor?: string;
+        };
         ChannelRatingWrite: {
             /**
              * Format: int64
@@ -3776,6 +3806,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RegistrationChallenge"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getChannelDirectory: {
+        parameters: {
+            query?: {
+                after?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resolve a catalog card by YouTube ID */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelDirectoryPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
