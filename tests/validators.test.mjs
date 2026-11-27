@@ -11,7 +11,7 @@ test('every pinned operation has runtime request/response validators', () => {
   const spec = JSON.parse(readFileSync(new URL('../contracts/openapi.json', import.meta.url)));
   const operations = Object.entries(spec.paths).flatMap(([path, methods]) =>
     Object.entries(methods).map(([method, operation]) => ({ path, method, operation })));
-  assert.equal(operations.length, 99);
+  assert.equal(operations.length, 101);
   assert.equal(Object.keys(validators.contract).length, operations.length);
   for (const { path, method, operation } of operations) {
     const actual = validators.contract[operation.operationId];
@@ -162,3 +162,4 @@ test('initial-period registration accepts omitted or empty email and credentials
   assert.equal(validators.schema_WebCredentials({...web,user}),true);
   assert.equal(validators.schema_ExtensionCredentials({...web,user,refresh_token:`${uid}.${'A'.repeat(43)}`}),true);
 });
+

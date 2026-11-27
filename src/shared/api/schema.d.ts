@@ -80,6 +80,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/bug-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List bug reports for administrators and moderators
+         * @description Admin and moderator only. YouTube identity ordered keyset pages of at most twelve. Only this moderation inventory may expose hidden video metadata.
+         */
+        get: operations["listBugReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/hidden-videos": {
         parameters: {
             query?: never;
@@ -414,6 +434,26 @@ export interface paths {
         get: operations["registrationChallenge"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/bug-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit a bug report from an authenticated account
+         * @description Id is client-generated UUID for exact retry; changed payload with same ID conflicts. Description1..3000 code points. Page is a relative site path without query parameters. Five new reports per account per rolling hour; blocked accounts may report bugs.
+         */
+        post: operations["createBugReport"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1969,6 +2009,31 @@ export interface components {
             /** Format: uuid */
             session_id: string;
         };
+        BugReceipt: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+        };
+        BugReport: {
+            /** Format: date-time */
+            created_at: string;
+            description: string;
+            /** Format: uuid */
+            id: string;
+            page_path: string;
+            reporter: components["schemas"]["StaffUser"];
+        };
+        BugReportInput: {
+            description: string;
+            /** Format: uuid */
+            id: string;
+            page_path: string;
+        };
+        BugReportPage: {
+            items: components["schemas"]["BugReport"][];
+            next_cursor?: string;
+        };
         CardChannel: {
             /** @description Separate video provider proof. Verified channel alone is insufficient. Future context writes recheck proof server-side. */
             association_verified: boolean;
@@ -2962,6 +3027,42 @@ export interface operations {
             };
         };
     };
+    listBugReports: {
+        parameters: {
+            query?: {
+                after?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Newest first; keyset pages of12 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BugReportPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     listHiddenVideos: {
         parameters: {
             query?: {
@@ -3806,6 +3907,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RegistrationChallenge"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createBugReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BugReportInput"];
+            };
+        };
+        responses: {
+            /** @description Saved or exact retry */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BugReceipt"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
