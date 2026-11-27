@@ -25,7 +25,7 @@ export function ChannelVideos({client,channelId}:{client:Pick<ApiClient,'request
   generation.current++;pending.current=false;setItems([]);setCursor(null);void load(null);
   return()=>{generation.current++;controller.current?.abort();};
  },[client,channelId]);
- return <section aria-labelledby="channel-videos-title" aria-busy={loading}>
+ return <section className="channel-videos" aria-labelledby="channel-videos-title" aria-busy={loading}>
   <div className="section-head"><h2 id="channel-videos-title">Видео канала</h2></div>
   {loading&&!items.length&&<p role="status" className="muted">Загружаем видео…</p>}
   {!loading&&!error&&!items.length&&<p className="muted">Видео этого канала пока не добавлены в YouPoisk.</p>}
@@ -33,3 +33,4 @@ export function ChannelVideos({client,channelId}:{client:Pick<ApiClient,'request
   <LoadMore cursor={cursor??(error?'retry':null)} loaded={items.length} busy={loading} error={error} onMore={()=>void load(cursor)}/>
  </section>;
 }
+

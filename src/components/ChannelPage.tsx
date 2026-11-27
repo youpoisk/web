@@ -72,9 +72,9 @@ export function ChannelPage({ publicClient, client, writer, channelId,ownerId=nu
       if (stamp === generation.current) { busy.current = false; setSaving(false); }
     }
   }
-  return <section aria-busy={loading || saving}>
-    <div className="eyebrow">СТРАНИЦА КАНАЛА</div>
-    <h1>{card?.name ?? 'Канал YouPoisk'}</h1>
+  return <section className="channel-page" aria-busy={loading || saving}>
+    <header className="channel-page-heading"><div className="eyebrow">СТРАНИЦА КАНАЛА</div>
+    <h1>{card?.name ?? 'Канал YouPoisk'}</h1></header>
     {loading && <p role="status">Загружаем канал…</p>}
     {error && <p role="alert">{error}</p>}
     {card && <>
@@ -92,7 +92,8 @@ export function ChannelPage({ publicClient, client, writer, channelId,ownerId=nu
       <ChannelVideos key={channelId} client={publicClient} channelId={channelId}/>
       {(card.identity_verified||!client)&&<ChannelReviews key={channelId} client={client} channelId={channelId} ownerId={ownerId}/>}
     </>}
-    <div className="actions"><button className="secondary" disabled={loading || saving} onClick={() => { if (busy.current || loading) return; setMessage(''); void refresh(); }}>Обновить данные</button><a className="secondary" href="#/">Вернуться к видео</a></div>
+    <div className="actions channel-page-actions"><button className="secondary" disabled={loading || saving} onClick={() => { if (busy.current || loading) return; setMessage(''); void refresh(); }}>Обновить данные</button><a className="secondary" href="#/">Вернуться к видео</a></div>
     {message && <p role="status">{message}</p>}
   </section>;
 }
+
