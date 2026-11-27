@@ -2,18 +2,34 @@
 
 Полный исходный scope: frontend-integration-plan.md и backend todo.md. Этот журнал фиксирует выполнение, не заменяет критерии MVP.
 
-Сверено2026-11-26: сайт https://youpoisk.github.io/web/ и frontend Actions опубликованы/проверены (b41547b); API пока не подключён. EXT-001…019 реализованы; Firefox1.0.0 production-configured/unsigned с пустым API готов (c15c9a7), Store/подпись и живой prod API ещё не готовы. YP-055.1, YP-100 (включая модерацию), YP-101, YP-102 и YP-103 реализованы. Старые статусы ниже — история; актуальный остаток дан в начале файла.
+Сверено2026-11-27: сайт https://youpoisk.github.io/web/ и frontend Actions опубликованы/проверены (b41547b); API пока не подключён. EXT-001…019 реализованы; Firefox1.0.0 production-configured/unsigned с пустым API готов (c15c9a7), Store/подпись и живой prod API ещё не готовы. YP-055.1, YP-100 (включая модерацию), YP-101, YP-102 и YP-103 реализованы. Старые статусы ниже — история; актуальный остаток дан в начале файла.
 
 
 ## Актуальный остаток MVP — 27.11.2026
 1. **YP-085 — backup/restore:** резервные копии вне DB volume, ключи переписок, репетиция восстановления с RPO/RTO ≤1ч и корректным учётом удалённых аккаунтов.
 2. **YP-071/086 — production API/БД:** VPS в выбранной заказчиком России, HTTPS/домен, production secrets, миграции, CORS и точный callback https://youpoisk.github.io/web/, подключение сайта и расширения. Публичный API пока отсутствует.
-3. **YP-091.U1 / YP-091/094 — YouTube:** YP-091.U1/091 завершены 26.11: ключ локально, live6тем/56видео/restart PASS. YP-094: live HTTP79/79 и guest desktop/mobile10/10 PASS; остались ручные авторизованные browser и нагрузка с worker100active.
+3. **YP-094 / WEB-REC-003 — приёмка рекомендаций:** YP-091.U1/091 завершены 26.11: ключ локально, live6тем/56видео/restart PASS. YP-094: live HTTP79/79 и guest desktop/mobile10/10 PASS; остались ручные авторизованные browser и нагрузка с worker100active.
 4. **YP-070/017/025, WEB-REC-003 — сквозная ручная приёмка:** реальные установленные расширения, сайт, две учётки и гость, privacy/offline/restart/import, мобильная вёрстка и доступность. HTTP journey33/33 уже PASS, он не заменяет всю browser-приёмку.
 5. **YP-076/087 — остаточные нагрузки на 100 одновременных пользователей:** массовый import+sync, конкурентные записи одного аккаунта, stress/spike и проверка на реальном VPS. 30min mixed100VU уже PASS; старая цель500active не является текущим release gate.
 6. **YP-068/026 — эксплуатация и CI:** облачный CI бэкенда, защита веток, production сбор/хранение логов и мониторинг. Frontend Pages/verification Actions уже успешно выполнены на GitHub.
 7. **EXT-020 / YP-028 — выпуск расширения:** подключённый HTTPS API, финальный установленный browser/manual checklist, подпись Mozilla и выбранная публикация. Firefox1.0.0 с пустым API уже подготовлен; он не подписан и не является работающим серверным релизом. Chrome release — только если сохраняется выбранный канал распространения.
 8. **YP-095 / YP-086 — финальный release sign-off:** повторная проверка QA/demo/production Swagger, откат и утверждённая опубликованная политика приватности (реквизиты оператора, провайдер и фактические сроки хранения). Новую очистку sync/receipts/snapshots не внедрять: прежняя политика отклонена заказчиком.
+
+
+### Дополнительно завершено 27.11.2026
+- [x] **YP-091.U1/091:** ключ YouTube добавлен локально, живой сбор и перезапуск проверены26.11; повторно создавать ключ не требуется. Значение секрета не хранится в todo/Git. Остаток приёмки — YP-094/WEB-REC-003.
+- [x] **YP-054:** подтверждение идентичности/объединение каналов; backend261f851+d3b075e, frontend77aa06c; unit/API100%, PostgreSQL и live browser13PASS, review PASS.
+- [x] **YP-107:** публичная вкладка «Каналы», порции12, реальные данные/приватность; backend0a5ba9a+b8e8aca, frontend4331191, PG57.045s/browser/review PASS.
+- [x] **Регистрация без email — временно:** backend419efba, frontend1fe0b58; NULL в БД, совместимый контракт, ALTCHA9PASS, PG80.431s, unit/API100%/review PASS. Вид формы исправлен92b1812: обязательные поля со звёздочками, Email(необязательно) в одну строку; broker42/browser/review PASS.
+- [x] **Верстка страницы канала:** frontend0b6121e, отступы/адаптивность/кнопки, build/browser/review PASS.
+
+### Открыто после начального периода и после MVP
+- **REG-EMAIL-REQUIRED:** вернуть обязательную почту при регистрации после согласования срока и поведения существующих аккаунтов без email. Сейчас поле необязательно.
+- **YP-046/047/088:** почтовый сервис, подтверждение email и восстановление пароля — отложены.
+- **YP-104:** декоративные значки пользователей — после MVP.
+- **YP-029:** мобильное приложение — после MVP.
+
+Сводка реализации: **33 Code First миграции,46 таблиц,99 API-операций**. Последующие локальные коммиты не считаются опубликованными на Pages или установленными в Firefox.
 
 ## Завершённые этапы выпуска
 - [x] YP-028.1: сайт опубликован на GitHub Pages; build + verification + deploy SUCCESS, публичные UI/404 smoke PASS. Репозиторий youpoisk/web, sourceb41547b; последующие локальные коммиты не выдаются за облачно проверенные/развёрнутые.
@@ -30,13 +46,13 @@
 - [x] WEB-002/006+: разделение монолита и последовательное подключение экранов; остальные пункты исходного плана остаются открытыми. ✅ все экраны сайта на живом API, демо удалено (real-data-cleanup.md).
 - [ ] EXT-020: EXT-001…019 закрыты; адрес сайта теперь известен, Firefox1.0.0 подготовлен. Остаток: HTTPS API/пересборка, подпись Mozilla/публикация и установленный browser/manual checklist; для Chrome отдельная приёмка при сохранении этого канала.
 
-## Рекомендации сайта — дополнение 2026-11-21
+## Рекомендации сайта — дополнение 2026-11-21 (статус обновлён27.11)
 
-Backend этапы YP-089…094: исследование популярных тем для групп интересов преимущественно15–30лет → Code First/общий пул и private preferences → Docker worker каждые X часов → API → UI →100% core/API tests, E2E и нагрузка10k/500. Канонический план: backend docs/plans/site-recommendations.md. Research/CodeFirst/worker/API реализованы и reviewed; frontend подключён ниже, итоговые интеграционные/live/capacity проверки отмечаются отдельно.
+Backend этапы YP-089…094: исследование популярных тем для групп интересов преимущественно15–30лет → Code First/общий пул и private preferences → Docker worker каждые X часов → API → UI →100% core/API tests, E2E и нагрузка: корпус10000аккаунтов, текущая цель100одновременных пользователей. Канонический план: backend docs/plans/site-recommendations.md. Research/CodeFirst/worker/API реализованы и reviewed; frontend подключён ниже, итоговые интеграционные/live/capacity проверки отмечаются отдельно.
 
 - [x] **WEB-REC-001 · Рекомендации сайта в разделе рекомендаций.** Описание: различимые источники, выключатель «Показывать рекомендации сайта» прямо в разделе, сохранение в аккаунте/между устройствами, optimistic UI только с корректным rollback либо подтверждение сервером; при выключении остаётся текущая личная лента. Loading/empty/error/retry/stale, mobile/desktop. Зависимости YP-092, auth/profile/feed. Реализовано; unit/API/build/review PASS. Manual/live приёмка — WEB-REC-003.
 - [x] **WEB-REC-002 · Любимые теги в профиле.** Описание: private multi-select с поиском/удалением/лимитом, API/revision/409, синхронизация и account isolation. ANY совпадение по выбранным тегам фильтрует общий пул; без тегов общий пул, нет совпадений — честное empty. Не раскрывать в чужом профиле. Реализовано; unit/API/build/review PASS. Manual/live приёмка — WEB-REC-003.
-- [ ] **WEB-REC-003 · Интеграция и проверки.** Описание: разные интересы двух аккаунтов, переключатель и reload/другое устройство, dedup/pagination, guest-local preferences без auto import, logout/смена аккаунта, quota/provider failures; unit/API/E2E и нагрузочные сценарии с worker. Общие рекомендации не превращаются в posts/ratings/watchlist пользователя. В первом варианте новый экран расширения не требуется, фоновые запросы выполняет backend. API/UI/PG/targeted20s smoke PASS; остаются live YouTube, manual/mobile и full capacity.
+- [ ] **WEB-REC-003 · Интеграция и проверки.** Описание: разные интересы двух аккаунтов, переключатель и reload/другое устройство, dedup/pagination, guest-local preferences без auto import, logout/смена аккаунта, quota/provider failures; unit/API/E2E и нагрузочные сценарии с worker. Общие рекомендации не превращаются в posts/ratings/watchlist пользователя. В первом варианте новый экран расширения не требуется, фоновые запросы выполняет backend. API/UI/PG/targeted20s smoke, live YouTube, HTTP79/79 и guest desktop/mobile10/10 PASS. Остаток: ручные авторизованные/two-browser проверки и нагрузка с worker100active (YP-094/070/076/087).
 
 
 ## Перед выкладкой MVP — обязательная очистка демопрофиля
@@ -357,15 +373,15 @@ Reviewer follow-up d2cda48 PASS, P2 закрыт, новых MEDIUM+ нет. Ful
 Reviewer PASS d46c398, MEDIUM+ нет. LOW учтён: политика/listing теперь отдельно описывают YouTube thumbnails i.ytimg.com, авторизованные API запросы идут только APIorigin. Актуальный полный gate PASS на d46c398: .artifacts/extension-verification/6581c3de-2fb5-4c59-aa52-22fa2a1b53f7 —124tests, auth100%line/functions (branches86.41%), contract/validators/bundle, cleanFirefox/MozillaLint, realauth/business/sync/import, FirefoxDOM/ACKloss/controlledstop. WebbuildPASS. Выпускная подготовка завершена в разрешённом scope, публикация по-прежнему не выполнялась.
 
 ## Задачи заказчика — рекомендации сайта
-- [ ] **YP-091.U1 · Исполнитель: заказчик · Создать ключ YouTube Data API.** В Google Cloud включить YouTube Data API v3, создать API key с ограничением этим API; добавить только в локальный C:\repos\youpoisk-backend\.env как YOUTUBE_API_KEY=... и сообщить агенту о готовности. Ключ не присылать в чат и не коммитить. После подключения агент включает worker и проверяет живой сбор/квоту; до этого collector отключён, API/UI проверяются без ключа.
+- [x] **YP-091.U1 · Исполнитель: заказчик · Создать ключ YouTube Data API.** Выполнено26.11.2026: ключ локально, живой сбор и restart PASS. Далее — исходное описание задачи: В Google Cloud включить YouTube Data API v3, создать API key с ограничением этим API; добавить только в локальный C:\repos\youpoisk-backend\.env как YOUTUBE_API_KEY=... и сообщить агенту о готовности. Ключ не присылать в чат и не коммитить. После подключения агент включает worker и проверяет живой сбор/квоту; до этого collector отключён, API/UI проверяются без ключа.
 
-### YP-093 / WEB-REC-001…003 — подключение сайта
+### История: YP-093 / WEB-REC-001…003 — первоначальное подключение сайта
 Добавлены SiteRecommendations и FavoriteTagsEditor: различимый site source на /feed, switch сохраняется сервером с revision (без ложногоoptimisticsuccess), личная лента не меняется. В own/profile private20tag multiselect с поиском/удалением/409reload, отсутствует в чужих профилях. ANY/empty/loading/stale/retry, publicguest source с отдельнымlocalStorage безautoimport.12cards/infinitepages+dedup, ownerkeyed/unmountgeneration+serial/abort guards. Guesttag save preserves latest local switch; oldpage doesn't revert confirmed toggle. Actual backend contract81 importedfromcommittedfc4f8d9; extensionbundle regenerated fromsharedvalidators (newUIextensionnotadded). WebbuildPASS;120sharedAPI/coretests100line/functions (modelbranches96.97%),124extensiontestsPASS. Pendingindependentreview andliveAPIdeployment withoutproviderkey; nofakepool.
 
 ### Обновление локальной версии сайта/расширения
 По просьбе заказчика: production build сайта обновлён, extension manifests0.5.1 с актуальным runtime/API81.124extensiontestsPASS; webtype/buildPASS. Отдельно готовится clean devpackage изамена старого0.4 sourceкаталогаFirefox сbackup. Это не означает автоматическойперезагрузки/публикации установленногоaddon.
 
-### Локальное обновление 2026-11-23 — подтверждённое состояние
+### История: локальное обновление 2026-11-23 (состояние на ту дату)
 Сайт http://127.0.0.1:5173/ обслуживает текущий исходный код; pnpm build и 124 теста расширения прошли. Чистый Firefox dev package 0.5.1 скопирован в прежний source-каталог C:\Users\HP-Serebro\Desktop\YouPoisk-Firefox-20261122-224558. Старая версия 0.4.0 сохранена отдельно: C:\Users\HP-Serebro\Desktop\YouPoisk-Firefox-backup-0.4.0-7575b906-f8de-4d6c-81af-2dc39506e6c6. Gecko ID и browser storage не изменялись. Фактическая перезагрузка addon в основном Firefox не подтверждена: требуется Reload в about:debugging#/runtime/this-firefox и обновление YouTube. Backend b690f8b пересобран и запущен, API/DB healthy, публичный endpoint рекомендаций отвечает 200; collector явно отключён до YP-091.U1. Независимое ревью YP-093 и SQL b690f8b: PASS, MEDIUM+ нет.
 
 ### Интерфейс popup и контакт в футере — 2026-11-23
@@ -466,3 +482,4 @@ YP-106 review P2: после filtered→allowed persistent popup-кнопки о
 - [ ] Вернуть обязательную электронную почту при регистрации по отдельному решению о сроке включения. Синхронно обновить форму, backend-валидацию, OpenAPI, тесты и документацию. Определить миграционный сценарий для существующих аккаунтов без email; не подставлять вымышленные адреса и не блокировать автоматически.
 - Временная мера: в начале работы сервиса регистрация разрешена без email; форма явно указывает, что поле необязательно. Это не отменяет последующую задачу возврата обязательности.
 - [x] Начальный период: email необязателен при регистрации, подсказка в форме. Backend419efba: пустое/отсутствующее поле → NULL, непустое проверяется строго; User DTO возвращает пустую строку. Code First33 миграции, unit/race/core/API100%, broker42, PostgreSQL80.431s, schema zero drift и backend-ревью PASS. Контракт сайта и worker расширения обновлены; build/API100%/extension:verify PASS.
+
