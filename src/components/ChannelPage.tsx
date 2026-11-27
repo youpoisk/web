@@ -88,11 +88,11 @@ export function ChannelPage({ publicClient, client, writer, channelId,ownerId=nu
           <h2>Ваша оценка канала</h2>
           <div className="score-row">{Array.from({ length: 10 }, (_, i) => <button key={i} aria-pressed={own?.rating === i + 1} className={own?.rating === i + 1 ? 'chosen' : ''} disabled={loading || saving || !own} onClick={() => void rate(i + 1)}>{i + 1}</button>)}</div>
           {own?.rating != null && <DeleteButton className="text-button" disabled={loading || saving} onDelete={() => rate(null)}>Удалить оценку канала</DeleteButton>}
-        </div> : <p><a href="#/login">Войдите</a>, чтобы оценить канал.</p>}
+        </div> : <p>Войдите, чтобы оценить канал.</p>}
       <ChannelVideos key={channelId} client={publicClient} channelId={channelId}/>
-      {card.identity_verified&&<ChannelReviews key={channelId} client={client} channelId={channelId} ownerId={ownerId}/>}
+      {(card.identity_verified||!client)&&<ChannelReviews key={channelId} client={client} channelId={channelId} ownerId={ownerId}/>}
     </>}
-    <div className="actions"><button className="secondary" disabled={loading || saving} onClick={() => { if (busy.current || loading) return; setMessage(''); void refresh(); }}>Обновить данные</button><a href="#/">К видео</a></div>
+    <div className="actions"><button className="secondary" disabled={loading || saving} onClick={() => { if (busy.current || loading) return; setMessage(''); void refresh(); }}>Обновить данные</button><a className="secondary" href="#/">Вернуться к видео</a></div>
     {message && <p role="status">{message}</p>}
   </section>;
 }
