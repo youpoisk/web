@@ -1445,6 +1445,26 @@ export interface paths {
         patch: operations["patchVideoState"];
         trace?: never;
     };
+    "/v1/me/videos/{youtube_id}/channel-identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify video channel through YouTube and reconcile proven duplicates
+         * @description Explicit authenticated lookup; no local rating is transferred. Cache24h, per-account5/min, global20/min, shared provider budget1000 units/day. Conflicting canonical values win, history retained. Unknown or ambiguous provider evidence never merges identities.
+         */
+        post: operations["resolveVideoChannelIdentity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/watchlist": {
         parameters: {
             query?: never;
@@ -6816,6 +6836,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VideoStateResult"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    resolveVideoChannelIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                youtube_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    handle: string;
+                };
+            };
+        };
+        responses: {
+            /** @description My staff role */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        channel_id: string;
+                    };
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

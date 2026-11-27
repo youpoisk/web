@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouPoisk",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Оценки, рецензии и «Посмотрю позже» YouTube в вашем аккаунте YouPoisk.",
   "permissions": [
     "activeTab",

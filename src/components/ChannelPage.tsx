@@ -83,7 +83,7 @@ export function ChannelPage({ publicClient, client, writer, channelId,ownerId=nu
         <p className="muted">{card.rating.count ? `Оценок в YouPoisk: ${card.rating.count}` : 'Пока нет оценок'}</p>
         {card.url && <a className="secondary" href={card.url} target="_blank" rel="noreferrer">Открыть канал на YouTube ↗</a>}
       </div>
-      {!card.identity_verified ? <p className="notice">Идентичность канала пока не подтверждена. Оценка станет доступна после подтверждения.</p>
+      {!card.identity_verified ? <p className="notice">Идентичность канала пока не подтверждена. Откройте одно из видео ниже и нажмите «Подтвердить канал». После проверки через YouTube станет доступна оценка.</p>
         : client && writer ? <div className="panel">
           <h2>Ваша оценка канала</h2>
           <div className="score-row">{Array.from({ length: 10 }, (_, i) => <button key={i} aria-pressed={own?.rating === i + 1} className={own?.rating === i + 1 ? 'chosen' : ''} disabled={loading || saving || !own} onClick={() => void rate(i + 1)}>{i + 1}</button>)}</div>

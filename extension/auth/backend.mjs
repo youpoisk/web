@@ -16,8 +16,13 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
   if(options.path?.id&&result.data?.target_id!==undefined&&result.data.target_id!==options.path.id)throw new BackendError('protocol');
   return result.data;
  }
- async function channelSnapshot(videoId,scope){
-  const video=await card(videoId,scope),channel=video?.channel;
+ async function channelSnapshot(videoId,scope,handle=''){
+  let video=await card(videoId,scope),channel=video?.channel;
+  if(!channel?.identity_verified||!channel.association_verified){
+   try{await request('resolveVideoChannelIdentity',{path:{youtube_id:videoId},body:{handle}},scope);}
+   catch(error){if(error instanceof ApiError&&[404,409].includes(error.status))throw new BackendError('channel_unconfirmed');throw error;}
+   video=await card(videoId,scope);channel=video?.channel;
+  }
   if(!channel?.identity_verified||!channel.association_verified||!/^UC[\w-]{22}$/.test(channel.youtube_channel_id??''))throw new BackendError('channel_unconfirmed');
   const confirmed=await request('getChannelCard',{path:{id:channel.id}},scope);if(confirmed.id!==channel.id||!confirmed.identity_verified||confirmed.youtube_channel_id!==channel.youtube_channel_id)throw new BackendError('channel_unconfirmed');
   const {state}=await request('getChannelRating',{path:{id:channel.id}},scope);await check(scope);return {channelId:channel.id,uc:channel.youtube_channel_id,revision:state.revision,rating:state.rating};
@@ -180,7 +185,7 @@ export function createBackend({session,storage,origin,fetch,crypto=globalThis.cr
    try{const policy=await request('getContentPolicy',{},scope);await check(scope);const value={...policy,available:true,until:now()+60000};await storage.write(value,key);return value;}
    catch(error){if(!transient(error))throw error;return {available:false,excluded_terms:[]};}
   }),
-  channelPreview:videoId=>exclusive(async()=>channelSnapshot(videoId,await actor())),
+  channelPreview:(videoId,handle='')=>exclusive(async()=>channelSnapshot(videoId,await actor(),handle)),
   channelConfirm:(videoId,expected,rating)=>exclusive(async()=>{const scope=await actor(),current=await channelSnapshot(videoId,scope);if(!expected||JSON.stringify(current)!==JSON.stringify(expected))throw new BackendError('preview_changed');await durable('putChannelRating',current.channelId,{rating},scope,async()=>({expected_revision:current.revision,rating}));}),
   resumePending:()=>exclusive(async()=>{const scope=await actor();return storage.mutateQueue(scope.owner,scope.epoch,'resume');}),
   discardPending:()=>exclusive(async()=>{const scope=await actor();return storage.mutateQueue(scope.owner,scope.epoch,'discard');}),

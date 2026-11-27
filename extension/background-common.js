@@ -105,7 +105,7 @@ globalThis.YPWorker=(()=>{
       if(request.type==='CHANNEL_PREVIEW'||request.type==='CHANNEL_CONFIRM'){
        if(auth?.state!=='authenticated')throw Object.assign(Error('Authentication'),{kind:'authentication'});
        if(!draft||draft.deleted)throw Object.assign(Error('Draft changed'),{kind:'preview_changed'});
-       if(request.type==='CHANNEL_PREVIEW')return {draft,server:await backend.channelPreview(request.video.id),scope:auth.epoch};
+       if(request.type==='CHANNEL_PREVIEW'){const channelURL=YPCore.channelUrl(request.video.channelUrl),path=channelURL?new URL(channelURL).pathname:'';const handle=path.startsWith('/@')?decodeURIComponent(path.slice(2)):'';return {draft,server:await backend.channelPreview(request.video.id,handle),scope:auth.epoch};}
        if(!draft||request.expected?.draftVersion!==draft.version)throw Object.assign(Error('Draft changed'),{kind:'preview_changed'});
        if(request.choice==='local')await backend.channelConfirm(request.video.id,request.expected.server,draft.rating);
        if((await authState()).epoch!==auth.epoch)throw Object.assign(Error('Stale scope'),{kind:'stale'});await storage.write({rating:null,version:draft.version+1,deleted:true},key);draft=null;
