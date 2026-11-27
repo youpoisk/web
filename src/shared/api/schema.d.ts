@@ -2447,8 +2447,8 @@ export interface components {
             altcha: string;
             /** @enum {string} */
             client_type: "web" | "extension";
-            /** @description Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred. */
-            email: string;
+            /** @description Optional mailbox. Omitted or empty on registration means no email; responses use an empty string when absent. Non-empty values must be a bare Go net/mail address, at most254 UTF8 bytes; lowercased. Verification and recovery deferred. */
+            email?: string;
             login: string;
             /** @description Server trims and NFC-normalizes; normalized length 1..30 code points. */
             name: string;
@@ -2584,7 +2584,7 @@ export interface components {
             unread_count: number;
         };
         User: {
-            /** @description Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred. */
+            /** @description Optional mailbox. Omitted or empty on registration means no email; responses use an empty string when absent. Non-empty values must be a bare Go net/mail address, at most254 UTF8 bytes; lowercased. Verification and recovery deferred. */
             email: string;
             /** Format: uuid */
             id: string;

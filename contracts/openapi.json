@@ -10055,9 +10055,8 @@
           "email": {
             "type": "string",
             "maxLength": 254,
-            "description": "Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred.",
-            "minLength": 3,
-            "pattern": "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"
+            "description": "Optional mailbox. Omitted or empty on registration means no email; responses use an empty string when absent. Non-empty values must be a bare Go net/mail address, at most254 UTF8 bytes; lowercased. Verification and recovery deferred.",
+            "pattern": "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"
           }
         },
         "required": [
@@ -10142,9 +10141,8 @@
           "email": {
             "type": "string",
             "maxLength": 254,
-            "minLength": 3,
-            "pattern": "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$",
-            "description": "Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred."
+            "pattern": "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$",
+            "description": "Optional mailbox. Omitted or empty on registration means no email; responses use an empty string when absent. Non-empty values must be a bare Go net/mail address, at most254 UTF8 bytes; lowercased. Verification and recovery deferred."
           },
           "name": {
             "type": "string",
@@ -10173,7 +10171,6 @@
         },
         "required": [
           "login",
-          "email",
           "name",
           "password",
           "client_type",

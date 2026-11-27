@@ -5819,7 +5819,7 @@ function validate128(data, { instancePath = "", parentData, parentDataProperty, 
 validate128.evaluated = { "props": true, "dynamicProps": false, "dynamicItems": false };
 var schema_Credentials = validate130;
 var pattern15 = new RegExp("^[A-Za-z0-9_]{3,32}$", "u");
-var pattern16 = new RegExp("^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$", "u");
+var pattern16 = new RegExp("^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$", "u");
 function validate132(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -5929,14 +5929,9 @@ function validate132(data, { instancePath = "", parentData, parentDataProperty, 
                         validate132.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
                         return false;
                       } else {
-                        if (func1(data3) < 3) {
-                          validate132.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
+                        if (!pattern16.test(data3)) {
+                          validate132.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                           return false;
-                        } else {
-                          if (!pattern16.test(data3)) {
-                            validate132.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
-                            return false;
-                          }
                         }
                       }
                     } else {
@@ -12877,7 +12872,7 @@ function validate219(data, { instancePath = "", parentData, parentDataProperty, 
 }
 validate219.evaluated = { "dynamicProps": true, "dynamicItems": false };
 var schema_Register = validate223;
-var schema126 = { "type": "object", "properties": { "login": { "type": "string", "pattern": "^[A-Za-z0-9_]{3,32}$" }, "email": { "type": "string", "maxLength": 254, "minLength": 3, "pattern": "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$", "description": "Canonical mailbox accepted by Go net/mail.ParseAddress, without display name, at most254 UTF8 bytes; Unicode local-part is supported and address lowercased by server. Wire bounds do not replace authoritative registration syntax validation. Verification and mail recovery deferred." }, "name": { "type": "string", "description": "Server trims and NFC-normalizes; normalized length 1..30 code points." }, "password": { "type": "string", "minLength": 8, "maxLength": 128, "writeOnly": true, "description": "8..128 Unicode code points, at most512 UTF8 bytes. Never trimmed/normalized/stored in client storage or an offline queue. Invalid Unicode JSON escapes are rejected." }, "client_type": { "type": "string", "enum": ["web", "extension"] }, "altcha": { "type": "string", "minLength": 1, "maxLength": 4096, "description": "Base64 ALTCHA v2 proof; expires in 3 minutes and is consumed once per registration attempt." } }, "required": ["login", "email", "name", "password", "client_type", "altcha"], "additionalProperties": false };
+var schema126 = { "type": "object", "properties": { "login": { "type": "string", "pattern": "^[A-Za-z0-9_]{3,32}$" }, "email": { "type": "string", "maxLength": 254, "pattern": "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$", "description": "Optional mailbox. Omitted or empty on registration means no email; responses use an empty string when absent. Non-empty values must be a bare Go net/mail address, at most254 UTF8 bytes; lowercased. Verification and recovery deferred." }, "name": { "type": "string", "description": "Server trims and NFC-normalizes; normalized length 1..30 code points." }, "password": { "type": "string", "minLength": 8, "maxLength": 128, "writeOnly": true, "description": "8..128 Unicode code points, at most512 UTF8 bytes. Never trimmed/normalized/stored in client storage or an offline queue. Invalid Unicode JSON escapes are rejected." }, "client_type": { "type": "string", "enum": ["web", "extension"] }, "altcha": { "type": "string", "minLength": 1, "maxLength": 4096, "description": "Base64 ALTCHA v2 proof; expires in 3 minutes and is consumed once per registration attempt." } }, "required": ["login", "name", "password", "client_type", "altcha"], "additionalProperties": false };
 function validate223(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   let vErrors = null;
   let errors = 0;
@@ -12891,7 +12886,7 @@ function validate223(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.login === void 0 && (missing0 = "login") || data.email === void 0 && (missing0 = "email") || data.name === void 0 && (missing0 = "name") || data.password === void 0 && (missing0 = "password") || data.client_type === void 0 && (missing0 = "client_type") || data.altcha === void 0 && (missing0 = "altcha")) {
+      if (data.login === void 0 && (missing0 = "login") || data.name === void 0 && (missing0 = "name") || data.password === void 0 && (missing0 = "password") || data.client_type === void 0 && (missing0 = "client_type") || data.altcha === void 0 && (missing0 = "altcha")) {
         validate223.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
@@ -12932,14 +12927,9 @@ function validate223(data, { instancePath = "", parentData, parentDataProperty, 
                     validate223.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
                     return false;
                   } else {
-                    if (func1(data1) < 3) {
-                      validate223.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
+                    if (!pattern16.test(data1)) {
+                      validate223.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                       return false;
-                    } else {
-                      if (!pattern16.test(data1)) {
-                        validate223.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
-                        return false;
-                      }
                     }
                   }
                 } else {
@@ -15092,14 +15082,9 @@ function validate246(data, { instancePath = "", parentData, parentDataProperty, 
                         validate246.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
                         return false;
                       } else {
-                        if (func1(data3) < 3) {
-                          validate246.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
+                        if (!pattern16.test(data3)) {
+                          validate246.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                           return false;
-                        } else {
-                          if (!pattern16.test(data3)) {
-                            validate246.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
-                            return false;
-                          }
                         }
                       }
                     } else {
@@ -18206,7 +18191,7 @@ function validate284(data, { instancePath = "", parentData, parentDataProperty, 
   if (errors === 0) {
     if (data && typeof data == "object" && !Array.isArray(data)) {
       let missing0;
-      if (data.login === void 0 && (missing0 = "login") || data.email === void 0 && (missing0 = "email") || data.name === void 0 && (missing0 = "name") || data.password === void 0 && (missing0 = "password") || data.client_type === void 0 && (missing0 = "client_type") || data.altcha === void 0 && (missing0 = "altcha")) {
+      if (data.login === void 0 && (missing0 = "login") || data.name === void 0 && (missing0 = "name") || data.password === void 0 && (missing0 = "password") || data.client_type === void 0 && (missing0 = "client_type") || data.altcha === void 0 && (missing0 = "altcha")) {
         validate284.errors = [{ instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: missing0 }, message: "must have required property '" + missing0 + "'" }];
         return false;
       } else {
@@ -18247,14 +18232,9 @@ function validate284(data, { instancePath = "", parentData, parentDataProperty, 
                     validate284.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
                     return false;
                   } else {
-                    if (func1(data1) < 3) {
-                      validate284.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
+                    if (!pattern16.test(data1)) {
+                      validate284.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                       return false;
-                    } else {
-                      if (!pattern16.test(data1)) {
-                        validate284.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
-                        return false;
-                      }
                     }
                   }
                 } else {
@@ -20388,14 +20368,9 @@ function validate313(data, { instancePath = "", parentData, parentDataProperty, 
                         validate313.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
                         return false;
                       } else {
-                        if (func1(data3) < 3) {
-                          validate313.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
+                        if (!pattern16.test(data3)) {
+                          validate313.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                           return false;
-                        } else {
-                          if (!pattern16.test(data3)) {
-                            validate313.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
-                            return false;
-                          }
                         }
                       }
                     } else {
@@ -43672,14 +43647,9 @@ function validate638(data, { instancePath = "", parentData, parentDataProperty, 
                         validate638.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
                         return false;
                       } else {
-                        if (func1(data3) < 3) {
-                          validate638.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
+                        if (!pattern16.test(data3)) {
+                          validate638.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                           return false;
-                        } else {
-                          if (!pattern16.test(data3)) {
-                            validate638.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
-                            return false;
-                          }
                         }
                       }
                     } else {
@@ -44041,14 +44011,9 @@ function validate641(data, { instancePath = "", parentData, parentDataProperty, 
                         validate641.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/maxLength", keyword: "maxLength", params: { limit: 254 }, message: "must NOT have more than 254 characters" }];
                         return false;
                       } else {
-                        if (func1(data3) < 3) {
-                          validate641.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/minLength", keyword: "minLength", params: { limit: 3 }, message: "must NOT have fewer than 3 characters" }];
+                        if (!pattern16.test(data3)) {
+                          validate641.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^$|^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
                           return false;
-                        } else {
-                          if (!pattern16.test(data3)) {
-                            validate641.errors = [{ instancePath: instancePath + "/email", schemaPath: "#/properties/email/pattern", keyword: "pattern", params: { pattern: "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$" }, message: 'must match pattern "^[^\\x00-\\x1F\\x7F]+@[^\\x00-\\x1F\\x7F]+$"' }];
-                            return false;
-                          }
                         }
                       }
                     } else {

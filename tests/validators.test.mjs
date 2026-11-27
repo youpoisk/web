@@ -151,3 +151,14 @@ test('registration contract requires bounded ALTCHA proof and a local v2 challen
  assert.equal(validators.registrationChallenge_response_200(challenge),true);
  assert.equal(validators.registrationChallenge_response_200({...challenge,parameters:{...challenge.parameters,cost:1}}),false);
 });
+
+test('initial-period registration accepts omitted or empty email and credentials preserve absence', () => {
+  const body={login:'test_user',name:'Owner',password:'valid password',client_type:'web',altcha:'proof'};
+  assert.equal(validators.registerAccount_request(body),true);
+  assert.equal(validators.registerAccount_request({...body,email:''}),true);
+  assert.equal(validators.registerAccount_request({...body,email:null}),false);
+  assert.equal(validators.registerAccount_request({...body,email:'invalid'}),false);
+  const user={...web.user,email:''};
+  assert.equal(validators.schema_WebCredentials({...web,user}),true);
+  assert.equal(validators.schema_ExtensionCredentials({...web,user,refresh_token:`${uid}.${'A'.repeat(43)}`}),true);
+});
