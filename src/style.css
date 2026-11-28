@@ -168,3 +168,13 @@ footer .footer-contact{display:flex;align-items:center;gap:10px;flex-wrap:wrap}f
 
 
 .system-avatar{background:#e4f3ff;color:#1c93d8}.system-service-label{font-size:10px;font-weight:400;color:#849baa;margin-left:5px}.system-thread-title{display:flex;align-items:center;gap:12px}.system-thread-title h2{margin:0 0 5px}.system-thread-title p{margin:0}.system-read-only{display:flex;align-items:center;gap:8px;padding:12px 14px;background:#f1f8fd;border-radius:10px;color:#7191a6;font-size:12px}.system-message-list{display:flex;flex-direction:column;gap:14px;margin:20px 0}.system-message{max-width:680px;padding:18px;border:1px solid #dceaf4;border-radius:14px;background:#f8fcff}.system-message p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.8;margin-bottom:12px}.system-conversation .conversation-text>.muted{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}@media(max-width:640px){.system-thread .list-head{align-items:flex-start;gap:12px;flex-wrap:wrap}.system-service-label{display:block;margin:4px 0 0}.system-read-only{align-items:flex-start;line-height:1.7}.system-read-only svg{flex-shrink:0;margin-top:3px}}
+
+/* The extension remains available on an empty catalog and below the narrow layout. */
+@media(max-width:1000px){
+ .content-frame:has(.community-rail){flex-direction:column;align-items:stretch}
+ .content-frame:has(.community-rail)>main{min-height:0}
+ .community-rail{display:block;width:auto;flex-shrink:1;padding:0 25px 28px}
+ .community-rail>.catalog-ranking{display:none}
+ .community-rail .catalog-extension-promo{margin-top:0;max-width:520px}
+}
+@media(max-width:600px){.community-rail{padding:0 16px 24px}}
