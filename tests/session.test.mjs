@@ -197,3 +197,22 @@ test('identity page: nonce-bound outcomes keep the local sign-in and return to t
  assert.deepEqual(await nh.session.completeCallback(callback+'?'+new URLSearchParams({identity:'changed',state:saved.state}),()=>{}),{returnHash:'#/settings',outcome:'identity_changed'},'only hash routes are restored');
 });
 
+
+test('access expiry is only a restore hint; guest, live, expired, corrupt and recovering scopes differ',async()=>{
+ const guest=fixture();assert.equal(guest.session.needsRestore(),false);
+ const f=fixture();
+ const token=payload=>'header.'+Buffer.from(payload).toString('base64url')+'.signature';
+ f.env.fetch=async()=>json({...credentials,access_token:token('{"exp":5}')});
+ await f.session.completeCallback(await start(f.session),()=>{});
+ assert.equal(f.session.needsRestore(),false);
+ f.env.now=5000;assert.equal(f.session.needsRestore(),true);
+ assert.equal(f.session.businessScope().state,'authenticated'); // hint cannot grant/revoke authorization
+ f.session.markRecovering();assert.equal(f.session.needsRestore(),true);
+ for(const payload of ['{}','null','{"exp":"5"}','{"exp":1e999}','not-json']){
+  const g=fixture();g.env.fetch=async()=>json({...credentials,access_token:token(payload)});
+  await g.session.completeCallback(await start(g.session),()=>{});
+  assert.equal(g.session.needsRestore(),true);
+ }
+ const invalid=fixture();await invalid.session.completeCallback(await start(invalid.session),()=>{});
+ assert.equal(invalid.session.needsRestore(),true);
+});

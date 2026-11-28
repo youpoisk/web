@@ -106,6 +106,20 @@ export async function bootAuth(session: SessionPort, browser: Browser): Promise<
   }
 }
 
+/** Resume a visible tab through the normal first-party PKCE broker, never replaying writes. */
+export async function resumeAuth(
+  session: SessionPort & { needsRestore(): boolean; markRecovering(): void },
+  browser: Browser,
+  visible: boolean
+): Promise<AuthView | null> {
+  try {
+    if (!visible || !session.needsRestore()) return null;
+    session.markRecovering();
+    return await bootAuth(session, browser);
+  } catch (error) {
+    return failure(error);
+  }
+}
 export async function signIn(session: SessionPort, browser: Browser, intent: Intent, returnHash = '#/'): Promise<AuthView> {
   try {
     const pending = session.pendingSummary();

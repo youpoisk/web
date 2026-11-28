@@ -26,12 +26,13 @@ export class BrowserSession {
   readonly #flowStorage: Storage;
   readonly #fetch: typeof fetch;
   readonly #timeout: number;
+  readonly #clock: () => number;
   #scope: Scope = { owner: null, epoch: '' };
   #credentials: components['schemas']['WebCredentials'] | null = null;
   #blocked = false;
   #reference: string | null = null;
   constructor(config: { storage: Storage; flowStorage?: Storage; crypto: Crypto; clock: () => number; apiOrigin: string; callback: string; clearPrivate: () => void; fetch?: typeof fetch; timeoutMs?: number }) {
-    this.#storage = config.storage; this.#crypto = config.crypto; this.#clearPrivate = config.clearPrivate;
+    this.#clock = config.clock; this.#storage = config.storage; this.#crypto = config.crypto; this.#clearPrivate = config.clearPrivate;
     this.#api = config.apiOrigin; this.#fetch = config.fetch ?? ((input, init) => globalThis.fetch(input, init)); this.#timeout = config.timeoutMs ?? 10000;
     // PKCE state is per tab (sessionStorage in the browser) so tabs never cancel
     // each other's sign-in; only the non-secret scope reference is shared.
@@ -212,6 +213,17 @@ export class BrowserSession {
     this.#scope = next;
     this.#credentials = { ...result.credentials, user: { ...result.credentials.user } };
     return { returnHash: result.returnHash };
+  }
+  /** Expiry is a recovery hint only; server signature/permissions remain authoritative. */
+  needsRestore(): boolean {
+    const scope = this.#identity();
+    if (!this.#credentials) return scope.owner !== null;
+    try {
+      const payload = JSON.parse(atob(this.#credentials.access_token.split('.')[1].replaceAll('-', '+').replaceAll('_', '/')));
+      return typeof payload?.exp !== 'number' || !Number.isFinite(payload.exp) || this.#clock() >= payload.exp * 1000;
+    } catch {
+      return true;
+    }
   }
   markRecovering(): void {
     this.#identity(); this.#credentials = null; this.#clear();

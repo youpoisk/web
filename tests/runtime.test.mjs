@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authConfig, bootAuth, changeIdentity, changePassword, deleteAccount, signIn, signOut, scrubCallback, startupFailure, AuthConfigError } from '../src/shared/auth/runtime.ts';
+import { authConfig, bootAuth, resumeAuth, changeIdentity, changePassword, deleteAccount, signIn, signOut, scrubCallback, startupFailure, AuthConfigError } from '../src/shared/auth/runtime.ts';
 
 const user = { id: '00000000-0000-4000-8000-000000000001', login: 'anton', name: 'Anton', email: 'a@example.invalid' };
 function port(over = {}) {
@@ -175,3 +175,19 @@ test('identity change opens the API page; boot restores the account after its ou
   assert.equal((await bootAuth(port({ done: { returnHash: '#/settings', outcome: 'identity_session' } }), browser())).status, 'guest');
 });
 
+
+test('visible expired tab restores through the broker and preserves the current route',async()=>{
+ const s=port({scope:'authenticated',user,needsRestore(){return true},markRecovering(){this.scope='recovering';this.user=null}});
+ const b=browser('#/profile');
+ assert.deepEqual(await resumeAuth(s,b,true),{status:'redirecting',user:null});
+ assert.deepEqual(s.calls.at(-1),['authorize','restore','#/profile']);
+ assert.deepEqual(b.assigned,['https://api.example/auth/authorize?intent=restore']);
+});
+test('resume skips hidden or valid sessions and handles storage failure without a blocked status',async()=>{
+ let called=0;const s=port({needsRestore(){called++;return false},markRecovering(){throw Error('unexpected')}});
+ assert.equal(await resumeAuth(s,browser(),false),null);assert.equal(called,0);
+ assert.equal(await resumeAuth(s,browser(),true),null);assert.equal(called,1);
+ const bad=port({needsRestore(){throw kind('storage')},markRecovering(){}});
+ const result=await resumeAuth(bad,browser(),true);
+ assert.equal(result.status,'error');assert.equal(result.user,null);
+});
