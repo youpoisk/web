@@ -26,3 +26,14 @@ test('Firefox production supports the published site path and an explicit discon
  for(const invalid of [['--production','--site-origin=https://site.example.com','--api-origin='],['--allow-unconfigured-api','--api-origin='],['--production','--site-origin=https://site.example.com','--api-origin=https://api.example.com','--allow-unconfigured-api'],['--production','--site-origin=https://site.example.com','--api-origin=https://api.example.com','--version=01.0'],['--production','--site-origin=https://site.example.com','--api-origin=https://api.example.com','--version=65536'],['--production','--site-origin=https://site.example.com/#/bad','--api-origin=https://api.example.com']])assert.throws(()=>execFileSync(process.execPath,['scripts/build-firefox-extension.mjs',...invalid],{cwd:root,stdio:'pipe'}));
  const full=execFileSync(process.execPath,['scripts/build-firefox-extension.mjs','--production','--site-origin=https://site.example.com/web/','--api-origin=https://api.example.com','--version=1.0.0'],{cwd:root,encoding:'utf8'}).trim().replace('Firefox extension built at ','');assert.deepEqual(JSON.parse(readFileSync(join(full,'manifest.json'))).host_permissions,['https://www.youtube.com/*','https://api.example.com/*']);
 });
+
+test('production IP API keeps port in requests and Chrome permission, but uses a portless Firefox permission',()=>{
+ for(const browser of ['firefox','chrome']){
+  const out=execFileSync(process.execPath,['scripts/build-'+browser+'-extension.mjs','--production','--site-origin=https://youpoisk.github.io/web/','--api-origin=https://91.228.154.168:8443','--version=1.0.1'],{cwd:root,encoding:'utf8'}).trim().replace(browser==='firefox'?'Firefox extension built at ':'Chrome extension built at ','');
+  const manifest=JSON.parse(readFileSync(join(out,'manifest.json'),'utf8')),config=readFileSync(join(out,'config.js'),'utf8');
+  assert.deepEqual(manifest.host_permissions,['https://www.youtube.com/*',browser==='firefox'?'https://91.228.154.168/*':'https://91.228.154.168:8443/*']);
+  assert.ok(config.includes('"apiOrigin":"https://91.228.154.168:8443"'));
+  assert.ok(config.includes('"siteOrigin":"https://youpoisk.github.io/web/"'));
+  assert.ok(!config.includes('127.0.0.1'));
+ }
+});
