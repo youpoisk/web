@@ -469,7 +469,7 @@ export async function loadReports(client: Pick<ApiClient, 'request'>, status: 'o
   const page = await client.request('listReports', { query, signal });
   return { items: page.items, next: page.next_cursor ?? null };
 }
-export async function resolveReport(client: Pick<ApiClient, 'request'>, id: string, action: 'dismiss' | 'hide' | 'suspend' | 'remove_avatar'): Promise<AdminReport> {
+export async function resolveReport(client: Pick<ApiClient, 'request'>, id: string, action: 'dismiss' | 'hide' | 'remove_avatar'): Promise<AdminReport> {
   return client.request('resolveReport', { path: { id }, body: { action } });
 }
 export async function loadAudit(client: Pick<ApiClient, 'request'>, after: string | null, signal?: AbortSignal): Promise<{ items: AuditEntry[]; next: string | null }> {
@@ -515,3 +515,4 @@ export function readFeedView(storage: Pick<Storage, 'getItem'> | undefined): boo
 export function saveFeedView(storage: Pick<Storage, 'setItem'> | undefined, grouped: boolean): void {
   try { storage?.setItem(FEED_VIEW_KEY, grouped ? 'videos' : 'authors'); } catch { /* storage unavailable: the in-memory choice still applies */ }
 }
+

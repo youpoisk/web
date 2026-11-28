@@ -171,7 +171,7 @@ export interface paths {
         put?: never;
         /**
          * Resolve a report
-         * @description Reports and minimal moderation (YP-083.2). Staff only (admin or moderator role, granted by the operator; no API grants roles): others get 403 forbidden. dismiss closes the report; hide (reviews only, else 422) hides the review; suspend disables the reported account and revokes all its sessions (403 for staff accounts and oneself). Atomic with the audit entry; an already resolved report is 409. Rate limited: 60 per account per minute.
+         * @description Resolve the reported item. Account bans require PATCH /v1/admin/users/{id} with a reason and optional calendar date; legacy suspend is rejected.
          */
         post: operations["resolveReport"];
         delete?: never;
@@ -1397,6 +1397,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/system-messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read own encrypted service messages
+         * @description Admin and moderator only. YouTube identity ordered keyset pages of at most twelve. Only this moderation inventory may expose hidden video metadata.
+         */
+        get: operations["listSystemMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/system-messages/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark own System messages read
+         * @description Only own encrypted System inbox; monotonic read watermark, no reply operation.
+         */
+        post: operations["markSystemMessagesRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/system-messages/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read own System conversation summary
+         * @description Admin and moderator only. YouTube identity ordered keyset pages of at most twelve. Only this moderation inventory may expose hidden video metadata.
+         */
+        get: operations["getSystemSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/user-badges": {
         parameters: {
             query?: never;
@@ -1864,11 +1924,19 @@ export interface components {
             next_cursor?: string;
         };
         AdminChange: {
+            /** @enum {string} */
+            block_reason_code?: "toxic" | "spam" | "harassment" | "inappropriate" | "other";
+            block_reason_text?: string;
+            /**
+             * Format: date
+             * @description Moscow calendar date when daily sweep may lift ban. Omit for permanent. Must be after today.
+             */
+            blocked_until?: string;
             expected_revision: number;
             is_blocked?: boolean;
             /** @enum {string} */
             role?: "user" | "moderator" | "admin";
-        };
+        } & unknown;
         /** @description A report with only the single reported item as evidence (never a whole conversation). */
         AdminReport: {
             avatar?: components["schemas"]["AvatarEvidence"];
@@ -1907,6 +1975,11 @@ export interface components {
             total_users: number;
         };
         AdminUser: {
+            /** @enum {string} */
+            block_reason_code?: "toxic" | "spam" | "harassment" | "inappropriate" | "other";
+            block_reason_text?: string;
+            /** Format: date */
+            blocked_until?: string;
             /** Format: date-time */
             created_at: string;
             /** Format: uuid */
@@ -2557,7 +2630,7 @@ export interface components {
         };
         ReportResolve: {
             /** @enum {string} */
-            action: "dismiss" | "hide" | "suspend" | "remove_avatar";
+            action: "dismiss" | "hide" | "remove_avatar";
         };
         ReportResult: {
             created: boolean;
@@ -2644,6 +2717,16 @@ export interface components {
             /** Format: uuid */
             id: string;
             pages: number;
+        };
+        SystemPage: {
+            items: components["schemas"]["Message"][];
+            next_before?: number;
+            read_seq: number;
+        };
+        SystemSummary: {
+            last_message: components["schemas"]["Message"] | null;
+            read_seq: number;
+            unread_count: number;
         };
         UnreadNotifications: {
             unread_count: number;
@@ -6686,6 +6769,129 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listSystemMessages: {
+        parameters: {
+            query?: {
+                before?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Descending sequence,12 perpage */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemPage"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    markSystemMessagesRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    through_seq: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Mark a conversation read */
+            200: {
+                headers: {
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadState"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            403: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */
+            default: {
+                headers: {
+                    /** @description Seconds before retry on rate/busy responses. */
+                    "Retry-After"?: string;
+                    /** @description Server-generated diagnostic ID; not an auth token. */
+                    "X-Request-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getSystemSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Read-only service sender; no reply endpoint */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemSummary"];
                 };
             };
             /** @description Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state. */

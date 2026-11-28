@@ -1,3 +1,5 @@
+import{SystemConversationLink}from'./SystemMessages.tsx';
+import type{ResponseBody}from'../shared/api/client.ts';
 import{createChatPolling}from'../shared/library/chat-polling.ts';
 import{UserName}from'./UserName.tsx';
 import { Avatar } from './Avatar.tsx';
@@ -13,6 +15,7 @@ const preview = (m: Message) => (m.mine ? 'Вы: ' : '') + (m.body ?? (m.video ?
 
 /** Account-keyed by the parent. Late responses after unmount are dropped. */
 export function ConversationsList({ client }: { client: Pick<ApiClient, 'request'> }) {
+  const[system,setSystem]=useState<ResponseBody<'getSystemSummary'>|null>(null);
   const [items, setItems] = useState<Conversation[]>([]), [next, setNext] = useState<string | null>(null);
   const [loading, setLoading] = useState(true), [error, setError] = useState(false), [failedAfter, setFailedAfter] = useState<string | null>(null);
   const generation = useRef(0), reading = useRef(false);
@@ -20,9 +23,9 @@ export function ConversationsList({ client }: { client: Pick<ApiClient, 'request
     if (reading.current) return;
     const stamp = generation.current; reading.current = true; setLoading(true); setError(false);
     try {
-      const page = await loadConversations(client, after, signal);
+      const [page,summary] = await Promise.all([loadConversations(client, after, signal),client.request('getSystemSummary',{signal})]);
       if (stamp !== generation.current) return;
-      setItems(prev => after ? [...prev, ...page.items.filter(x => !prev.some(y => y.id === x.id))] : page.items); setNext(page.next);
+      setSystem(summary);setItems(prev => after ? [...prev, ...page.items.filter(x => !prev.some(y => y.id === x.id))] : page.items); setNext(page.next);
     } catch {
       if (stamp === generation.current && !signal?.aborted) { setError(true); setFailedAfter(after); }
     } finally { if (stamp === generation.current) { reading.current = false; setLoading(false); } }
@@ -31,10 +34,10 @@ export function ConversationsList({ client }: { client: Pick<ApiClient, 'request
     generation.current++; reading.current = false; const ctl = new AbortController(); void load(null, ctl.signal);
     return () => { generation.current++; ctl.abort(); };
   }, [client]);
-  const empty = !loading && !error && !items.length;
+  const empty = !loading && !error && !items.length&&!system?.last_message;
   return <section className="panel conversations-panel" aria-busy={loading}>
     <div className="list-head">
-      <h2>Диалоги{items.length > 0 && <span className="list-count">{items.length}{next ? '+' : ''}</span>}</h2>
+      <h2>Диалоги{(items.length > 0||system?.last_message) && <span className="list-count">{items.length+(system?.last_message?1:0)}{next ? '+' : ''}</span>}</h2>
       <button className="secondary refresh-button" disabled={loading} onClick={() => void load(null)}><RefreshCw size={15} aria-hidden="true" className={loading ? 'spin' : undefined}/>Обновить</button>
     </div>
     {loading && !items.length && <p className="muted list-status" role="status">Загружаем переписки…</p>}
@@ -45,6 +48,7 @@ export function ConversationsList({ client }: { client: Pick<ApiClient, 'request
       <p>Писать можно только друзьям. Откройте профиль друга и нажмите «Написать сообщение», чтобы начать диалог.</p>
       <a className="primary" href="#/friends">Перейти к друзьям</a>
     </div>}
+    {system&&<SystemConversationLink summary={system}/>}
     {items.map(it => <a className={`conversation-line${it.unread_count ? ' unread' : ''}`} key={it.id} href={`#/messages/${it.user.id}`}>
       <Avatar client={client} userId={it.user.id} name={it.user.name||it.user.login} className="avatar small-avatar"/>
       <span className="conversation-text"><strong><UserName client={client} userId={it.user.id} name={it.user.name||it.user.login}/></strong><span className="small muted"><bdi dir="auto">{preview(it.last_message)}</bdi></span></span>

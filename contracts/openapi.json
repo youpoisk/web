@@ -6754,7 +6754,7 @@
       "post": {
         "operationId": "resolveReport",
         "summary": "Resolve a report",
-        "description": "Reports and minimal moderation (YP-083.2). Staff only (admin or moderator role, granted by the operator; no API grants roles): others get 403 forbidden. dismiss closes the report; hide (reviews only, else 422) hides the review; suspend disables the reported account and revokes all its sessions (403 for staff accounts and oneself). Atomic with the audit entry; an already resolved report is 409. Rate limited: 60 per account per minute.",
+        "description": "Resolve the reported item. Account bans require PATCH /v1/admin/users/{id} with a reason and optional calendar date; legacy suspend is rejected.",
         "tags": [
           "PersonalState"
         ],
@@ -10124,6 +10124,244 @@
           }
         }
       }
+    },
+    "/v1/me/system-messages/summary": {
+      "get": {
+        "operationId": "getSystemSummary",
+        "summary": "Read own System conversation summary",
+        "description": "Admin and moderator only. YouTube identity ordered keyset pages of at most twelve. Only this moderation inventory may expose hidden video metadata.",
+        "tags": [
+          "Messages"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Read-only service sender; no reply endpoint",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemSummary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/system-messages": {
+      "get": {
+        "operationId": "listSystemMessages",
+        "summary": "Read own encrypted service messages",
+        "description": "Admin and moderator only. YouTube identity ordered keyset pages of at most twelve. Only this moderation inventory may expose hidden video metadata.",
+        "tags": [
+          "Messages"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12,
+              "default": 12
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Descending sequence,12 perpage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemPage"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/system-messages/read": {
+      "post": {
+        "operationId": "markSystemMessagesRead",
+        "summary": "Mark own System messages read",
+        "description": "Only own encrypted System inbox; monotonic read watermark, no reply operation.",
+        "tags": [
+          "Messages"
+        ],
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Mark a conversation read",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadState"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured operation error. 401 is inactive/invalid access; 403 does not request refresh; 409 conflict/reconcile; 410 original lease/receipt expired; 429 retry respecting Retry-After; 503 transient, preserve pending state.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated diagnostic ID; not an auth token.",
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds before retry on rate/busy responses.",
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[0-9]+$"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "through_seq"
+                ],
+                "properties": {
+                  "through_seq": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -13072,7 +13310,6 @@
             "enum": [
               "dismiss",
               "hide",
-              "suspend",
               "remove_avatar"
             ]
           }
@@ -13685,6 +13922,24 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "block_reason_code": {
+            "type": "string",
+            "enum": [
+              "toxic",
+              "spam",
+              "harassment",
+              "inappropriate",
+              "other"
+            ]
+          },
+          "block_reason_text": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "blocked_until": {
+            "type": "string",
+            "format": "date"
           }
         },
         "required": [
@@ -13718,12 +13973,50 @@
           },
           "is_blocked": {
             "type": "boolean"
+          },
+          "block_reason_code": {
+            "type": "string",
+            "enum": [
+              "toxic",
+              "spam",
+              "harassment",
+              "inappropriate",
+              "other"
+            ]
+          },
+          "block_reason_text": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "blocked_until": {
+            "type": "string",
+            "format": "date",
+            "description": "Moscow calendar date when daily sweep may lift ban. Omit for permanent. Must be after today."
           }
         },
         "required": [
           "expected_revision"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "is_blocked": {
+                  "const": true
+                }
+              },
+              "required": [
+                "is_blocked"
+              ]
+            },
+            "then": {
+              "required": [
+                "block_reason_code"
+              ]
+            }
+          }
+        ]
       },
       "AdminAction": {
         "type": "object",
@@ -14328,6 +14621,64 @@
           "next_cursor": {
             "type": "string",
             "minLength": 1
+          }
+        }
+      },
+      "SystemSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "last_message",
+          "unread_count",
+          "read_seq"
+        ],
+        "properties": {
+          "last_message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Message"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unread_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "read_seq": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        }
+      },
+      "SystemPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "read_seq"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            }
+          },
+          "read_seq": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "next_before": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
           }
         }
       }

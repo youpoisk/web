@@ -11,7 +11,7 @@ test('every pinned operation has runtime request/response validators', () => {
   const spec = JSON.parse(readFileSync(new URL('../contracts/openapi.json', import.meta.url)));
   const operations = Object.entries(spec.paths).flatMap(([path, methods]) =>
     Object.entries(methods).map(([method, operation]) => ({ path, method, operation })));
-  assert.equal(operations.length, 101);
+  assert.equal(operations.length, 104);
   assert.equal(Object.keys(validators.contract).length, operations.length);
   for (const { path, method, operation } of operations) {
     const actual = validators.contract[operation.operationId];
@@ -163,3 +163,12 @@ test('initial-period registration accepts omitted or empty email and credentials
   assert.equal(validators.schema_ExtensionCredentials({...web,user,refresh_token:`${uid}.${'A'.repeat(43)}`}),true);
 });
 
+
+
+test('moderation requires reason for bans, calendar date and disallows legacy suspension requests', () => {
+  assert.equal(validators.schema_AdminChange({expected_revision:1,is_blocked:true}),false);
+  assert.equal(validators.schema_AdminChange({expected_revision:1,is_blocked:true,block_reason_code:'toxic',blocked_until:'2099-12-05'}),true);
+  assert.equal(validators.schema_AdminChange({expected_revision:1,is_blocked:false}),true);
+  assert.equal(validators.schema_ReportResolve({action:'suspend'}),false);
+  assert.equal(validators.schema_SystemSummary({last_message:null,unread_count:0,read_seq:0}),true);
+});
