@@ -178,3 +178,7 @@ footer .footer-contact{display:flex;align-items:center;gap:10px;flex-wrap:wrap}f
  .community-rail .catalog-extension-promo{margin-top:0;max-width:520px}
 }
 @media(max-width:600px){.community-rail{padding:0 16px 24px}}
+
+/* Reserve the catalog rail above the extension card in every catalog state. */
+.community-rail>.catalog-ranking{min-height:340px}
+.catalog-ranking-empty{padding-top:14px;line-height:1.6}
