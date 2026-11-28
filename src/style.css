@@ -184,3 +184,5 @@ footer .footer-contact{display:flex;align-items:center;gap:10px;flex-wrap:wrap}f
 .catalog-ranking-empty{padding-top:14px;line-height:1.6}
 
 .avatar-status-pending{background:#eef4f8;color:#8fa4b3}.user-name-pending{color:#8fa4b3;font-weight:400}
+
+.session-restore-notice{position:sticky;top:0;z-index:100;background:#fff7e8;border:1px solid #ead5ad;padding:16px 24px;display:flex;align-items:center;justify-content:center;gap:20px}.session-restore-notice p{margin:0}.session-restore-notice button{flex-shrink:0}
